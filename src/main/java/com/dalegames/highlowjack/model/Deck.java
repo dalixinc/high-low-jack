@@ -10,7 +10,7 @@ import java.util.List;
  * <p>The deck contains one card of each combination of suit and rank.
  * Provides methods for shuffling and dealing cards.</p>
  * 
- * @author Dale & Primus
+ * @author Dale &amp; Primus
  * @version 1.0
  */
 public class Deck {

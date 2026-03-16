@@ -9,7 +9,7 @@ import java.util.List;
  * <p>The first card played determines the lead suit. The trick winner is determined
  * by trump suit and rank precedence.</p>
  * 
- * @author Dale & Primus
+ * @author Dale &amp; Primus
  * @version 1.0
  */
 public class Trick {

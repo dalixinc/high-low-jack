@@ -18,8 +18,7 @@ import java.util.Map;
  *   <li><b>Jack</b>: Capturing the Jack of trumps, if in play (1 point)</li>
  *   <li><b>Game</b>: Most game points from captured cards (1 point)</li>
  * </ul>
- * </p>
- * 
+ *
  * <p>Card point values for "Game" calculation:
  * <ul>
  *   <li>Ace = 4 points</li>
@@ -29,9 +28,8 @@ import java.util.Map;
  *   <li>Ten = 10 points</li>
  *   <li>All other cards = 0 points</li>
  * </ul>
- * </p>
- * 
- * @author Dale & Primus
+ *
+ * @author Dale &amp; Primus
  * @version 1.0
  */
 public class GameEngine {
@@ -189,8 +187,7 @@ public class GameEngine {
      *   <li>Jack = 1 point</li>
      *   <li>Ten = 10 points</li>
      * </ul>
-     * </p>
-     * 
+     *
      * @param tricks list of completed tricks
      * @return name of player with most game points, or null on tie
      */
@@ -268,8 +265,7 @@ public class GameEngine {
      *   <li>If not leading, must follow suit if possible</li>
      *   <li>If cannot follow suit, any card may be played</li>
      * </ul>
-     * </p>
-     * 
+     *
      * @param game the current game
      * @param playerName the player attempting to play
      * @param card the card being played

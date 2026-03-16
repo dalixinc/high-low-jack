@@ -21,9 +21,8 @@ import java.util.Map;
  *   <li>Score High, Low, Jack, Game points</li>
  *   <li>First to 7 total points wins</li>
  * </ol>
- * </p>
- * 
- * @author Dale & Primus
+ *
+ * @author Dale &amp; Primus
  * @version 1.0
  */
 public class Game {

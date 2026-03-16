@@ -9,7 +9,7 @@ import java.util.List;
  * <p>A hand can hold any number of cards (typically 7 in High Low Jack) and
  * provides methods for adding, playing, and querying cards.</p>
  * 
- * @author Dale & Primus
+ * @author Dale &amp; Primus
  * @version 1.0
  */
 public class Hand {

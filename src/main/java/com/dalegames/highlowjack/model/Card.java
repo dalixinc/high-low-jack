@@ -6,7 +6,7 @@ package com.dalegames.highlowjack.model;
  * <p>Cards are immutable and use enums for both suit and rank to ensure type safety.
  * The rank values range from 2 (lowest) to ACE (highest) for game comparison purposes.</p>
  * 
- * @author Dale & Primus
+ * @author Dale &amp; Primus
  * @version 1.0
  */
 public class Card {

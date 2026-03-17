@@ -17,8 +17,16 @@ import jakarta.servlet.http.HttpSession;
 /**
  * Web controller for High Low Jack card game.
  * 
+ * <p>Implements turn-based gameplay with proper pacing:
+ * <ul>
+ *   <li>Human player clicks to play their card</li>
+ *   <li>AI players play ONE card per page load</li>
+ *   <li>JavaScript auto-refreshes with 1-3 second delays</li>
+ *   <li>Tricks complete after 4th card with visual pause</li>
+ * </ul>
+ * 
  * @author Dale &amp; Primus
- * @version 2.0
+ * @version 3.0
  */
 @Controller
 @RequestMapping("/highlowjack")
@@ -28,6 +36,9 @@ public class HighLowJackController {
     
     /**
      * Show the game page.
+     * 
+     * <p>If it's an AI player's turn, plays ONE card and returns.
+     * Browser will auto-refresh to show next turn.</p>
      * 
      * @param model the model
      * @param session the HTTP session
@@ -43,20 +54,43 @@ public class HighLowJackController {
             session.setAttribute("hlj_game", game);
         }
         
-        // Let AI players play if it's their turn
-        processAITurns(game);
+        // Check if we need to clear completed trick
+        Boolean trickJustCompleted = (Boolean) session.getAttribute("hlj_trickCompleted");
+        if (Boolean.TRUE.equals(trickJustCompleted)) {
+            // Give user time to see the completed trick before clearing
+            session.removeAttribute("hlj_trickCompleted");
+        }
         
-        // Save updated game state
-        session.setAttribute("hlj_game", game);
+        // If it's AI's turn and game is in progress, play ONE card
+        if (game.getState() == Game.GameState.IN_PROGRESS &&
+            !game.getCurrentPlayer().equals(HUMAN_PLAYER)) {
+            
+            playAITurn(game);
+            
+            // Check if trick just completed
+            if (game.getCurrentTrick() == null) {
+                session.setAttribute("hlj_trickCompleted", true);
+            }
+            
+            // Check if round is complete
+            if (game.getState() == Game.GameState.ROUND_COMPLETE) {
+                // TODO: Score the hand and deal new hand
+                // For now, just start a new game
+                game = createNewGame();
+            }
+            
+            session.setAttribute("hlj_game", game);
+        }
         
         model.addAttribute("game", game);
         model.addAttribute("humanPlayer", HUMAN_PLAYER);
+        model.addAttribute("isAITurn", !game.getCurrentPlayer().equals(HUMAN_PLAYER));
         
         return "highlowjack/game";
     }
     
     /**
-     * Play a card.
+     * Play a card for the human player.
      * 
      * @param cardIndex the index of the card to play
      * @param session the HTTP session
@@ -66,28 +100,19 @@ public class HighLowJackController {
     public String playCard(@RequestParam int cardIndex, HttpSession session) {
         Game game = (Game) session.getAttribute("hlj_game");
         
-        if (game != null && game.getCurrentPlayer().equals(HUMAN_PLAYER)) {
+        if (game != null && 
+            game.getCurrentPlayer().equals(HUMAN_PLAYER) &&
+            game.getState() == Game.GameState.IN_PROGRESS) {
+            
             Hand hand = game.getHand(HUMAN_PLAYER);
             
             if (cardIndex >= 0 && cardIndex < hand.getCards().size()) {
                 Card card = hand.getCards().get(cardIndex);
-                
-                // Play the card - Game.java handles everything!
-                // - Validates the play
-                // - Adds to current trick
-                // - Completes trick if 4th card
-                // - Determines winner
-                // - Advances to next player
                 game.playCard(card);
                 
-                // Let AI players play their turns
-                processAITurns(game);
-                
-                // Check if hand is complete
-                if (game.getState() == Game.GameState.ROUND_COMPLETE) {
-                    // TODO: Score the hand and deal new hand
-                    // For now, just start a new game
-                    game = createNewGame();
+                // Check if trick just completed
+                if (game.getCurrentTrick() == null) {
+                    session.setAttribute("hlj_trickCompleted", true);
                 }
                 
                 session.setAttribute("hlj_game", game);
@@ -106,11 +131,12 @@ public class HighLowJackController {
     @PostMapping("/new")
     public String newGame(HttpSession session) {
         session.removeAttribute("hlj_game");
+        session.removeAttribute("hlj_trickCompleted");
         return "redirect:/highlowjack";
     }
     
     /**
-     * Creates a new game.
+     * Creates a new game with 4 players.
      * 
      * @return new game instance
      */
@@ -121,29 +147,15 @@ public class HighLowJackController {
     }
     
     /**
-     * Processes AI turns until it's the human player's turn.
+     * Plays ONE turn for the current AI player.
      * 
-     * <p>Game.java automatically:
+     * <p>Game.java automatically handles:
      * <ul>
-     *   <li>Advances to next player after each card</li>
-     *   <li>Completes tricks when 4 cards played</li>
-     *   <li>Sets trick winner as next player</li>
+     *   <li>Advancing to next player</li>
+     *   <li>Completing trick if 4th card</li>
+     *   <li>Setting winner as next player</li>
      * </ul>
      * </p>
-     * 
-     * @param game the game
-     */
-    private void processAITurns(Game game) {
-        // Keep playing AI turns until it's human's turn or round is complete
-        while (!game.getCurrentPlayer().equals(HUMAN_PLAYER) && 
-               game.getState() == Game.GameState.IN_PROGRESS) {
-            
-            playAITurn(game);
-        }
-    }
-    
-    /**
-     * Plays a turn for the current AI player.
      * 
      * @param game the game
      */
@@ -154,7 +166,7 @@ public class HighLowJackController {
         // Use SimpleAI to choose a card
         Card card = SimpleAI.chooseCard(game, currentPlayer, hand);
         
-        // Play it - Game.java handles all the logic!
+        // Play the card - Game.java handles all the logic
         game.playCard(card);
     }
 }

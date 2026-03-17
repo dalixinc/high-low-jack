@@ -1,9 +1,11 @@
 package com.dalegames.highlowjack;
 
-import com.dalegames.highlowjack.engine.GameEngine;
-import com.dalegames.highlowjack.model.*;
-
 import java.util.List;
+
+import com.dalegames.highlowjack.engine.GameEngine;
+import com.dalegames.highlowjack.model.Card;
+import com.dalegames.highlowjack.model.Game;
+import com.dalegames.highlowjack.model.Hand;
 
 /**
  * Simple AI for playing High Low Jack.
@@ -18,7 +20,7 @@ import java.util.List;
  * </p>
  * 
  * @author Dale &amp; Primus
- * @version 2.0
+ * @version 2.1
  */
 public class SimpleAI {
     
@@ -118,12 +120,11 @@ public class SimpleAI {
     /**
      * Chooses a card to play when following (not leading).
      * 
-     * <p>Simple strategy for now - just play first valid card.
-     * Could be improved later with:
+     * <p>Strategy:
      * <ul>
-     *   <li>Try to win if we have high cards</li>
-     *   <li>Duck if we want to avoid winning</li>
-     *   <li>Trump strategically</li>
+     *   <li>If following suit: Try to win with high cards, duck with low cards</li>
+     *   <li>If can't follow (discarding): Throw worthless cards first, save valuable cards</li>
+     *   <li>Trump strategically to win important tricks</li>
      * </ul>
      * </p>
      * 
@@ -132,9 +133,109 @@ public class SimpleAI {
      * @return the chosen card
      */
     private static Card chooseFollowCard(List<Card> validCards, Game game) {
+        Card.Suit leadSuit = game.getCurrentTrick().getLeadSuit();
+        Card.Suit trump = game.getTrumpSuit();
+        
+        // Check if we can follow suit
+        boolean canFollowSuit = validCards.stream()
+            .anyMatch(card -> card.getSuit() == leadSuit);
+        
+        if (!canFollowSuit) {
+            // DISCARDING - we can't follow suit, so we're guaranteed to lose
+            // Throw away worthless cards first, save valuable cards for later!
+            return chooseBestDiscard(validCards, trump);
+        }
+        
+        // We CAN follow suit - try to play smart
         // For now: simple - just play first valid card
-        // This can be made MUCH smarter later!
-        // (Try to win with high cards, duck with low cards, etc.)
+        // TODO: Could be smarter - try to win with high cards, duck with low cards
+        return validCards.get(0);
+    }
+    
+    /**
+     * Chooses best card to discard when we can't follow suit.
+     * 
+     * <p>Discard priority (best to worst):
+     * <ol>
+     *   <li>Low non-point cards (2-9 of non-trump)</li>
+     *   <li>Queen (2 points, weak for leading)</li>
+     *   <li>10 (10 points, but less useful than court cards for leading)</li>
+     *   <li>King (3 points, GOOD for leading - try to save!)</li>
+     *   <li>Ace (4 points, GREAT for leading - definitely save!)</li>
+     *   <li>Jack of trump (NEVER discard if possible!)</li>
+     * </ol>
+     * </p>
+     * 
+     * @param validCards cards we can play
+     * @param trump the trump suit
+     * @return the best card to discard
+     */
+    private static Card chooseBestDiscard(List<Card> validCards, Card.Suit trump) {
+        
+        // PRIORITY 1: Low non-point cards (2-9) - completely worthless!
+        Card lowCard = validCards.stream()
+            .filter(card -> card.getSuit() != trump)  // Not trump
+            .filter(card -> {
+                Card.Rank rank = card.getRank();
+                return rank != Card.Rank.TEN && 
+                       rank != Card.Rank.JACK && 
+                       rank != Card.Rank.QUEEN && 
+                       rank != Card.Rank.KING && 
+                       rank != Card.Rank.ACE;
+            })
+            .findFirst()
+            .orElse(null);
+        
+        if (lowCard != null) {
+            return lowCard;  // Throw away garbage!
+        }
+        
+        // PRIORITY 2: Queen (only 2 points, weak lead)
+        Card queen = validCards.stream()
+            .filter(card -> card.getRank() == Card.Rank.QUEEN)
+            .filter(card -> card.getSuit() != trump)
+            .findFirst()
+            .orElse(null);
+        
+        if (queen != null) {
+            return queen;
+        }
+        
+        // PRIORITY 3: 10 (10 points hurts, but less useful for leading than King/Ace)
+        Card ten = validCards.stream()
+            .filter(card -> card.getRank() == Card.Rank.TEN)
+            .filter(card -> card.getSuit() != trump)
+            .findFirst()
+            .orElse(null);
+        
+        if (ten != null) {
+            return ten;
+        }
+        
+        // PRIORITY 4: King (3 points, good lead - try to save!)
+        Card king = validCards.stream()
+            .filter(card -> card.getRank() == Card.Rank.KING)
+            .filter(card -> card.getSuit() != trump)
+            .findFirst()
+            .orElse(null);
+        
+        if (king != null) {
+            return king;
+        }
+        
+        // PRIORITY 5: Ace (4 points, GREAT lead - really want to save!)
+        Card ace = validCards.stream()
+            .filter(card -> card.getRank() == Card.Rank.ACE)
+            .filter(card -> card.getSuit() != trump)
+            .findFirst()
+            .orElse(null);
+        
+        if (ace != null) {
+            return ace;
+        }
+        
+        // LAST RESORT: Must throw trump or Jack of trump (ouch!)
+        // Just play first available - we're in trouble!
         return validCards.get(0);
     }
 }

@@ -103,6 +103,13 @@
             opacity: 0.8;
         }
         
+        .played-card img {
+            height: 120px;
+            width: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+        
         .your-hand {
             text-align: center;
         }
@@ -119,61 +126,38 @@
             flex-wrap: wrap;
         }
         
-        .card {
-            width: 100px;
-            height: 140px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        .hand-cards button {
+            background: none;
+            border: none;
+            padding: 0;
             cursor: pointer;
             transition: all 0.3s ease;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            padding: 8px;
         }
         
-        .card:hover {
+        .hand-cards button img {
+            height: 140px;
+            width: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .hand-cards button:hover img {
             transform: translateY(-15px) scale(1.05);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
         }
         
-        .card.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        .hand-cards button:active img {
+            transform: translateY(-10px) scale(1.02);
         }
         
-        .card.disabled:hover {
-            transform: none;
-        }
-        
-        .card-rank {
-            font-size: 1.5rem;
-            font-weight: bold;
-            line-height: 1;
-        }
-        
-        .card-suit {
-            font-size: 2.5rem;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-        
-        .card-rank-bottom {
-            font-size: 1.5rem;
-            font-weight: bold;
-            align-self: flex-end;
-            transform: rotate(180deg);
-        }
-        
-        .red {
-            color: #dc143c;
-        }
-        
-        .black {
-            color: #000;
+        .message {
+            text-align: center;
+            font-size: 1.2rem;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255, 215, 0, 0.2);
+            border-radius: 10px;
         }
         
         .buttons {
@@ -198,13 +182,20 @@
             box-shadow: 0 6px 20px rgba(0,0,0,0.3);
         }
         
-        .message {
+        footer {
             text-align: center;
-            font-size: 1.2rem;
-            margin: 20px 0;
-            padding: 15px;
-            background: rgba(255, 215, 0, 0.2);
-            border-radius: 10px;
+            margin-top: 30px;
+            opacity: 0.7;
+            font-size: 0.9rem;
+        }
+        
+        footer a {
+            color: #ffd700;
+            text-decoration: none;
+        }
+        
+        footer a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -236,7 +227,7 @@
             <!-- Trump Display -->
             <div class="trump-display" th:if="${game.trumpSuit != null}">
                 <strong>Trump Suit:</strong> 
-                <span th:text="${game.trumpSuit.symbol}" style="font-size: 2rem;">♠</span>
+                <span th:text="${game.trumpSuit.getSymbol()}" style="font-size: 2rem;">♠</span>
             </div>
             
             <!-- Current Trick Area -->
@@ -244,11 +235,10 @@
                 <div th:if="${game.currentTrick != null and game.currentTrick.size() > 0}">
                     <div th:each="play : ${game.currentTrick.plays}" class="played-card">
                         <div class="played-card-label" th:text="${play.playerName}">Player</div>
-                        <div class="card" th:classappend="${play.card.suit.getColor() == 'RED'} ? 'red' : 'black'">
-                            <div class="card-rank" th:text="${play.card.rank}">A</div>
-                            <div class="card-suit" th:text="${play.card.suit}">♠</div>
-                            <div class="card-rank-bottom" th:text="${play.card.rank}">A</div>
-                        </div>
+                        <!-- img th:src="@{|/images/cards/${play.card.suit.name().toLowerCase()}_${play.card.rank == T(com.dalegames.highlowjack.model.Card$Rank).ACE ? '1' : (play.card.rank == T(com.dalegames.highlowjack.model.Card$Rank).TWO ? '2' : (play.card.rank == T(com.dalegames.highlowjack.model.Card$Rank).THREE ? '3' : (play.card.rank == T(com.dalegames.highlowjack.model.Card$Rank).FOUR ? '4' : (play.card.rank == T(com.dalegames.highlowjack.model.Card$Rank).FIVE ? '5' : (play.card.rank == T(com.dalegames.highlowjack.model.Card$Rank).SIX ? '6' : (play.card.rank == T(com.dalegames.highlowjack.model.Card$Rank).SEVEN ? '7' : (play.card.rank == T(com.dalegames.highlowjack.model.Card$Rank).EIGHT ? '8' : (play.card.rank == T(com.dalegames.highlowjack.model.Card$Rank).NINE ? '9' : (play.card.rank == T(com.dalegames.highlowjack.model.Card$Rank).TEN ? '10' : (play.card.rank == T(com.dalegames.highlowjack.model.Card$Rank).JACK ? 'jack' : (play.card.rank == T(com.dalegames.highlowjack.model.Card$Rank).QUEEN ? 'queen' : 'king')))))))))))}.png|}"
+                             alt="Card"> -->
+                        <img th:src="@{|/images/cards/${#strings.substring(play.card.suit.name().toLowerCase(), 0, #strings.length(play.card.suit.name()) - 1)}_${#strings.toLowerCase(play.card.rank.name()) == 'ace' ? '1' : (#strings.toLowerCase(play.card.rank.name()) == 'two' ? '2' : (#strings.toLowerCase(play.card.rank.name()) == 'three' ? '3' : (#strings.toLowerCase(play.card.rank.name()) == 'four' ? '4' : (#strings.toLowerCase(play.card.rank.name()) == 'five' ? '5' : (#strings.toLowerCase(play.card.rank.name()) == 'six' ? '6' : (#strings.toLowerCase(play.card.rank.name()) == 'seven' ? '7' : (#strings.toLowerCase(play.card.rank.name()) == 'eight' ? '8' : (#strings.toLowerCase(play.card.rank.name()) == 'nine' ? '9' : (#strings.toLowerCase(play.card.rank.name()) == 'ten' ? '10' : (#strings.toLowerCase(play.card.rank.name()) == 'jack' ? 'jack' : (#strings.toLowerCase(play.card.rank.name()) == 'queen' ? 'queen' : 'king')))))))))))}.png|}"
+                            alt="Card">
                     </div>
                 </div>
                 <div th:if="${game.currentTrick == null or game.currentTrick.size() == 0}">
@@ -270,14 +260,12 @@
                 <div class="hand-cards">
                     <form th:action="@{/highlowjack/play}" method="post" style="display: contents;">
                         <div th:each="card, iterStat : ${game.getHand(humanPlayer).cards}">
-                            <button type="submit" name="cardIndex" th:value="${iterStat.index}"
-                                    class="card" 
-                                    <!-- th:classappend="${card.suit.color == 'RED'} ? 'red' : 'black'" -->
-                                    th:classappend="${card.suit.toString() == 'HEARTS' or card.suit.toString() == 'DIAMONDS'} ? 'red' : 'black'"
-                                    style="border: none;">
-                                <div class="card-rank" th:text="${card.rank}">A</div>
-                                <div class="card-suit" th:text="${card.suit}">♠</div>
-                                <div class="card-rank-bottom" th:text="${card.rank}">A</div>
+                            <button type="submit" name="cardIndex" th:value="${iterStat.index}">
+                                <!-- img th:src="@{|/images/cards/${card.suit.name().toLowerCase()}_${card.rank == T(com.dalegames.highlowjack.model.Card$Rank).ACE ? '1' : (card.rank == T(com.dalegames.highlowjack.model.Card$Rank).TWO ? '2' : (card.rank == T(com.dalegames.highlowjack.model.Card$Rank).THREE ? '3' : (card.rank == T(com.dalegames.highlowjack.model.Card$Rank).FOUR ? '4' : (card.rank == T(com.dalegames.highlowjack.model.Card$Rank).FIVE ? '5' : (card.rank == T(com.dalegames.highlowjack.model.Card$Rank).SIX ? '6' : (card.rank == T(com.dalegames.highlowjack.model.Card$Rank).SEVEN ? '7' : (card.rank == T(com.dalegames.highlowjack.model.Card$Rank).EIGHT ? '8' : (card.rank == T(com.dalegames.highlowjack.model.Card$Rank).NINE ? '9' : (card.rank == T(com.dalegames.highlowjack.model.Card$Rank).TEN ? '10' : (card.rank == T(com.dalegames.highlowjack.model.Card$Rank).JACK ? 'jack' : (card.rank == T(com.dalegames.highlowjack.model.Card$Rank).QUEEN ? 'queen' : 'king')))))))))))}.png|}" -->
+                                <!-- img th:src="${cardImageHelper.getCardImage(card)}" alt="Card">
+                                     alt="Card"> -->
+                                <img th:src="@{|/images/cards/${#strings.substring(card.suit.name().toLowerCase(), 0, #strings.length(card.suit.name()) - 1)}_${#strings.toLowerCase(card.rank.name()) == 'ace' ? '1' : (#strings.toLowerCase(card.rank.name()) == 'two' ? '2' : (#strings.toLowerCase(card.rank.name()) == 'three' ? '3' : (#strings.toLowerCase(card.rank.name()) == 'four' ? '4' : (#strings.toLowerCase(card.rank.name()) == 'five' ? '5' : (#strings.toLowerCase(card.rank.name()) == 'six' ? '6' : (#strings.toLowerCase(card.rank.name()) == 'seven' ? '7' : (#strings.toLowerCase(card.rank.name()) == 'eight' ? '8' : (#strings.toLowerCase(card.rank.name()) == 'nine' ? '9' : (#strings.toLowerCase(card.rank.name()) == 'ten' ? '10' : (#strings.toLowerCase(card.rank.name()) == 'jack' ? 'jack' : (#strings.toLowerCase(card.rank.name()) == 'queen' ? 'queen' : 'king')))))))))))}.png|}"
+                                     alt="Card">
                             </button>
                         </div>
                     </form>
@@ -291,6 +279,11 @@
                 </form>
             </div>
         </div>
+        
+        <footer>
+            Card graphics from <a href="https://github.com/htdebeer/SVG-cards" target="_blank">SVG-cards</a> 
+            by David Bellot (LGPL-2.1)
+        </footer>
     </div>
     
     <script>

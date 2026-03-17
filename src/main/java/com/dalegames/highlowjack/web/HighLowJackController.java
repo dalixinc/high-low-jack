@@ -1,9 +1,15 @@
 package com.dalegames.highlowjack.web;
 
-import com.dalegames.highlowjack.model.*;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import com.dalegames.highlowjack.model.Card;
+import com.dalegames.highlowjack.model.Game;
+import com.dalegames.highlowjack.model.Hand;
 
 import jakarta.servlet.http.HttpSession;
 
@@ -39,6 +45,7 @@ public class HighLowJackController {
         
         model.addAttribute("game", game);
         model.addAttribute("humanPlayer", "Dale"); // For now, Dale is human
+        model.addAttribute("cardImageHelper", new CardImageHelper());  // ← ADD THIS LINE
         
         return "highlowjack/game";
     }

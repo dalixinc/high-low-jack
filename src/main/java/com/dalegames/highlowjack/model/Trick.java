@@ -3,6 +3,8 @@ package com.dalegames.highlowjack.model;
 import java.util.ArrayList;
 import java.util.List;
 
+import java.io.Serializable;
+
 /**
  * Represents one trick (round) in the game where each of 4 players plays one card.
  * 
@@ -12,7 +14,7 @@ import java.util.List;
  * @author Dale &amp; Primus
  * @version 1.0
  */
-public class Trick {
+public class Trick implements Serializable {
     private final List<CardPlay> plays;
     private final Card.Suit trumpSuit;
     private Card.Suit leadSuit;

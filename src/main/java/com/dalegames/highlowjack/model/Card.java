@@ -1,5 +1,7 @@
 package com.dalegames.highlowjack.model;
 
+import java.io.Serializable;
+
 /**
  * Represents a standard playing card with a suit and rank.
  * 
@@ -9,7 +11,7 @@ package com.dalegames.highlowjack.model;
  * @author Dale &amp; Primus
  * @version 1.0
  */
-public class Card {
+public class Card implements Serializable {
     private final Suit suit;
     private final Rank rank;
 
@@ -87,28 +89,26 @@ public class Card {
      * Each suit has a Unicode symbol for display purposes.
      */
     public enum Suit {
-        /** Hearts suit (♥) */
-        HEARTS("♥"),
-        /** Diamonds suit (♦) */
-        DIAMONDS("♦"),
-        /** Clubs suit (♣) */
-        CLUBS("♣"),
-        /** Spades suit (♠) */
-        SPADES("♠");
-        
+        HEARTS("♥", "RED"),
+        DIAMONDS("♦", "RED"),
+        CLUBS("♣", "BLACK"),
+        SPADES("♠", "BLACK");
+
         private final String symbol;
-        
-        Suit(String symbol) {
+        private final String color;
+
+        // Constructor
+        Suit(String symbol, String color) {
             this.symbol = symbol;
+            this.color = color;
         }
-        
-        /**
-         * Returns the Unicode symbol for this suit.
-         * 
-         * @return the suit symbol (♥, ♦, ♣, or ♠)
-         */
+
         public String getSymbol() {
             return symbol;
+        }
+
+        public String getColor() {  // ← THIS METHOD!
+            return color;
         }
     }
 

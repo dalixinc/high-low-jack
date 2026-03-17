@@ -3,29 +3,32 @@ package com.dalegames.highlowjack;
 import com.dalegames.highlowjack.engine.GameEngine;
 import com.dalegames.highlowjack.model.*;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
+import java.util.*;
 
 /**
  * Command-line interface for High Low Jack card game.
  * 
- * <p>Allows four players (Dale, Kreep, Carryn, Primus) to play an interactive
- * game of High Low Jack from the terminal with exciting fanfares!</p>
+ * <p>Allows configuration of human vs AI players and displays detailed
+ * game statistics with exciting fanfares!</p>
  * 
  * @author Dale &amp; Primus
- * @version 2.0
+ * @version 3.0
  */
 public class HighLowJackCLI {
     
-    private static final String[] PLAYERS = {"Dale", "Kreep", "Carryn", "Primus"};
+    private static final String[] PLAYER_NAMES = {"Dale", "Kreep", "Carryn", "Primus"};
     private static final Scanner scanner = new Scanner(System.in);
-    private static final int WINNING_SCORE = 11;  // First to 11!
+    private static final int WINNING_SCORE = 11;
+    
+    // Player configuration
+    private static final Map<String, Boolean> isHuman = new HashMap<>();
     
     // Track current high/low in trump suit during play
     private static Card currentHigh = null;
     private static Card currentLow = null;
+    
+    // Track valuable cards captured by each player
+    private static final Map<String, List<Card>> capturedValuableCards = new HashMap<>();
     
     /**
      * Main entry point for the CLI game.
@@ -34,8 +37,9 @@ public class HighLowJackCLI {
      */
     public static void main(String[] args) {
         printWelcome();
+        configurePlayers();  // FIXED TYPO!
         
-        Game game = new Game(PLAYERS[0], PLAYERS[1], PLAYERS[2], PLAYERS[3]);
+        Game game = new Game(PLAYER_NAMES[0], PLAYER_NAMES[1], PLAYER_NAMES[2], PLAYER_NAMES[3]);
         
         boolean playAgain = true;
         
@@ -60,12 +64,34 @@ public class HighLowJackCLI {
      */
     private static void printWelcome() {
         System.out.println("\n╔══════════════════════════════════════╗");
-        System.out.println("║       HIGH LOW JACK CARD GAME       ║");
-        System.out.println("╔══════════════════════════════════════╗");
+        System.out.println("║       HIGH LOW JACK CARD GAME        ║");
+        System.out.println("╚══════════════════════════════════════╝");
         System.out.println();
-        System.out.println("Players: " + String.join(", ", PLAYERS));
         System.out.println("First to " + WINNING_SCORE + " points wins!");
         System.out.println();
+    }
+    
+    /**
+     * Configure whether each player is human or AI.
+     */
+    private static void configurePlayers() {
+        System.out.println("=".repeat(50));
+        System.out.println("PLAYER CONFIGURATION");
+        System.out.println("=".repeat(50));
+        System.out.println();
+        
+        for (String playerName : PLAYER_NAMES) {
+            System.out.print(playerName + " - Human or Computer? (h/c): ");
+            String response = scanner.nextLine().trim().toLowerCase();
+            isHuman.put(playerName, response.startsWith("h"));
+            
+            String type = isHuman.get(playerName) ? "👤 Human" : "🤖 Computer";
+            System.out.println("  → " + playerName + ": " + type);
+        }
+        
+        System.out.println();
+        System.out.println("Players configured! Let's play!");
+        pause();
     }
     
     /**
@@ -78,9 +104,12 @@ public class HighLowJackCLI {
         System.out.println("NEW ROUND");
         System.out.println("=".repeat(50));
         
-        // Reset current high/low tracking
+        // Reset tracking
         currentHigh = null;
         currentLow = null;
+        for (String player : PLAYER_NAMES) {
+            capturedValuableCards.put(player, new ArrayList<>());
+        }
         
         // Deal cards
         game.dealCards();
@@ -120,7 +149,8 @@ public class HighLowJackCLI {
             String currentPlayer = game.getCurrentPlayer();
             Hand hand = game.getHand(currentPlayer);
             
-            System.out.println("\n" + currentPlayer + "'s turn");
+            String playerType = isHuman.get(currentPlayer) ? "👤" : "🤖";
+            System.out.println("\n" + playerType + " " + currentPlayer + "'s turn");
             
             // Show current trick state
             if (game.getCurrentTrick() != null && game.getCurrentTrick().size() > 0) {
@@ -148,13 +178,51 @@ public class HighLowJackCLI {
             pause();
         }
         
-        // Show trick winner
+        // Show trick winner and track captured cards
         List<Trick> tricks = game.getTricks();
         Trick completedTrick = tricks.get(tricks.size() - 1);
         String winner = completedTrick.getWinner();
         
+        // Track valuable cards captured
+        for (Trick.CardPlay play : completedTrick.getPlays()) {
+            if (isValuableCard(play.card)) {
+                capturedValuableCards.get(winner).add(play.card);
+            }
+        }
+        
         System.out.println("\n" + winner + " wins the trick!");
         pause();
+    }
+    
+    /**
+     * Checks if a card is valuable for game points.
+     * 
+     * @param card the card to check
+     * @return true if card has point value
+     */
+    private static boolean isValuableCard(Card card) {
+        return card.getRank() == Card.Rank.ACE ||
+               card.getRank() == Card.Rank.KING ||
+               card.getRank() == Card.Rank.QUEEN ||
+               card.getRank() == Card.Rank.JACK ||
+               card.getRank() == Card.Rank.TEN;
+    }
+    
+    /**
+     * Gets the point value of a card.
+     * 
+     * @param card the card
+     * @return point value
+     */
+    private static int getCardValue(Card card) {
+        return switch (card.getRank()) {
+            case ACE -> 4;
+            case KING -> 3;
+            case QUEEN -> 2;
+            case JACK -> 1;
+            case TEN -> 10;
+            default -> 0;
+        };
     }
     
     /**
@@ -168,7 +236,7 @@ public class HighLowJackCLI {
         Card.Suit trump = game.getTrumpSuit();
         
         if (trump == null || card.getSuit() != trump) {
-            return; // Only trump cards matter
+            return;
         }
         
         // Check for JACK capture!
@@ -214,7 +282,7 @@ public class HighLowJackCLI {
     }
     
     /**
-     * Gets card choice from player (human or simulated).
+     * Gets card choice from player (human or AI).
      * 
      * @param playerName the player's name
      * @param hand the player's hand
@@ -222,39 +290,31 @@ public class HighLowJackCLI {
      * @return the chosen card
      */
     private static Card getCardChoice(String playerName, Hand hand, Game game) {
-        List<Card> cards = hand.getCards();
-        
-        // Dale gets interactive choice
-        if (playerName.equals("Dale")) {
-            return getHumanCardChoice(hand, game);
+        if (isHuman.get(playerName)) {
+            return getHumanCardChoice(hand, game, playerName);
+        } else {
+            return SimpleAI.chooseCard(game, playerName, hand);
         }
-        
-        // Other players: simple AI (play first valid card)
-        for (Card card : cards) {
-            if (GameEngine.isValidPlay(game, playerName, card)) {
-                return card;
-            }
-        }
-        
-        // Fallback (shouldn't happen)
-        return cards.get(0);
     }
     
     /**
-     * Gets interactive card choice from human player (Dale).
+     * Gets interactive card choice from human player.
      * 
-     * @param hand Dale's hand
+     * @param hand player's hand
      * @param game the game instance
+     * @param playerName the player's name
      * @return the chosen card
      */
-    private static Card getHumanCardChoice(Hand hand, Game game) {
+    private static Card getHumanCardChoice(Hand hand, Game game, String playerName) {
         List<Card> cards = hand.getCards();
         
         System.out.println("\nYour hand:");
         for (int i = 0; i < cards.size(); i++) {
             Card card = cards.get(i);
-            boolean valid = GameEngine.isValidPlay(game, "Dale", card);
-            System.out.printf("  %d. %s%s\n", i + 1, card, valid ? "" : " (invalid)");
+            boolean valid = GameEngine.isValidPlay(game, playerName, card);
+            int value = getCardValue(card);
+            String valueStr = value > 0 ? " [" + value + "pts]" : "";
+            System.out.printf("  %d. %s%s%s\n", i + 1, card, valueStr, valid ? "" : " (invalid)");
         }
         
         while (true) {
@@ -270,7 +330,7 @@ public class HighLowJackCLI {
                 
                 Card chosen = cards.get(choice - 1);
                 
-                if (!GameEngine.isValidPlay(game, "Dale", chosen)) {
+                if (!GameEngine.isValidPlay(game, playerName, chosen)) {
                     System.out.println("Invalid play! You must follow suit if possible.");
                     continue;
                 }
@@ -282,50 +342,30 @@ public class HighLowJackCLI {
             }
         }
     }
-
+    
     /**
      * Calculates game points for each player based on captured cards.
-     *
+     * 
      * @param game the game instance
      * @return map of player names to their game points
      */
     private static Map<String, Integer> calculateGamePoints(Game game) {
         Map<String, Integer> gamePoints = new HashMap<>();
-        for (String player : PLAYERS) {
+        for (String player : PLAYER_NAMES) {
             gamePoints.put(player, 0);
         }
-
+        
         for (Trick trick : game.getTricks()) {
             String winner = trick.getWinner();
             int points = 0;
-
+            
             for (Trick.CardPlay play : trick.getPlays()) {
-                Card card = play.card;
-                // Count ALL cards, not just trump!
-                switch (card.getRank()) {
-                    case ACE:
-                        points += 4;
-                        break;
-                    case KING:
-                        points += 3;
-                        break;
-                    case QUEEN:
-                        points += 2;
-                        break;
-                    case JACK:
-                        points += 1;
-                        break;
-                    case TEN:
-                        points += 10;
-                        break;
-                    default:
-                        break;
-                }
+                points += getCardValue(play.card);
             }
-
+            
             gamePoints.put(winner, gamePoints.get(winner) + points);
         }
-
+        
         return gamePoints;
     }
     
@@ -339,11 +379,28 @@ public class HighLowJackCLI {
         System.out.println("SCORING ROUND");
         System.out.println("=".repeat(50));
         
-        // Show Game points breakdown first
+        // Show Game points breakdown with cards
         Map<String, Integer> gamePoints = calculateGamePoints(game);
         System.out.println("\n📊 GAME POINTS (card values captured):");
-        for (String player : PLAYERS) {
-            System.out.printf("  %-10s: %2d points\n", player, gamePoints.get(player));
+        for (String player : PLAYER_NAMES) {
+            int points = gamePoints.get(player);
+            List<Card> valuableCards = capturedValuableCards.get(player);
+            
+            // Build card breakdown string
+            StringBuilder cardsStr = new StringBuilder();
+            if (!valuableCards.isEmpty()) {
+                cardsStr.append("[");
+                for (int i = 0; i < valuableCards.size(); i++) {
+                    Card card = valuableCards.get(i);
+                    if (i > 0) cardsStr.append(" ");
+                    cardsStr.append(card).append("(").append(getCardValue(card)).append(")");
+                }
+                cardsStr.append("]");
+            } else {
+                cardsStr.append("[]");
+            }
+            
+            System.out.printf("  %-10s: %2d points %s\n", player, points, cardsStr.toString());
         }
         System.out.println();
         
@@ -385,7 +442,7 @@ public class HighLowJackCLI {
         System.out.println("CURRENT SCORES (First to " + WINNING_SCORE + " wins!)");
         System.out.println("=".repeat(50));
         
-        for (String player : PLAYERS) {
+        for (String player : PLAYER_NAMES) {
             int score = game.getScore(player);
             String bar = "█".repeat(score) + "░".repeat(WINNING_SCORE - score);
             System.out.printf("  %-10s: %2d [%s]\n", player, score, bar);

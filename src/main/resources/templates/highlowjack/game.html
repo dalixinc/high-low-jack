@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High Low Jack - Card Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+        
+        .game-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .game-board {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        
+        .scores {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .player-score {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 120px;
+        }
+        
+        .player-score.current {
+            background: rgba(255, 215, 0, 0.3);
+            border: 2px solid gold;
+        }
+        
+        .player-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+        
+        .score {
+            font-size: 1.5rem;
+            color: #ffd700;
+        }
+        
+        .trump-display {
+            text-align: center;
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
+        
+        .trick-area {
+            min-height: 200px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .played-card {
+            text-align: center;
+        }
+        
+        .played-card-label {
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            opacity: 0.8;
+        }
+        
+        .your-hand {
+            text-align: center;
+        }
+        
+        .your-hand h3 {
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        
+        .hand-cards {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .card {
+            width: 100px;
+            height: 140px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 8px;
+        }
+        
+        .card:hover {
+            transform: translateY(-15px) scale(1.05);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+        }
+        
+        .card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .card.disabled:hover {
+            transform: none;
+        }
+        
+        .card-rank {
+            font-size: 1.5rem;
+            font-weight: bold;
+            line-height: 1;
+        }
+        
+        .card-suit {
+            font-size: 2.5rem;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .card-rank-bottom {
+            font-size: 1.5rem;
+            font-weight: bold;
+            align-self: flex-end;
+            transform: rotate(180deg);
+        }
+        
+        .red {
+            color: #dc143c;
+        }
+        
+        .black {
+            color: #000;
+        }
+        
+        .buttons {
+            text-align: center;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .message {
+            text-align: center;
+            font-size: 1.2rem;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255, 215, 0, 0.2);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🃏 High Low Jack 🃏</h1>
+        
+        <div class="game-board">
+            <!-- Scores -->
+            <div class="scores">
+                <div class="player-score" th:classappend="${game.currentPlayer == 'Dale'} ? 'current'">
+                    <div class="player-name">👤 Dale</div>
+                    <div class="score" th:text="${game.getScore('Dale')}">0</div>
+                </div>
+                <div class="player-score" th:classappend="${game.currentPlayer == 'Kreep'} ? 'current'">
+                    <div class="player-name">🤖 Kreep</div>
+                    <div class="score" th:text="${game.getScore('Kreep')}">0</div>
+                </div>
+                <div class="player-score" th:classappend="${game.currentPlayer == 'Carryn'} ? 'current'">
+                    <div class="player-name">🤖 Carryn</div>
+                    <div class="score" th:text="${game.getScore('Carryn')}">0</div>
+                </div>
+                <div class="player-score" th:classappend="${game.currentPlayer == 'Primus'} ? 'current'">
+                    <div class="player-name">🤖 Primus</div>
+                    <div class="score" th:text="${game.getScore('Primus')}">0</div>
+                </div>
+            </div>
+            
+            <!-- Trump Display -->
+            <div class="trump-display" th:if="${game.trumpSuit != null}">
+                <strong>Trump Suit:</strong> 
+                <span th:text="${game.trumpSuit.symbol}" style="font-size: 2rem;">♠</span>
+            </div>
+            
+            <!-- Current Trick Area -->
+            <div class="trick-area">
+                <div th:if="${game.currentTrick != null and game.currentTrick.size() > 0}">
+                    <div th:each="play : ${game.currentTrick.plays}" class="played-card">
+                        <div class="played-card-label" th:text="${play.playerName}">Player</div>
+                        <div class="card" th:classappend="${play.card.suit.getColor() == 'RED'} ? 'red' : 'black'">
+                            <div class="card-rank" th:text="${play.card.rank}">A</div>
+                            <div class="card-suit" th:text="${play.card.suit}">♠</div>
+                            <div class="card-rank-bottom" th:text="${play.card.rank}">A</div>
+                        </div>
+                    </div>
+                </div>
+                <div th:if="${game.currentTrick == null or game.currentTrick.size() == 0}">
+                    <p style="opacity: 0.6; font-size: 1.2rem;">Waiting for cards...</p>
+                </div>
+            </div>
+            
+            <!-- Current Player Message -->
+            <div class="message" th:if="${game.currentPlayer == humanPlayer}">
+                <strong>Your turn!</strong> Choose a card to play
+            </div>
+            <div class="message" th:if="${game.currentPlayer != humanPlayer}">
+                <strong th:text="${game.currentPlayer}">Computer</strong> is thinking...
+            </div>
+            
+            <!-- Your Hand -->
+            <div class="your-hand">
+                <h3>Your Hand</h3>
+                <div class="hand-cards">
+                    <form th:action="@{/highlowjack/play}" method="post" style="display: contents;">
+                        <div th:each="card, iterStat : ${game.getHand(humanPlayer).cards}">
+                            <button type="submit" name="cardIndex" th:value="${iterStat.index}"
+                                    class="card" 
+                                    <!-- th:classappend="${card.suit.color == 'RED'} ? 'red' : 'black'" -->
+                                    th:classappend="${card.suit.toString() == 'HEARTS' or card.suit.toString() == 'DIAMONDS'} ? 'red' : 'black'"
+                                    style="border: none;">
+                                <div class="card-rank" th:text="${card.rank}">A</div>
+                                <div class="card-suit" th:text="${card.suit}">♠</div>
+                                <div class="card-rank-bottom" th:text="${card.rank}">A</div>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Buttons -->
+            <div class="buttons">
+                <form th:action="@{/highlowjack/new}" method="post" style="display: inline;">
+                    <button type="submit" class="btn">New Game</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-refresh for AI turns
+        const currentPlayer = /*[[${game.currentPlayer}]]*/ 'Dale';
+        const humanPlayer = /*[[${humanPlayer}]]*/ 'Dale';
+        
+        if (currentPlayer !== humanPlayer) {
+            // AI's turn - refresh after a delay
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

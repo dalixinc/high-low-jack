@@ -3,6 +3,8 @@ package com.dalegames.highlowjack.model;
 import java.util.ArrayList;
 import java.util.List;
 
+import java.io.Serializable;
+
 /**
  * Represents a player's hand of cards in the game.
  * 
@@ -12,7 +14,7 @@ import java.util.List;
  * @author Dale &amp; Primus
  * @version 1.0
  */
-public class Hand {
+public class Hand implements Serializable{
     private final List<Card> cards;
     private final String playerName;
 

@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import java.io.Serializable;
+
 /**
  * Represents a standard 52-card deck.
  * 
@@ -13,7 +15,7 @@ import java.util.List;
  * @author Dale &amp; Primus
  * @version 1.0
  */
-public class Deck {
+public class Deck implements Serializable{
     private final List<Card> cards;
 
     /**

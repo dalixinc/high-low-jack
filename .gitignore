@@ -1,2 +1,17 @@
-./target/
+# Maven
+target/
+
+# IntelliJ
+.idea/
+*.iml
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# Compiled Java
 *.class
+
+# Logs
+*.log

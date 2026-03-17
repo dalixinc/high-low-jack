@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import java.io.Serializable;
+
 /**
  * Represents the complete state of a High Low Jack game.
  * 
@@ -25,7 +27,7 @@ import java.util.Map;
  * @author Dale &amp; Primus
  * @version 1.0
  */
-public class Game {
+public class Game implements Serializable{
     private static final int NUM_PLAYERS = 4;
     private static final int CARDS_PER_PLAYER = 7;
     private static final int WINNING_SCORE = 7;

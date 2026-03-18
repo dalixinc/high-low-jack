@@ -1,11 +1,13 @@
 package com.dalegames.highlowjack.engine;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import com.dalegames.highlowjack.model.Card;
 import com.dalegames.highlowjack.model.Game;
+import com.dalegames.highlowjack.model.RoundResult;
 import com.dalegames.highlowjack.model.Trick;
 
 /**
@@ -89,7 +91,96 @@ public class GameEngine {
         
         return results;
     }
-    
+
+    /**
+     * Calculates complete round results including captured cards and detailed scoring.
+     * 
+     * <p>This method provides all information needed to display a beautiful scoring screen:
+     * <ul>
+     *   <li>All cards captured by each player</li>
+     *   <li>Game points (card values) per player</li>
+     *   <li>Winners of High/Low/Jack/Game round points</li>
+     *   <li>Updated game scores</li>
+     * </ul>
+     * </p>
+     * 
+     * @param game the game (must be in ROUND_COMPLETE state)
+     * @return complete round results for display
+     */
+    public static RoundResult calculateRoundResults(Game game) {
+        if (game == null) {
+            throw new IllegalArgumentException("Game cannot be null");
+        }
+        if (game.getState() != Game.GameState.ROUND_COMPLETE) {
+            throw new IllegalStateException("Round must be complete to calculate results");
+        }
+        
+        List<Trick> tricks = game.getTricks();
+        Card.Suit trump = game.getTrumpSuit();
+        
+        // Calculate captured cards per player
+        Map<String, List<Card>> capturedCards = calculateCapturedCards(tricks);
+        
+        // Calculate game points (card values) per player
+        Map<String, Integer> gamePointTotals = calculateGamePointTotals(capturedCards);
+        
+        // Calculate round point winners (High/Low/Jack/Game)
+        Map<String, String> roundPointWinners = calculateScores(game);
+        
+        // Get current scores (already updated by calculateScores)
+        Map<String, Integer> scores = new HashMap<>();
+        for (String player : game.getPlayerNames()) {
+            scores.put(player, game.getScore(player));
+        }
+        
+        return new RoundResult(capturedCards, gamePointTotals, roundPointWinners, scores, trump);
+    }
+
+    /**
+     * Calculates which cards were captured by each player.
+     * 
+     * @param tricks list of completed tricks
+     * @return map of player name to list of captured cards
+     */
+    public static Map<String, List<Card>> calculateCapturedCards(List<Trick> tricks) {
+        Map<String, List<Card>> capturedCards = new HashMap<>();
+        
+        for (Trick trick : tricks) {
+            String winner = trick.getWinner();
+            capturedCards.putIfAbsent(winner, new ArrayList<>());
+            
+            // Winner captures all cards in the trick
+            for (Trick.CardPlay play : trick.getPlays()) {
+                capturedCards.get(winner).add(play.card);
+            }
+        }
+        
+        return capturedCards;
+    }
+
+    /**
+     * Calculates game points (card values) per player from captured cards.
+     * 
+     * @param capturedCards map of player to their captured cards
+     * @return map of player name to total game points
+     */
+    public static Map<String, Integer> calculateGamePointTotals(Map<String, List<Card>> capturedCards) {
+        Map<String, Integer> gamePoints = new HashMap<>();
+        
+        for (Map.Entry<String, List<Card>> entry : capturedCards.entrySet()) {
+            String player = entry.getKey();
+            int points = 0;
+            
+            for (Card card : entry.getValue()) {
+                points += card.getRank().getPoints();
+            }
+            
+            gamePoints.put(player, points);
+        }
+        
+        return gamePoints;
+    }
+        
     /**
      * Finds the player who was dealt the highest trump card.
      * Searches all tricks for trump cards and returns the player who played the highest.

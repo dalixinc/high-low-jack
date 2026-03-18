@@ -1,5 +1,8 @@
 package com.dalegames.highlowjack.web;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,11 +15,10 @@ import com.dalegames.highlowjack.engine.GameEngine;
 import com.dalegames.highlowjack.model.Card;
 import com.dalegames.highlowjack.model.Game;
 import com.dalegames.highlowjack.model.Hand;
+import com.dalegames.highlowjack.model.RoundResult;
 import com.dalegames.highlowjack.model.Trick;
 
 import jakarta.servlet.http.HttpSession;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Web controller for High Low Jack card game.
@@ -78,13 +80,13 @@ public class HighLowJackController {
             }
             
             // Check if round is complete
+
             if (game.getState() == Game.GameState.ROUND_COMPLETE) {
-                // TODO: Score the hand and deal new hand
-                // For now, just start a new game
-                game = createNewGame();
-                completedTrick = null;
-            }
-            
+                // Redirect to scoring screen
+                session.setAttribute("hlj_game", game);
+                return "redirect:/highlowjack/scoring";
+            }   
+                   
             session.setAttribute("hlj_game", game);
         }
         
@@ -214,4 +216,58 @@ public class HighLowJackController {
         
         return validCards;
     }
+
+    /**
+     * Shows the scoring screen after a round completes.
+     * 
+     * @param model the model
+     * @param session the HTTP session
+     * @return the scoring view
+     */
+    @GetMapping("/scoring")
+    public String showScoring(Model model, HttpSession session) {
+        Game game = (Game) session.getAttribute("hlj_game");
+        
+        if (game == null) {
+            return "redirect:/highlowjack";
+        }
+        
+        // Calculate complete round results
+        RoundResult results = GameEngine.calculateRoundResults(game);
+        
+        model.addAttribute("results", results);
+        model.addAttribute("playerNames", game.getPlayerNames());
+        model.addAttribute("winningScore", 11);  // First to 11 wins
+        
+        return "highlowjack/scoring";
+    }
+
+    /**
+     * Continues to next round after scoring.
+     * 
+     * @param session the HTTP session
+     * @return redirect to game page
+     */
+    @PostMapping("/continue")
+    public String continueGame(HttpSession session) {
+        Game game = (Game) session.getAttribute("hlj_game");
+        
+        if (game != null) {
+            // Check if someone won the game
+            for (String player : game.getPlayerNames()) {
+                if (game.getScore(player) >= 11) {
+                    // TODO: Show game over screen
+                    session.removeAttribute("hlj_game");
+                    return "redirect:/highlowjack";
+                }
+            }
+            
+            // Deal new round
+            game.dealCards();
+            session.setAttribute("hlj_game", game);
+        }
+        
+        return "redirect:/highlowjack";
+    }
+
 }

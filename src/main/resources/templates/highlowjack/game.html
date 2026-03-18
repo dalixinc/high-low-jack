@@ -20,7 +20,7 @@
         }
         
         .game-container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
         
@@ -29,6 +29,16 @@
             font-size: 2.5rem;
             margin-bottom: 2rem;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .game-layout {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .main-game-area {
+            flex: 1;
+            min-width: 0;
         }
         
         .game-board {
@@ -174,7 +184,7 @@
             transform: translateY(-10px) scale(1.02);
         }
         
-                .hand-cards button.invalid-card {
+        .hand-cards button.invalid-card {
             cursor: not-allowed;
         }
         
@@ -234,6 +244,57 @@
             box-shadow: 0 6px 20px rgba(0,0,0,0.3);
         }
         
+        .scoreboard-sidebar {
+            width: 250px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            align-self: flex-start;
+            position: sticky;
+            top: 20px;
+        }
+        
+        .scoreboard-title {
+            text-align: center;
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #ffd700;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .scoreboard-player {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+        
+        .scoreboard-player-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 1.1rem;
+        }
+        
+        .scoreboard-score {
+            font-size: 1.5rem;
+            color: #ffd700;
+            margin-bottom: 8px;
+        }
+        
+        .scoreboard-progress {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .scoreboard-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ffd700 0%, #ffed4e 100%);
+            transition: width 0.5s ease-out;
+        }
+        
         footer {
             text-align: center;
             margin-top: 30px;
@@ -249,111 +310,144 @@
         footer a:hover {
             text-decoration: underline;
         }
+        
+        @media (max-width: 1024px) {
+            .game-layout {
+                flex-direction: column;
+            }
+            
+            .scoreboard-sidebar {
+                width: 100%;
+                position: static;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="game-container">
         <h1>🃏 High Low Jack 🃏</h1>
         
-        <div class="game-board">
-            <!-- Scores -->
-            <div class="scores">
-                <div class="player-score" th:classappend="${game.currentPlayer == 'Dale'} ? 'current'">
-                    <div class="player-name">👤 Dale</div>
-                    <div class="score" th:text="${game.getScore('Dale')}">0</div>
-                </div>
-                <div class="player-score" th:classappend="${game.currentPlayer == 'Kreep'} ? 'current'">
-                    <div class="player-name">🤖 Kreep</div>
-                    <div class="score" th:text="${game.getScore('Kreep')}">0</div>
-                </div>
-                <div class="player-score" th:classappend="${game.currentPlayer == 'Carryn'} ? 'current'">
-                    <div class="player-name">🤖 Carryn</div>
-                    <div class="score" th:text="${game.getScore('Carryn')}">0</div>
-                </div>
-                <div class="player-score" th:classappend="${game.currentPlayer == 'Primus'} ? 'current'">
-                    <div class="player-name">🤖 Primus</div>
-                    <div class="score" th:text="${game.getScore('Primus')}">0</div>
+        <div class="game-layout">
+            <div class="main-game-area">
+                <div class="game-board">
+                    <!-- Scores -->
+                    <div class="scores">
+                        <div class="player-score" th:classappend="${game.currentPlayer == 'Dale'} ? 'current'">
+                            <div class="player-name">👤 Dale</div>
+                            <div class="score" th:text="${game.getScore('Dale')}">0</div>
+                        </div>
+                        <div class="player-score" th:classappend="${game.currentPlayer == 'Kreep'} ? 'current'">
+                            <div class="player-name">🤖 Kreep</div>
+                            <div class="score" th:text="${game.getScore('Kreep')}">0</div>
+                        </div>
+                        <div class="player-score" th:classappend="${game.currentPlayer == 'Carryn'} ? 'current'">
+                            <div class="player-name">🤖 Carryn</div>
+                            <div class="score" th:text="${game.getScore('Carryn')}">0</div>
+                        </div>
+                        <div class="player-score" th:classappend="${game.currentPlayer == 'Primus'} ? 'current'">
+                            <div class="player-name">🤖 Primus</div>
+                            <div class="score" th:text="${game.getScore('Primus')}">0</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Trump Display -->
+                    <div class="trump-display" th:if="${game.trumpSuit != null}">
+                        <strong>Trump Suit:</strong> 
+                        <span th:text="${game.trumpSuit.getSymbol()}" style="font-size: 2rem;">♠</span>
+                    </div>
+
+                    <!-- Current Trick Area -->
+                    <div class="trick-area">
+                        <!-- Show current trick in progress -->
+                        <div th:if="${game.currentTrick != null and game.currentTrick.size() > 0}">
+                            <div class="trick-cards">
+                                <div th:each="play : ${game.currentTrick.plays}" class="played-card">
+                                    <div class="played-card-label" th:text="${play.playerName}">Player</div>
+                                    <img th:src="@{|/images/cards/${#strings.substring(play.card.suit.name().toLowerCase(), 0, #strings.length(play.card.suit.name()) - 1)}_${#strings.toLowerCase(play.card.rank.name()) == 'ace' ? '1' : (#strings.toLowerCase(play.card.rank.name()) == 'two' ? '2' : (#strings.toLowerCase(play.card.rank.name()) == 'three' ? '3' : (#strings.toLowerCase(play.card.rank.name()) == 'four' ? '4' : (#strings.toLowerCase(play.card.rank.name()) == 'five' ? '5' : (#strings.toLowerCase(play.card.rank.name()) == 'six' ? '6' : (#strings.toLowerCase(play.card.rank.name()) == 'seven' ? '7' : (#strings.toLowerCase(play.card.rank.name()) == 'eight' ? '8' : (#strings.toLowerCase(play.card.rank.name()) == 'nine' ? '9' : (#strings.toLowerCase(play.card.rank.name()) == 'ten' ? '10' : (#strings.toLowerCase(play.card.rank.name()) == 'jack' ? 'jack' : (#strings.toLowerCase(play.card.rank.name()) == 'queen' ? 'queen' : 'king')))))))))))}.png|}"
+                                         alt="Card">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Show completed trick -->
+                        <div th:if="${completedTrick != null}">
+                            <div class="trick-cards">
+                                <div th:each="play : ${completedTrick.plays}" class="played-card">
+                                    <div class="played-card-label" th:text="${play.playerName}">Player</div>
+                                    <img th:src="@{|/images/cards/${#strings.substring(play.card.suit.name().toLowerCase(), 0, #strings.length(play.card.suit.name()) - 1)}_${#strings.toLowerCase(play.card.rank.name()) == 'ace' ? '1' : (#strings.toLowerCase(play.card.rank.name()) == 'two' ? '2' : (#strings.toLowerCase(play.card.rank.name()) == 'three' ? '3' : (#strings.toLowerCase(play.card.rank.name()) == 'four' ? '4' : (#strings.toLowerCase(play.card.rank.name()) == 'five' ? '5' : (#strings.toLowerCase(play.card.rank.name()) == 'six' ? '6' : (#strings.toLowerCase(play.card.rank.name()) == 'seven' ? '7' : (#strings.toLowerCase(play.card.rank.name()) == 'eight' ? '8' : (#strings.toLowerCase(play.card.rank.name()) == 'nine' ? '9' : (#strings.toLowerCase(play.card.rank.name()) == 'ten' ? '10' : (#strings.toLowerCase(play.card.rank.name()) == 'jack' ? 'jack' : (#strings.toLowerCase(play.card.rank.name()) == 'queen' ? 'queen' : 'king')))))))))))}.png|}"
+                                         alt="Card">
+                                </div>
+                            </div>
+                            <div style="text-align: center; margin-top: 10px; font-size: 1.1rem; color: #ffd700;">
+                                <strong th:text="${completedTrick.winner}">Winner</strong> wins the trick!
+                            </div>
+                        </div>
+
+                        <!-- Empty state -->
+                        <div th:if="${(game.currentTrick == null or game.currentTrick.size() == 0) and completedTrick == null}" class="trick-empty">
+                            <p>Waiting for first card...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Current Player Message -->
+                    <div class="message" th:if="${game.currentPlayer == humanPlayer}">
+                        <strong>Your turn!</strong> Choose a card to play
+                    </div>
+                    <div class="message ai-thinking" th:if="${game.currentPlayer != humanPlayer}">
+                        <strong th:text="${game.currentPlayer}">Computer</strong> is thinking...
+                    </div>
+                    
+                    <!-- Your Hand -->
+                    <div class="your-hand">
+                        <h3>Your Hand</h3>
+                        
+                        <!-- Show "must follow suit" message if applicable -->
+                        <div th:if="${leadSuit != null and game.currentPlayer == humanPlayer}" class="must-follow">
+                            You must follow <strong th:text="${leadSuit.name()}">SUIT</strong> 
+                            <span th:text="${leadSuit.symbol}" style="font-size: 1.3rem;">♠</span>
+                        </div>
+                        
+                        <div class="hand-cards">
+                            <form th:action="@{/highlowjack/play}" method="post" style="display: contents;">
+                                <div th:each="card, iterStat : ${game.getHand(humanPlayer).cards}">
+                                    <button type="submit" 
+                                            name="cardIndex" 
+                                            th:value="${iterStat.index}"
+                                            th:disabled="${game.currentPlayer != humanPlayer}"
+                                            th:classappend="${!validCards.contains(card)} ? 'invalid-card'">
+                                        <img th:src="@{|/images/cards/${#strings.substring(card.suit.name().toLowerCase(), 0, #strings.length(card.suit.name()) - 1)}_${#strings.toLowerCase(card.rank.name()) == 'ace' ? '1' : (#strings.toLowerCase(card.rank.name()) == 'two' ? '2' : (#strings.toLowerCase(card.rank.name()) == 'three' ? '3' : (#strings.toLowerCase(card.rank.name()) == 'four' ? '4' : (#strings.toLowerCase(card.rank.name()) == 'five' ? '5' : (#strings.toLowerCase(card.rank.name()) == 'six' ? '6' : (#strings.toLowerCase(card.rank.name()) == 'seven' ? '7' : (#strings.toLowerCase(card.rank.name()) == 'eight' ? '8' : (#strings.toLowerCase(card.rank.name()) == 'nine' ? '9' : (#strings.toLowerCase(card.rank.name()) == 'ten' ? '10' : (#strings.toLowerCase(card.rank.name()) == 'jack' ? 'jack' : (#strings.toLowerCase(card.rank.name()) == 'queen' ? 'queen' : 'king')))))))))))}.png|}"
+                                             alt="Card">
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Buttons -->
+                    <div class="buttons">
+                        <form th:action="@{/highlowjack/new}" method="post" style="display: inline;">
+                            <button type="submit" class="btn">New Game</button>
+                        </form>
+                    </div>
                 </div>
             </div>
             
-            <!-- Trump Display -->
-            <div class="trump-display" th:if="${game.trumpSuit != null}">
-                <strong>Trump Suit:</strong> 
-                <span th:text="${game.trumpSuit.getSymbol()}" style="font-size: 2rem;">♠</span>
-            </div>
-
-            <!-- Current Trick Area - HORIZONTAL LAYOUT -->
-            <div class="trick-area">
-                <!-- Show current trick in progress -->
-                <div th:if="${game.currentTrick != null and game.currentTrick.size() > 0}">
-                    <div class="trick-cards">
-                        <div th:each="play : ${game.currentTrick.plays}" class="played-card">
-                            <div class="played-card-label" th:text="${play.playerName}">Player</div>
-                            <img th:src="@{|/images/cards/${#strings.substring(play.card.suit.name().toLowerCase(), 0, #strings.length(play.card.suit.name()) - 1)}_${#strings.toLowerCase(play.card.rank.name()) == 'ace' ? '1' : (#strings.toLowerCase(play.card.rank.name()) == 'two' ? '2' : (#strings.toLowerCase(play.card.rank.name()) == 'three' ? '3' : (#strings.toLowerCase(play.card.rank.name()) == 'four' ? '4' : (#strings.toLowerCase(play.card.rank.name()) == 'five' ? '5' : (#strings.toLowerCase(play.card.rank.name()) == 'six' ? '6' : (#strings.toLowerCase(play.card.rank.name()) == 'seven' ? '7' : (#strings.toLowerCase(play.card.rank.name()) == 'eight' ? '8' : (#strings.toLowerCase(play.card.rank.name()) == 'nine' ? '9' : (#strings.toLowerCase(play.card.rank.name()) == 'ten' ? '10' : (#strings.toLowerCase(play.card.rank.name()) == 'jack' ? 'jack' : (#strings.toLowerCase(play.card.rank.name()) == 'queen' ? 'queen' : 'king')))))))))))}.png|}"
-                                 alt="Card">
+            <!-- SCOREBOARD SIDEBAR -->
+            <div class="scoreboard-sidebar">
+                <div class="scoreboard-title">📊 Score</div>
+                <div th:each="player : ${game.playerNames}" class="scoreboard-player">
+                    <div class="scoreboard-player-name" th:text="${player}">Player</div>
+                    <div class="scoreboard-score" th:text="${game.getScore(player)}">0</div>
+                    <div class="scoreboard-progress">
+                        <div class="scoreboard-progress-fill" 
+                             th:style="'width: ' + (${game.getScore(player)} * 100 / 11) + '%'">
                         </div>
                     </div>
                 </div>
-
-                <!-- Show completed trick (all 4 cards) -->
-                <div th:if="${completedTrick != null}">
-                    <div class="trick-cards">
-                        <div th:each="play : ${completedTrick.plays}" class="played-card">
-                            <div class="played-card-label" th:text="${play.playerName}">Player</div>
-                            <img th:src="@{|/images/cards/${#strings.substring(play.card.suit.name().toLowerCase(), 0, #strings.length(play.card.suit.name()) - 1)}_${#strings.toLowerCase(play.card.rank.name()) == 'ace' ? '1' : (#strings.toLowerCase(play.card.rank.name()) == 'two' ? '2' : (#strings.toLowerCase(play.card.rank.name()) == 'three' ? '3' : (#strings.toLowerCase(play.card.rank.name()) == 'four' ? '4' : (#strings.toLowerCase(play.card.rank.name()) == 'five' ? '5' : (#strings.toLowerCase(play.card.rank.name()) == 'six' ? '6' : (#strings.toLowerCase(play.card.rank.name()) == 'seven' ? '7' : (#strings.toLowerCase(play.card.rank.name()) == 'eight' ? '8' : (#strings.toLowerCase(play.card.rank.name()) == 'nine' ? '9' : (#strings.toLowerCase(play.card.rank.name()) == 'ten' ? '10' : (#strings.toLowerCase(play.card.rank.name()) == 'jack' ? 'jack' : (#strings.toLowerCase(play.card.rank.name()) == 'queen' ? 'queen' : 'king')))))))))))}.png|}"
-                                 alt="Card">
-                        </div>
-                    </div>
-                    <div style="text-align: center; margin-top: 10px; font-size: 1.1rem; color: #ffd700;">
-                        <strong th:text="${completedTrick.winner}">Winner</strong> wins the trick!
-                    </div>
-                </div>
-
-                <!-- Empty state -->
-                <div th:if="${(game.currentTrick == null or game.currentTrick.size() == 0) and completedTrick == null}" class="trick-empty">
-                    <p>Waiting for first card...</p>
-                </div>
-            </div>
-            
-            <!-- Current Player Message -->
-            <div class="message" th:if="${game.currentPlayer == humanPlayer}">
-                <strong>Your turn!</strong> Choose a card to play
-            </div>
-            <div class="message ai-thinking" th:if="${game.currentPlayer != humanPlayer}">
-                <strong th:text="${game.currentPlayer}">Computer</strong> is thinking...
-            </div>
-            
-            <!-- Your Hand -->
-            <div class="your-hand">
-                <h3>Your Hand</h3>
                 
-                <!-- Show "must follow suit" message if applicable -->
-                <div th:if="${leadSuit != null and game.currentPlayer == humanPlayer}" class="must-follow">
-                    You must follow <strong th:text="${leadSuit.name()}">SUIT</strong> 
-                    <span th:text="${leadSuit.symbol}" style="font-size: 1.3rem;">♠</span>
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.2); text-align: center; font-size: 0.9rem;">
+                    First to <strong>11</strong> wins!
                 </div>
-                
-                <div class="hand-cards">
-                    <form th:action="@{/highlowjack/play}" method="post" style="display: contents;">
-                        <div th:each="card, iterStat : ${game.getHand(humanPlayer).cards}">
-                            <button type="submit" 
-                                    name="cardIndex" 
-                                    th:value="${iterStat.index}"
-                                    th:disabled="${game.currentPlayer != humanPlayer}"
-                                    th:classappend="${!validCards.contains(card)} ? 'invalid-card'">
-                                <img th:src="@{|/images/cards/${#strings.substring(card.suit.name().toLowerCase(), 0, #strings.length(card.suit.name()) - 1)}_${#strings.toLowerCase(card.rank.name()) == 'ace' ? '1' : (#strings.toLowerCase(card.rank.name()) == 'two' ? '2' : (#strings.toLowerCase(card.rank.name()) == 'three' ? '3' : (#strings.toLowerCase(card.rank.name()) == 'four' ? '4' : (#strings.toLowerCase(card.rank.name()) == 'five' ? '5' : (#strings.toLowerCase(card.rank.name()) == 'six' ? '6' : (#strings.toLowerCase(card.rank.name()) == 'seven' ? '7' : (#strings.toLowerCase(card.rank.name()) == 'eight' ? '8' : (#strings.toLowerCase(card.rank.name()) == 'nine' ? '9' : (#strings.toLowerCase(card.rank.name()) == 'ten' ? '10' : (#strings.toLowerCase(card.rank.name()) == 'jack' ? 'jack' : (#strings.toLowerCase(card.rank.name()) == 'queen' ? 'queen' : 'king')))))))))))}.png|}"
-                                     alt="Card">
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            
-            <!-- Buttons -->
-            <div class="buttons">
-                <form th:action="@{/highlowjack/new}" method="post" style="display: inline;">
-                    <button type="submit" class="btn">New Game</button>
-                </form>
             </div>
         </div>
         

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Round Scoring - High Low Jack</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .scoring-container {
+            max-width: 900px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .scoring-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            text-align: center;
+        }
+
+        .scoring-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .trump-display {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .scoring-content {
+            padding: 30px;
+            color: #333;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: #667eea;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: #667eea;
+            border-radius: 2px;
+        }
+
+        .player-row {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .player-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+
+        .player-points {
+            color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+
+        .captured-cards {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .captured-cards img {
+            height: 60px;
+            width: auto;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .round-points-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .round-point-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .round-point-category {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+        }
+
+        .round-point-winner {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .score-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .score-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .score-player-name {
+            font-weight: bold;
+            min-width: 100px;
+            color: #2c3e50;
+        }
+
+        .score-value {
+            min-width: 30px;
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.2rem;
+        }
+
+        .progress-bar-container {
+            flex: 1;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 1s ease-out;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .continue-button {
+            display: block;
+            width: 100%;
+            max-width: 300px;
+            margin: 30px auto 0;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .continue-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+
+        .continue-button:active {
+            transform: translateY(0);
+        }
+
+        .no-cards {
+            color: #95a5a6;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="scoring-container">
+        <div class="scoring-header">
+            <h1>🏆 Round Complete! 🏆</h1>
+            <div class="trump-display">
+                Trump: <strong th:text="${results.trumpSuit.name()}">SUIT</strong>
+                <span th:text="${results.trumpSuit.symbol}" style="font-size: 1.5rem;">♠</span>
+            </div>
+        </div>
+
+        <div class="scoring-content">
+            <!-- GAME POINTS (Card Values Captured) -->
+            <div class="section">
+                <div class="section-title">📊 Game Points (Card Values)</div>
+                <div th:each="player : ${playerNames}" class="player-row">
+                    <div class="player-name" th:text="${player}">Player</div>
+                    <div class="player-points" 
+                         th:text="${results.getGamePoints(player)} + ' points'">0 points</div>
+                    <div class="captured-cards">
+                        <img th:each="card : ${results.getCapturedCards(player)}"
+                             th:src="@{|/images/cards/${#strings.substring(card.suit.name().toLowerCase(), 0, #strings.length(card.suit.name()) - 1)}_${#strings.toLowerCase(card.rank.name()) == 'ace' ? '1' : (#strings.toLowerCase(card.rank.name()) == 'two' ? '2' : (#strings.toLowerCase(card.rank.name()) == 'three' ? '3' : (#strings.toLowerCase(card.rank.name()) == 'four' ? '4' : (#strings.toLowerCase(card.rank.name()) == 'five' ? '5' : (#strings.toLowerCase(card.rank.name()) == 'six' ? '6' : (#strings.toLowerCase(card.rank.name()) == 'seven' ? '7' : (#strings.toLowerCase(card.rank.name()) == 'eight' ? '8' : (#strings.toLowerCase(card.rank.name()) == 'nine' ? '9' : (#strings.toLowerCase(card.rank.name()) == 'ten' ? '10' : (#strings.toLowerCase(card.rank.name()) == 'jack' ? 'jack' : (#strings.toLowerCase(card.rank.name()) == 'queen' ? 'queen' : 'king')))))))))))}.png|}"
+                             alt="Card">
+                        <span th:if="${#lists.isEmpty(results.getCapturedCards(player))}" class="no-cards">
+                            No cards captured
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROUND POINTS AWARDED -->
+            <div class="section">
+                <div class="section-title">🎯 Round Points Awarded</div>
+                <div class="round-points-grid">
+                    <div class="round-point-card" th:if="${results.getRoundPointWinner('High') != null}">
+                        <div class="round-point-category">⬆️ HIGH</div>
+                        <div class="round-point-winner" th:text="${results.getRoundPointWinner('High')}">Player</div>
+                        <div style="font-size: 0.9rem; margin-top: 5px;">+1 point</div>
+                    </div>
+                    <div class="round-point-card" th:if="${results.getRoundPointWinner('Low') != null}">
+                        <div class="round-point-category">⬇️ LOW</div>
+                        <div class="round-point-winner" th:text="${results.getRoundPointWinner('Low')}">Player</div>
+                        <div style="font-size: 0.9rem; margin-top: 5px;">+1 point</div>
+                    </div>
+                    <div class="round-point-card" th:if="${results.getRoundPointWinner('Jack') != null}">
+                        <div class="round-point-category">💎 JACK</div>
+                        <div class="round-point-winner" th:text="${results.getRoundPointWinner('Jack')}">Player</div>
+                        <div style="font-size: 0.9rem; margin-top: 5px;">+1 point</div>
+                    </div>
+                    <div class="round-point-card" th:if="${results.getRoundPointWinner('Game') != null}">
+                        <div class="round-point-category">🎯 GAME</div>
+                        <div class="round-point-winner" th:text="${results.getRoundPointWinner('Game')}">Player</div>
+                        <div style="font-size: 0.9rem; margin-top: 5px;">+1 point</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GAME SCORE -->
+            <div class="section">
+                <div class="section-title">📈 Game Score (First to <span th:text="${winningScore}">11</span> wins!)</div>
+                <div class="score-bars">
+                    <div th:each="player : ${playerNames}" class="score-bar-row">
+                        <div class="score-player-name" th:text="${player}">Player</div>
+                        <div class="score-value" th:text="${results.getScore(player)}">0</div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" 
+                                 th:style="'width: ' + (${results.getScore(player)} * 100 / ${winningScore}) + '%'">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONTINUE BUTTON -->
+            <form th:action="@{/highlowjack/continue}" method="post">
+                <button type="submit" class="continue-button">Continue to Next Round</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

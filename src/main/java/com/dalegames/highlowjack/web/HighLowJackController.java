@@ -8,20 +8,24 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import com.dalegames.highlowjack.SimpleAI;
+import com.dalegames.highlowjack.engine.GameEngine;
 import com.dalegames.highlowjack.model.Card;
 import com.dalegames.highlowjack.model.Game;
 import com.dalegames.highlowjack.model.Hand;
 import com.dalegames.highlowjack.model.Trick;
 
 import jakarta.servlet.http.HttpSession;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Web controller for High Low Jack card game.
  * 
- * <p>Implements turn-based gameplay with proper pacing and trick display.
+ * <p>Implements turn-based gameplay with proper pacing, trick display,
+ * and valid card enforcement.
  * 
  * @author Dale &amp; Primus
- * @version 4.0
+ * @version 5.0
  */
 @Controller
 @RequestMapping("/highlowjack")
@@ -84,13 +88,24 @@ public class HighLowJackController {
             session.setAttribute("hlj_game", game);
         }
         
+        // Calculate valid cards for human player
+        List<Card> validCards = calculateValidCards(game, HUMAN_PLAYER);
+        
         // Determine if we should auto-refresh
         boolean isAITurn = !game.getCurrentPlayer().equals(HUMAN_PLAYER);
+        
+        // Get lead suit if applicable
+        Card.Suit leadSuit = null;
+        if (game.getCurrentTrick() != null && game.getCurrentTrick().size() > 0) {
+            leadSuit = game.getCurrentTrick().getLeadSuit();
+        }
         
         model.addAttribute("game", game);
         model.addAttribute("humanPlayer", HUMAN_PLAYER);
         model.addAttribute("isAITurn", isAITurn);
         model.addAttribute("completedTrick", completedTrick);
+        model.addAttribute("validCards", validCards);
+        model.addAttribute("leadSuit", leadSuit);
         
         return "highlowjack/game";
     }
@@ -114,9 +129,13 @@ public class HighLowJackController {
             
             if (cardIndex >= 0 && cardIndex < hand.getCards().size()) {
                 Card card = hand.getCards().get(cardIndex);
-                game.playCard(card);
                 
-                session.setAttribute("hlj_game", game);
+                // Validate the play before executing
+                if (GameEngine.isValidPlay(game, HUMAN_PLAYER, card)) {
+                    game.playCard(card);
+                    session.setAttribute("hlj_game", game);
+                }
+                // If invalid, just redirect back - front-end should prevent this
             }
         }
         
@@ -161,5 +180,38 @@ public class HighLowJackController {
         
         // Play the card
         game.playCard(card);
+    }
+    
+    /**
+     * Calculates which cards are valid plays for the given player.
+     * 
+     * <p>Uses GameEngine.isValidPlay() to check each card in the player's hand.
+     * 
+     * @param game the game
+     * @param playerName the player's name
+     * @return list of valid cards
+     */
+    private List<Card> calculateValidCards(Game game, String playerName) {
+        List<Card> validCards = new ArrayList<>();
+        
+        // If it's not this player's turn, no cards are valid
+        if (!game.getCurrentPlayer().equals(playerName)) {
+            return validCards;
+        }
+        
+        // If game is not in progress, no cards are valid
+        if (game.getState() != Game.GameState.IN_PROGRESS) {
+            return validCards;
+        }
+        
+        // Check each card in hand
+        Hand hand = game.getHand(playerName);
+        for (Card card : hand.getCards()) {
+            if (GameEngine.isValidPlay(game, playerName, card)) {
+                validCards.add(card);
+            }
+        }
+        
+        return validCards;
     }
 }

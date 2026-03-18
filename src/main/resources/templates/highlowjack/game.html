@@ -174,6 +174,31 @@
             transform: translateY(-10px) scale(1.02);
         }
         
+                .hand-cards button.invalid-card {
+            cursor: not-allowed;
+        }
+        
+        .hand-cards button.invalid-card img {
+            opacity: 0.35;
+            filter: grayscale(80%);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .hand-cards button.invalid-card:hover img {
+            transform: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .must-follow {
+            text-align: center;
+            font-size: 1.1rem;
+            margin: 15px 0;
+            padding: 12px;
+            background: rgba(255, 150, 50, 0.3);
+            border-radius: 8px;
+            border: 2px solid rgba(255, 150, 50, 0.5);
+        }
+
         .message {
             text-align: center;
             font-size: 1.2rem;
@@ -301,13 +326,21 @@
             <!-- Your Hand -->
             <div class="your-hand">
                 <h3>Your Hand</h3>
+                
+                <!-- Show "must follow suit" message if applicable -->
+                <div th:if="${leadSuit != null and game.currentPlayer == humanPlayer}" class="must-follow">
+                    You must follow <strong th:text="${leadSuit.name()}">SUIT</strong> 
+                    <span th:text="${leadSuit.symbol}" style="font-size: 1.3rem;">♠</span>
+                </div>
+                
                 <div class="hand-cards">
                     <form th:action="@{/highlowjack/play}" method="post" style="display: contents;">
                         <div th:each="card, iterStat : ${game.getHand(humanPlayer).cards}">
                             <button type="submit" 
                                     name="cardIndex" 
                                     th:value="${iterStat.index}"
-                                    th:disabled="${game.currentPlayer != humanPlayer}">
+                                    th:disabled="${game.currentPlayer != humanPlayer}"
+                                    th:classappend="${!validCards.contains(card)} ? 'invalid-card'">
                                 <img th:src="@{|/images/cards/${#strings.substring(card.suit.name().toLowerCase(), 0, #strings.length(card.suit.name()) - 1)}_${#strings.toLowerCase(card.rank.name()) == 'ace' ? '1' : (#strings.toLowerCase(card.rank.name()) == 'two' ? '2' : (#strings.toLowerCase(card.rank.name()) == 'three' ? '3' : (#strings.toLowerCase(card.rank.name()) == 'four' ? '4' : (#strings.toLowerCase(card.rank.name()) == 'five' ? '5' : (#strings.toLowerCase(card.rank.name()) == 'six' ? '6' : (#strings.toLowerCase(card.rank.name()) == 'seven' ? '7' : (#strings.toLowerCase(card.rank.name()) == 'eight' ? '8' : (#strings.toLowerCase(card.rank.name()) == 'nine' ? '9' : (#strings.toLowerCase(card.rank.name()) == 'ten' ? '10' : (#strings.toLowerCase(card.rank.name()) == 'jack' ? 'jack' : (#strings.toLowerCase(card.rank.name()) == 'queen' ? 'queen' : 'king')))))))))))}.png|}"
                                      alt="Card">
                             </button>
@@ -334,19 +367,32 @@
         /*<![CDATA[*/
         const isAITurn = /*[[${isAITurn}]]*/ false;
         const hasCompletedTrick = /*[[${completedTrick != null}]]*/ false;
-
+        const currentPlayer = /*[[${game.currentPlayer}]]*/ 'Dale';
+        const humanPlayer = /*[[${humanPlayer}]]*/ 'Dale';
+        
+        // Priority 1: If there's a completed trick, show it then clear
         if (hasCompletedTrick) {
-            // Show completed trick for 2 seconds
-            setTimeout(() => {
-                location.reload();
-            }, 2000);
-        } else if (isAITurn) {
+            if (currentPlayer === humanPlayer) {
+                // Human won the trick - show it for 3 seconds, then clear and let them lead
+                setTimeout(() => {
+                    location.reload();
+                }, 3000);
+            } else {
+                // AI won the trick - show it for 2 seconds, then clear and continue
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            }
+        } 
+        // Priority 2: If it's an AI turn, wait and refresh
+        else if (isAITurn) {
             // AI's turn - refresh with random delay (1-3 seconds)
             const delay = 1000 + Math.random() * 2000;
             setTimeout(() => {
                 location.reload();
             }, delay);
         }
+        // Otherwise: It's human's turn to play - no auto-refresh needed
         /*]]>*/
     </script>
 </body>

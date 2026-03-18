@@ -1,12 +1,12 @@
 package com.dalegames.highlowjack.engine;
 
-import com.dalegames.highlowjack.model.Card;
-import com.dalegames.highlowjack.model.Game;
-import com.dalegames.highlowjack.model.Trick;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.dalegames.highlowjack.model.Card;
+import com.dalegames.highlowjack.model.Game;
+import com.dalegames.highlowjack.model.Trick;
 
 /**
  * Game engine for High Low Jack scoring and validation.
@@ -129,7 +129,7 @@ public class GameEngine {
      * @param trump the trump suit
      * @return name of player with lowest trump, or null if no trumps played
      */
-    public static String findLowTrump(List<Trick> tricks, Card.Suit trump) {h
+    public static String findLowTrump(List<Trick> tricks, Card.Suit trump) {
         if (tricks == null || trump == null) {
             return null;
         }

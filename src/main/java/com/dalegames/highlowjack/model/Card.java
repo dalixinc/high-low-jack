@@ -159,5 +159,19 @@ public class Card implements Serializable {
         public int getValue() {
             return value;
         }
+
+        /**
+         * Returns the point value of this rank for scoring purposes.
+         */
+        public int getPoints() {
+            return switch (this) {
+                case ACE -> 4;
+                case KING -> 3;
+                case QUEEN -> 2;
+                case JACK -> 1;
+                case TEN -> 10;
+                default -> 0;  // 2-9 have no point value
+            };
+        }
     }
 }

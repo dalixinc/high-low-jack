@@ -215,6 +215,11 @@ public class HighLowJackCLI {
      * @return point value
      */
     private static int getCardValue(Card card) {
+        return card.getRank().getPoints();
+
+        /*
+         & Newer style switch statement - replaced with delegation to Card class
+         *
         return switch (card.getRank()) {
             case ACE -> 4;
             case KING -> 3;
@@ -222,7 +227,7 @@ public class HighLowJackCLI {
             case JACK -> 1;
             case TEN -> 10;
             default -> 0;
-        };
+        }; */
     }
     
     /**

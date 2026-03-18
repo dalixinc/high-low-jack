@@ -129,7 +129,7 @@ public class GameEngine {
      * @param trump the trump suit
      * @return name of player with lowest trump, or null if no trumps played
      */
-    public static String findLowTrump(List<Trick> tricks, Card.Suit trump) {
+    public static String findLowTrump(List<Trick> tricks, Card.Suit trump) {h
         if (tricks == null || trump == null) {
             return null;
         }
@@ -239,7 +239,11 @@ public class GameEngine {
         if (card == null) {
             return 0;
         }
-        
+        return  card.getRank().getPoints();
+
+        /*
+         * Ols style switch statement - replaced with a delegation to Card class
+         *
         switch (card.getRank()) {
             case ACE:
                 return 4;
@@ -253,7 +257,7 @@ public class GameEngine {
                 return 10;
             default:
                 return 0;
-        }
+        } */
     }
     
     /**

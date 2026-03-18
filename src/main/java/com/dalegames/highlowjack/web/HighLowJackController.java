@@ -11,22 +11,17 @@ import com.dalegames.highlowjack.SimpleAI;
 import com.dalegames.highlowjack.model.Card;
 import com.dalegames.highlowjack.model.Game;
 import com.dalegames.highlowjack.model.Hand;
+import com.dalegames.highlowjack.model.Trick;
 
 import jakarta.servlet.http.HttpSession;
 
 /**
  * Web controller for High Low Jack card game.
  * 
- * <p>Implements turn-based gameplay with proper pacing:
- * <ul>
- *   <li>Human player clicks to play their card</li>
- *   <li>AI players play ONE card per page load</li>
- *   <li>JavaScript auto-refreshes with 1-3 second delays</li>
- *   <li>Tricks complete after 4th card with visual pause</li>
- * </ul>
+ * <p>Implements turn-based gameplay with proper pacing and trick display.
  * 
  * @author Dale &amp; Primus
- * @version 3.0
+ * @version 4.0
  */
 @Controller
 @RequestMapping("/highlowjack")
@@ -36,9 +31,6 @@ public class HighLowJackController {
     
     /**
      * Show the game page.
-     * 
-     * <p>If it's an AI player's turn, plays ONE card and returns.
-     * Browser will auto-refresh to show next turn.</p>
      * 
      * @param model the model
      * @param session the HTTP session
@@ -54,22 +46,31 @@ public class HighLowJackController {
             session.setAttribute("hlj_game", game);
         }
         
-        // Check if we need to clear completed trick
-        Boolean trickJustCompleted = (Boolean) session.getAttribute("hlj_trickCompleted");
-        if (Boolean.TRUE.equals(trickJustCompleted)) {
-            // Give user time to see the completed trick before clearing
-            session.removeAttribute("hlj_trickCompleted");
+        // Check if we should clear a completed trick
+        Boolean shouldClearTrick = (Boolean) session.getAttribute("hlj_clearTrick");
+        if (Boolean.TRUE.equals(shouldClearTrick)) {
+            game.clearCompletedTrick();
+            session.removeAttribute("hlj_clearTrick");
         }
         
-        // If it's AI's turn and game is in progress, play ONE card
-        if (game.getState() == Game.GameState.IN_PROGRESS &&
-            !game.getCurrentPlayer().equals(HUMAN_PLAYER)) {
-            
+        // Get the completed trick for display (if any)
+        Trick completedTrick = game.getCompletedTrick();
+        
+        // Handle different states
+        if (completedTrick != null) {
+            // A trick just completed - show it and set flag to clear on next load
+            session.setAttribute("hlj_clearTrick", true);
+        } 
+        else if (game.getState() == Game.GameState.IN_PROGRESS &&
+                 !game.getCurrentPlayer().equals(HUMAN_PLAYER)) {
+            // AI's turn and no completed trick showing - play ONE card
             playAITurn(game);
             
-            // Check if trick just completed
-            if (game.getCurrentTrick() == null) {
-                session.setAttribute("hlj_trickCompleted", true);
+            // Check if this AI play completed a trick
+            completedTrick = game.getCompletedTrick();
+            if (completedTrick != null) {
+                // Trick just completed - set flag to clear on next load
+                session.setAttribute("hlj_clearTrick", true);
             }
             
             // Check if round is complete
@@ -77,14 +78,19 @@ public class HighLowJackController {
                 // TODO: Score the hand and deal new hand
                 // For now, just start a new game
                 game = createNewGame();
+                completedTrick = null;
             }
             
             session.setAttribute("hlj_game", game);
         }
         
+        // Determine if we should auto-refresh
+        boolean isAITurn = !game.getCurrentPlayer().equals(HUMAN_PLAYER);
+        
         model.addAttribute("game", game);
         model.addAttribute("humanPlayer", HUMAN_PLAYER);
-        model.addAttribute("isAITurn", !game.getCurrentPlayer().equals(HUMAN_PLAYER));
+        model.addAttribute("isAITurn", isAITurn);
+        model.addAttribute("completedTrick", completedTrick);
         
         return "highlowjack/game";
     }
@@ -110,11 +116,6 @@ public class HighLowJackController {
                 Card card = hand.getCards().get(cardIndex);
                 game.playCard(card);
                 
-                // Check if trick just completed
-                if (game.getCurrentTrick() == null) {
-                    session.setAttribute("hlj_trickCompleted", true);
-                }
-                
                 session.setAttribute("hlj_game", game);
             }
         }
@@ -131,7 +132,7 @@ public class HighLowJackController {
     @PostMapping("/new")
     public String newGame(HttpSession session) {
         session.removeAttribute("hlj_game");
-        session.removeAttribute("hlj_trickCompleted");
+        session.removeAttribute("hlj_clearTrick");
         return "redirect:/highlowjack";
     }
     
@@ -149,14 +150,6 @@ public class HighLowJackController {
     /**
      * Plays ONE turn for the current AI player.
      * 
-     * <p>Game.java automatically handles:
-     * <ul>
-     *   <li>Advancing to next player</li>
-     *   <li>Completing trick if 4th card</li>
-     *   <li>Setting winner as next player</li>
-     * </ul>
-     * </p>
-     * 
      * @param game the game
      */
     private void playAITurn(Game game) {
@@ -166,7 +159,7 @@ public class HighLowJackController {
         // Use SimpleAI to choose a card
         Card card = SimpleAI.chooseCard(game, currentPlayer, hand);
         
-        // Play the card - Game.java handles all the logic
+        // Play the card
         game.playCard(card);
     }
 }

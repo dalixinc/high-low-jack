@@ -42,7 +42,8 @@ public class Game implements Serializable{
     private int currentPlayerIndex;
     private Trick currentTrick;
     private GameState state;
-    
+    private Trick completedTrick;  // Last completed trick (kept for display before clearing)
+
     /**
      * Constructs a new game with the specified player names.
      * 
@@ -107,9 +108,10 @@ public class Game implements Serializable{
             Hand hand = hands.get(playerName);
             hand.addCards(deck.dealHand(CARDS_PER_PLAYER));
         }
-        
+
         trumpSuit = null;
         currentTrick = null;
+        completedTrick = null;  // ← ADD THIS LINE
         tricks.clear();
         state = GameState.IN_PROGRESS;
     }
@@ -160,21 +162,25 @@ public class Game implements Serializable{
         // Play the card
         hand.playCard(card);
         currentTrick.playCard(currentPlayer, card);
-        
+
         // Check if trick is complete
         if (currentTrick.isComplete()) {
             tricks.add(currentTrick);
             String winner = currentTrick.getWinner();
-            
+
+            // Save completed trick for display
+            completedTrick = currentTrick;
+
             // Winner leads next trick
             currentPlayerIndex = playerNames.indexOf(winner);
             currentTrick = null;
-            
+
             // Check if round is complete (all 7 tricks played)
             if (tricks.size() == CARDS_PER_PLAYER) {
                 state = GameState.ROUND_COMPLETE;
             }
         } else {
+
             // Move to next player
             currentPlayerIndex = (currentPlayerIndex + 1) % NUM_PLAYERS;
         }
@@ -242,7 +248,21 @@ public class Game implements Serializable{
     public Trick getCurrentTrick() {
         return currentTrick;
     }
-    
+
+    /**
+     * Returns the last completed trick that hasn't been cleared yet.
+     * This allows the UI to display the completed trick before starting the next one.
+     *
+     * @return the completed trick, or null if no trick has been completed recently
+     */
+    public Trick getCompletedTrick() { return completedTrick; }
+
+    /**
+     * Clears the completed trick from memory.
+     * Should be called after the UI has displayed the completed trick.
+     */
+    public void clearCompletedTrick() { this.completedTrick = null; }
+
     /**
      * Returns the current game state.
      * 

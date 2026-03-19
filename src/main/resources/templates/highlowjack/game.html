@@ -295,6 +295,44 @@
             transition: width 0.5s ease-out;
         }
         
+        .point-tracker {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .point-tracker-title {
+            text-align: center;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: #ffd700;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .point-item {
+            margin-bottom: 12px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+        }
+        
+        .point-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 3px;
+        }
+        
+        .point-value {
+            font-size: 1rem;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .point-value.not-yet {
+            opacity: 0.5;
+            font-style: italic;
+        }
+        
         footer {
             text-align: center;
             margin-top: 30px;
@@ -330,7 +368,6 @@
         <div class="game-layout">
             <div class="main-game-area">
                 <div class="game-board">
-                    <!-- Scores -->
                     <div class="scores">
                         <div class="player-score" th:classappend="${game.currentPlayer == 'Dale'} ? 'current'">
                             <div class="player-name">👤 Dale</div>
@@ -350,15 +387,12 @@
                         </div>
                     </div>
                     
-                    <!-- Trump Display -->
                     <div class="trump-display" th:if="${game.trumpSuit != null}">
                         <strong>Trump Suit:</strong> 
                         <span th:text="${game.trumpSuit.getSymbol()}" style="font-size: 2rem;">♠</span>
                     </div>
 
-                    <!-- Current Trick Area -->
                     <div class="trick-area">
-                        <!-- Show current trick in progress -->
                         <div th:if="${game.currentTrick != null and game.currentTrick.size() > 0}">
                             <div class="trick-cards">
                                 <div th:each="play : ${game.currentTrick.plays}" class="played-card">
@@ -369,7 +403,6 @@
                             </div>
                         </div>
 
-                        <!-- Show completed trick -->
                         <div th:if="${completedTrick != null}">
                             <div class="trick-cards">
                                 <div th:each="play : ${completedTrick.plays}" class="played-card">
@@ -383,13 +416,11 @@
                             </div>
                         </div>
 
-                        <!-- Empty state -->
                         <div th:if="${(game.currentTrick == null or game.currentTrick.size() == 0) and completedTrick == null}" class="trick-empty">
                             <p>Waiting for first card...</p>
                         </div>
                     </div>
                     
-                    <!-- Current Player Message -->
                     <div class="message" th:if="${game.currentPlayer == humanPlayer}">
                         <strong>Your turn!</strong> Choose a card to play
                     </div>
@@ -397,11 +428,9 @@
                         <strong th:text="${game.currentPlayer}">Computer</strong> is thinking...
                     </div>
                     
-                    <!-- Your Hand -->
                     <div class="your-hand">
                         <h3>Your Hand</h3>
                         
-                        <!-- Show "must follow suit" message if applicable -->
                         <div th:if="${leadSuit != null and game.currentPlayer == humanPlayer}" class="must-follow">
                             You must follow <strong th:text="${leadSuit.name()}">SUIT</strong> 
                             <span th:text="${leadSuit.symbol}" style="font-size: 1.3rem;">♠</span>
@@ -423,7 +452,6 @@
                         </div>
                     </div>
                     
-                    <!-- Buttons -->
                     <div class="buttons">
                         <form th:action="@{/highlowjack/new}" method="post" style="display: inline;">
                             <button type="submit" class="btn">New Game</button>
@@ -432,7 +460,6 @@
                 </div>
             </div>
             
-            <!-- SCOREBOARD SIDEBAR -->
             <div class="scoreboard-sidebar">
                 <div class="scoreboard-title">📊 Score</div>
                 <div th:each="player : ${game.playerNames}" class="scoreboard-player">
@@ -447,6 +474,37 @@
                 
                 <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.2); text-align: center; font-size: 0.9rem;">
                     First to <strong>11</strong> wins!
+                </div>
+                
+                <div class="point-tracker" th:if="${game.trumpSuit != null}">
+                    <div class="point-tracker-title">🎯 Points</div>
+                    
+                    <div class="point-item">
+                        <div class="point-label">⬆️ HIGH</div>
+                        <div class="point-value" 
+                             th:classappend="${pointStatus.get('High') == null} ? 'not-yet'"
+                             th:text="${pointStatus.get('High') != null ? pointStatus.get('High') : 'Not yet played'}">
+                            Not yet played
+                        </div>
+                    </div>
+                    
+                    <div class="point-item">
+                        <div class="point-label">⬇️ LOW</div>
+                        <div class="point-value"
+                             th:classappend="${pointStatus.get('Low') == null} ? 'not-yet'"
+                             th:text="${pointStatus.get('Low') != null ? pointStatus.get('Low') : 'Not yet played'}">
+                            Not yet played
+                        </div>
+                    </div>
+                    
+                    <div class="point-item">
+                        <div class="point-label">💎 JACK</div>
+                        <div class="point-value"
+                             th:classappend="${pointStatus.get('Jack') == null} ? 'not-yet'"
+                             th:text="${pointStatus.get('Jack') != null ? pointStatus.get('Jack') : 'Not yet played'}">
+                            Not yet played
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -464,29 +522,23 @@
         const currentPlayer = /*[[${game.currentPlayer}]]*/ 'Dale';
         const humanPlayer = /*[[${humanPlayer}]]*/ 'Dale';
         
-        // Priority 1: If there's a completed trick, show it then clear
         if (hasCompletedTrick) {
             if (currentPlayer === humanPlayer) {
-                // Human won the trick - show it for 3 seconds, then clear and let them lead
                 setTimeout(() => {
                     location.reload();
                 }, 3000);
             } else {
-                // AI won the trick - show it for 2 seconds, then clear and continue
                 setTimeout(() => {
                     location.reload();
                 }, 2000);
             }
         } 
-        // Priority 2: If it's an AI turn, wait and refresh
         else if (isAITurn) {
-            // AI's turn - refresh with random delay (1-3 seconds)
             const delay = 1000 + Math.random() * 2000;
             setTimeout(() => {
                 location.reload();
             }, delay);
         }
-        // Otherwise: It's human's turn to play - no auto-refresh needed
         /*]]>*/
     </script>
 </body>

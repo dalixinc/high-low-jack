@@ -21,16 +21,16 @@ import java.io.Serializable;
  *   <li>First card played determines trump suit</li>
  *   <li>Play 7 tricks</li>
  *   <li>Score High, Low, Jack, Game points</li>
- *   <li>First to 7 total points wins</li>
+ *   <li>First to 11 total points wins</li>
  * </ol>
  *
  * @author Dale &amp; Primus
- * @version 1.0
+ * @version 1.1 - FIXED: WINNING_SCORE changed from 7 to 11
  */
 public class Game implements Serializable{
     private static final int NUM_PLAYERS = 4;
     private static final int CARDS_PER_PLAYER = 7;
-    private static final int WINNING_SCORE = 7;
+    private static final int WINNING_SCORE = 11;  // FIXED: Changed from 7 to 11
     
     private final List<String> playerNames;
     private final Map<String, Hand> hands;
@@ -111,7 +111,7 @@ public class Game implements Serializable{
 
         trumpSuit = null;
         currentTrick = null;
-        completedTrick = null;  // ← ADD THIS LINE
+        completedTrick = null;
         tricks.clear();
         state = GameState.IN_PROGRESS;
     }
@@ -180,7 +180,6 @@ public class Game implements Serializable{
                 state = GameState.ROUND_COMPLETE;
             }
         } else {
-
             // Move to next player
             currentPlayerIndex = (currentPlayerIndex + 1) % NUM_PLAYERS;
         }
@@ -255,13 +254,17 @@ public class Game implements Serializable{
      *
      * @return the completed trick, or null if no trick has been completed recently
      */
-    public Trick getCompletedTrick() { return completedTrick; }
+    public Trick getCompletedTrick() { 
+        return completedTrick; 
+    }
 
     /**
      * Clears the completed trick from memory.
      * Should be called after the UI has displayed the completed trick.
      */
-    public void clearCompletedTrick() { this.completedTrick = null; }
+    public void clearCompletedTrick() { 
+        this.completedTrick = null; 
+    }
 
     /**
      * Returns the current game state.

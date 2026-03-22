@@ -14,7 +14,7 @@ import com.dalegames.highlowjack.model.Trick;
  * Game engine for High Low Jack scoring and validation.
  * 
  * @author Dale &amp; Primus
- * @version 2.0
+ * @version 2.1 - FIXED: Jack tracking shows WINNER not player
  */
 public class GameEngine {
     
@@ -167,20 +167,24 @@ public class GameEngine {
             status.put("Low", lowestTrump.toString() + " - " + lowPlayer);
         }
         
-        String jackPlayer = null;
+        // FIXED: Find Jack of trump - show WHO WON IT, not who played it
+        String jackWinner = null;
         
         for (Trick trick : allTricks) {
             for (Trick.CardPlay play : trick.getPlays()) {
                 if (play.card.getSuit() == trump && play.card.getRank() == Card.Rank.JACK) {
-                    jackPlayer = play.playerName;
+                    // Get the winner of THIS trick (who captured the Jack)
+                    if (trick.isComplete()) {
+                        jackWinner = trick.getWinner();
+                    }
                     break;
                 }
             }
-            if (jackPlayer != null) break;
+            if (jackWinner != null) break;
         }
         
-        if (jackPlayer != null) {
-            status.put("Jack", "J" + trump.getSymbol() + " - " + jackPlayer);
+        if (jackWinner != null) {
+            status.put("Jack", "J" + trump.getSymbol() + " - " + jackWinner);
         }
         
         return status;
@@ -260,7 +264,7 @@ public class GameEngine {
             int points = 0;
             
             for (Trick.CardPlay play : trick.getPlays()) {
-                points += getGamePoints(play.card);
+                points += play.card.getRank().getPoints();
             }
             
             gamePoints.put(winner, gamePoints.getOrDefault(winner, 0) + points);

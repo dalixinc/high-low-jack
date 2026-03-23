@@ -14,7 +14,7 @@ import com.dalegames.highlowjack.model.Trick;
  * Game engine for High Low Jack scoring and validation.
  * 
  * @author Dale &amp; Primus
- * @version 2.1 - FIXED: Jack tracking shows WINNER not player
+ * @version 2.2 - Added card detail extraction for scoring display
  */
 public class GameEngine {
     
@@ -76,12 +76,22 @@ public class GameEngine {
         Map<String, Integer> gamePointTotals = calculateGamePointTotals(capturedCards);
         Map<String, String> roundPointWinners = calculateScores(game);
         
+        // Extract card details for display
+        Card highCard = findHighTrumpCard(tricks, trump);
+        Card lowCard = findLowTrumpCard(tricks, trump);
+        Integer gameWinnerPoints = null;
+        String gameWinner = roundPointWinners.get("Game");
+        if (gameWinner != null) {
+            gameWinnerPoints = gamePointTotals.get(gameWinner);
+        }
+        
         Map<String, Integer> scores = new HashMap<>();
         for (String player : game.getPlayerNames()) {
             scores.put(player, game.getScore(player));
         }
         
-        return new RoundResult(capturedCards, gamePointTotals, roundPointWinners, scores, trump);
+        return new RoundResult(capturedCards, gamePointTotals, roundPointWinners, scores, trump, 
+                               highCard, lowCard, gameWinnerPoints);
     }
 
     public static Map<String, List<Card>> calculateCapturedCards(List<Trick> tricks) {
@@ -167,16 +177,11 @@ public class GameEngine {
             status.put("Low", lowestTrump.toString() + " - " + lowPlayer);
         }
         
-        // FIXED: Find Jack of trump - show WHO WON IT, not who played it
         String jackWinner = null;
-        
         for (Trick trick : allTricks) {
             for (Trick.CardPlay play : trick.getPlays()) {
                 if (play.card.getSuit() == trump && play.card.getRank() == Card.Rank.JACK) {
-                    // Get the winner of THIS trick (who captured the Jack)
-                    if (trick.isComplete()) {
-                        jackWinner = trick.getWinner();
-                    }
+                    jackWinner = trick.getWinner();
                     break;
                 }
             }
@@ -213,6 +218,30 @@ public class GameEngine {
         return winner;
     }
     
+    /**
+     * Finds and returns the actual highest trump card.
+     */
+    public static Card findHighTrumpCard(List<Trick> tricks, Card.Suit trump) {
+        if (tricks == null || trump == null) {
+            return null;
+        }
+        
+        Card highestTrump = null;
+        
+        for (Trick trick : tricks) {
+            for (Trick.CardPlay play : trick.getPlays()) {
+                Card card = play.card;
+                if (card.getSuit() == trump) {
+                    if (highestTrump == null || card.getRank().getValue() > highestTrump.getRank().getValue()) {
+                        highestTrump = card;
+                    }
+                }
+            }
+        }
+        
+        return highestTrump;
+    }
+    
     public static String findLowTrump(List<Trick> tricks, Card.Suit trump) {
         if (tricks == null || trump == null) {
             return null;
@@ -234,6 +263,30 @@ public class GameEngine {
         }
         
         return winner;
+    }
+    
+    /**
+     * Finds and returns the actual lowest trump card.
+     */
+    public static Card findLowTrumpCard(List<Trick> tricks, Card.Suit trump) {
+        if (tricks == null || trump == null) {
+            return null;
+        }
+        
+        Card lowestTrump = null;
+        
+        for (Trick trick : tricks) {
+            for (Trick.CardPlay play : trick.getPlays()) {
+                Card card = play.card;
+                if (card.getSuit() == trump) {
+                    if (lowestTrump == null || card.getRank().getValue() < lowestTrump.getRank().getValue()) {
+                        lowestTrump = card;
+                    }
+                }
+            }
+        }
+        
+        return lowestTrump;
     }
     
     public static String findJackWinner(List<Trick> tricks, Card.Suit trump) {

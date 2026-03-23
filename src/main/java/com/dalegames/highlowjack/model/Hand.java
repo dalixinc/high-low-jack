@@ -1,6 +1,7 @@
 package com.dalegames.highlowjack.model;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import java.io.Serializable;
@@ -12,7 +13,7 @@ import java.io.Serializable;
  * provides methods for adding, playing, and querying cards.</p>
  * 
  * @author Dale &amp; Primus
- * @version 1.0
+ * @version 1.1
  */
 public class Hand implements Serializable{
     private final List<Card> cards;
@@ -149,6 +150,33 @@ public class Hand implements Serializable{
      */
     public boolean hasSuit(Card.Suit suit) {
         return cards.stream().anyMatch(c -> c.getSuit() == suit);
+    }
+
+    /**
+     * Sorts the hand by suit (Spades, Hearts, Diamonds, Clubs) and rank (high to low).
+     * The sort is performed in-place.
+     */
+    public void sort() {
+        cards.sort(Comparator
+            .comparing((Card c) -> getSuitOrder(c.getSuit()))
+            .thenComparing((Card c) -> c.getRank().getValue(), Comparator.reverseOrder())
+        );
+    }
+
+    /**
+     * Returns the sort order for suits: Spades=0, Hearts=1, Diamonds=2, Clubs=3.
+     * 
+     * @param suit the suit to get the order for
+     * @return the sort order (0-3)
+     */
+    private int getSuitOrder(Card.Suit suit) {
+        switch (suit) {
+            case SPADES: return 0;
+            case HEARTS: return 1;
+            case DIAMONDS: return 2;
+            case CLUBS: return 3;
+            default: return 4;
+        }
     }
 
     /**

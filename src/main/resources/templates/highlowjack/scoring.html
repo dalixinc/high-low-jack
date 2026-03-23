@@ -132,6 +132,12 @@
             font-weight: bold;
         }
 
+        .round-point-detail {
+            font-size: 0.85rem;
+            margin-top: 8px;
+            opacity: 0.9;
+        }
+
         .score-bars {
             display: flex;
             flex-direction: column;
@@ -246,11 +252,19 @@
                     <div class="round-point-card" th:if="${results.getRoundPointWinner('High') != null}">
                         <div class="round-point-category">⬆️ HIGH</div>
                         <div class="round-point-winner" th:text="${results.getRoundPointWinner('High')}">Player</div>
+                        <div class="round-point-detail" th:if="${results.highCard != null}" 
+                             th:text="'(' + ${results.highCard.rank.name()} + ${results.highCard.suit.symbol} + ')'">
+                            (Card)
+                        </div>
                         <div style="font-size: 0.9rem; margin-top: 5px;">+1 point</div>
                     </div>
                     <div class="round-point-card" th:if="${results.getRoundPointWinner('Low') != null}">
                         <div class="round-point-category">⬇️ LOW</div>
                         <div class="round-point-winner" th:text="${results.getRoundPointWinner('Low')}">Player</div>
+                        <div class="round-point-detail" th:if="${results.lowCard != null}" 
+                             th:text="'(' + ${results.lowCard.rank.name()} + ${results.lowCard.suit.symbol} + ')'">
+                            (Card)
+                        </div>
                         <div style="font-size: 0.9rem; margin-top: 5px;">+1 point</div>
                     </div>
                     <div class="round-point-card" th:if="${results.getRoundPointWinner('Jack') != null}">
@@ -261,6 +275,10 @@
                     <div class="round-point-card" th:if="${results.getRoundPointWinner('Game') != null}">
                         <div class="round-point-category">🎯 GAME</div>
                         <div class="round-point-winner" th:text="${results.getRoundPointWinner('Game')}">Player</div>
+                        <div class="round-point-detail" th:if="${results.gameWinnerPoints != null}" 
+                             th:text="'(' + ${results.gameWinnerPoints} + ' points)'">
+                            (Points)
+                        </div>
                         <div style="font-size: 0.9rem; margin-top: 5px;">+1 point</div>
                     </div>
                 </div>

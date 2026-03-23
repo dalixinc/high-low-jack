@@ -10,9 +10,11 @@ import java.util.Map;
  * Holds the complete results of a scored round for display purposes.
  * 
  * @author Dale &amp; Primus
- * @version 2.0
+ * @version 2.1
  */
 public class RoundResult implements Serializable {
+    
+    private static final long serialVersionUID = 1L;
     
     private final Map<String, List<Card>> capturedCards;
     private final Map<String, Integer> gamePointTotals;
@@ -20,18 +22,28 @@ public class RoundResult implements Serializable {
     private final Map<String, Integer> updatedScores;
     private final Card.Suit trumpSuit;
     
+    private final Card highCard;
+    private final Card lowCard;
+    private final Integer gameWinnerPoints;
+    
     public RoundResult(
             Map<String, List<Card>> capturedCards,
             Map<String, Integer> gamePointTotals,
             Map<String, String> roundPointWinners,
             Map<String, Integer> updatedScores,
-            Card.Suit trumpSuit) {
+            Card.Suit trumpSuit,
+            Card highCard,
+            Card lowCard,
+            Integer gameWinnerPoints) {
         
         this.capturedCards = new HashMap<>(capturedCards);
         this.gamePointTotals = new HashMap<>(gamePointTotals);
         this.roundPointWinners = new HashMap<>(roundPointWinners);
         this.updatedScores = new HashMap<>(updatedScores);
         this.trumpSuit = trumpSuit;
+        this.highCard = highCard;
+        this.lowCard = lowCard;
+        this.gameWinnerPoints = gameWinnerPoints;
     }
     
     /**
@@ -76,5 +88,17 @@ public class RoundResult implements Serializable {
     
     public Card.Suit getTrumpSuit() {
         return trumpSuit;
+    }
+    
+    public Card getHighCard() {
+        return highCard;
+    }
+    
+    public Card getLowCard() {
+        return lowCard;
+    }
+    
+    public Integer getGameWinnerPoints() {
+        return gameWinnerPoints;
     }
 }

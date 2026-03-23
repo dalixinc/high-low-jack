@@ -108,43 +108,61 @@
             display: flex;
             justify-content: center;
             align-items: flex-end;
-            gap: 20px;
+            gap: 15px;
             flex-wrap: wrap;
+            min-height: 150px;
         }
         
         .played-card {
             text-align: center;
-            flex: 0 0 auto;
         }
         
         .played-card-label {
-            font-size: 0.9rem;
             margin-bottom: 8px;
-            opacity: 0.9;
             font-weight: bold;
+            font-size: 1.1rem;
         }
         
         .played-card img {
-            height: 110px;
+            height: 140px;
             width: auto;
             border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
         }
         
-        .trick-empty {
+        .trick-winner {
             text-align: center;
-            opacity: 0.6;
+            margin-top: 15px;
             font-size: 1.2rem;
-            padding: 40px;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .waiting-message {
+            text-align: center;
+            color: rgba(255,255,255,0.5);
+            padding: 50px 0;
+            font-size: 1.2rem;
         }
         
         .your-hand {
-            text-align: center;
+            margin-bottom: 30px;
         }
         
         .your-hand h3 {
+            text-align: center;
             margin-bottom: 20px;
             font-size: 1.5rem;
+        }
+        
+        .must-follow {
+            text-align: center;
+            background: rgba(255, 215, 0, 0.2);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
         }
         
         .hand-cards {
@@ -162,53 +180,28 @@
             transition: all 0.3s ease;
         }
         
+        .hand-cards button:not(:disabled):hover img {
+            transform: translateY(-10px);
+        }
+        
         .hand-cards button:disabled {
             cursor: not-allowed;
             opacity: 0.6;
         }
         
-        .hand-cards button img {
+        .hand-cards button.invalid-card {
+            cursor: not-allowed;
+            opacity: 0.3;
+            filter: grayscale(80%);
+        }
+        
+        .hand-cards img {
             height: 140px;
             width: auto;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
         
-        .hand-cards button:not(:disabled):hover img {
-            transform: translateY(-15px) scale(1.05);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
-        }
-        
-        .hand-cards button:active img {
-            transform: translateY(-10px) scale(1.02);
-        }
-        
-        .hand-cards button.invalid-card {
-            cursor: not-allowed;
-        }
-        
-        .hand-cards button.invalid-card img {
-            opacity: 0.35;
-            filter: grayscale(80%);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-        
-        .hand-cards button.invalid-card:hover img {
-            transform: none;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-        
-        .must-follow {
-            text-align: center;
-            font-size: 1.1rem;
-            margin: 15px 0;
-            padding: 12px;
-            background: rgba(255, 150, 50, 0.3);
-            border-radius: 8px;
-            border: 2px solid rgba(255, 150, 50, 0.5);
-        }
-
         .message {
             text-align: center;
             font-size: 1.2rem;
@@ -218,8 +211,8 @@
             border-radius: 10px;
         }
         
-        .message.ai-thinking {
-            background: rgba(100, 150, 255, 0.2);
+        .ai-thinking {
+            background: rgba(102, 126, 234, 0.2);
         }
         
         .buttons {
@@ -310,27 +303,119 @@
         }
         
         .point-item {
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             padding: 10px;
             background: rgba(255, 255, 255, 0.05);
-            border-radius: 6px;
+            border-radius: 8px;
         }
         
         .point-label {
-            font-size: 0.9rem;
-            opacity: 0.8;
-            margin-bottom: 3px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 0.95rem;
         }
         
         .point-value {
-            font-size: 1rem;
-            font-weight: bold;
-            color: #fff;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
         }
         
-        .point-value.not-yet {
-            opacity: 0.5;
-            font-style: italic;
+        .win-message {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 1.1rem;
+            color: #ffd700;
+            font-weight: bold;
+        }
+        
+        /* SURGICAL ADDITION #1: Sort Hand Button Styles */
+        .sort-hand-button {
+            text-align: center;
+            margin-top: 15px;
+        }
+        
+        .sort-hand-button button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .sort-hand-button button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+        
+        /* SURGICAL ADDITION #2: Confirmation Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+        }
+        
+        .modal-content {
+            background: white;
+            margin: 15% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            color: #333;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        
+        .modal h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .modal p {
+            margin-bottom: 25px;
+            font-size: 1.1rem;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+        }
+        
+        .modal-btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .modal-btn-confirm {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .modal-btn-confirm:hover {
+            background: #c0392b;
+        }
+        
+        .modal-btn-cancel {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .modal-btn-cancel:hover {
+            background: #7f8c8d;
         }
         
         footer {
@@ -349,7 +434,7 @@
             text-decoration: underline;
         }
         
-        @media (max-width: 1024px) {
+        @media (max-width: 1200px) {
             .game-layout {
                 flex-direction: column;
             }
@@ -391,18 +476,8 @@
                         <strong>Trump Suit:</strong> 
                         <span th:text="${game.trumpSuit.getSymbol()}" style="font-size: 2rem;">♠</span>
                     </div>
-
+                    
                     <div class="trick-area">
-                        <div th:if="${game.currentTrick != null and game.currentTrick.size() > 0}">
-                            <div class="trick-cards">
-                                <div th:each="play : ${game.currentTrick.plays}" class="played-card">
-                                    <div class="played-card-label" th:text="${play.playerName}">Player</div>
-                                    <img th:src="@{|/images/cards/${#strings.substring(play.card.suit.name().toLowerCase(), 0, #strings.length(play.card.suit.name()) - 1)}_${#strings.toLowerCase(play.card.rank.name()) == 'ace' ? '1' : (#strings.toLowerCase(play.card.rank.name()) == 'two' ? '2' : (#strings.toLowerCase(play.card.rank.name()) == 'three' ? '3' : (#strings.toLowerCase(play.card.rank.name()) == 'four' ? '4' : (#strings.toLowerCase(play.card.rank.name()) == 'five' ? '5' : (#strings.toLowerCase(play.card.rank.name()) == 'six' ? '6' : (#strings.toLowerCase(play.card.rank.name()) == 'seven' ? '7' : (#strings.toLowerCase(play.card.rank.name()) == 'eight' ? '8' : (#strings.toLowerCase(play.card.rank.name()) == 'nine' ? '9' : (#strings.toLowerCase(play.card.rank.name()) == 'ten' ? '10' : (#strings.toLowerCase(play.card.rank.name()) == 'jack' ? 'jack' : (#strings.toLowerCase(play.card.rank.name()) == 'queen' ? 'queen' : 'king')))))))))))}.png|}"
-                                         alt="Card">
-                                </div>
-                            </div>
-                        </div>
-
                         <div th:if="${completedTrick != null}">
                             <div class="trick-cards">
                                 <div th:each="play : ${completedTrick.plays}" class="played-card">
@@ -411,12 +486,23 @@
                                          alt="Card">
                                 </div>
                             </div>
-                            <div style="text-align: center; margin-top: 10px; font-size: 1.1rem; color: #ffd700;">
-                                <strong th:text="${completedTrick.winner}">Winner</strong> wins the trick!
+                            <p class="trick-winner">
+                                <span th:text="${completedTrick.winner}">Winner</span> wins this trick!
+                            </p>
+                        </div>
+                        
+                        <div th:if="${completedTrick == null and game.currentTrick != null and game.currentTrick.size() > 0}">
+                            <div class="trick-cards">
+                                <div th:each="play : ${game.currentTrick.plays}" class="played-card">
+                                    <div class="played-card-label" th:text="${play.playerName}">Player</div>
+                                    <img th:src="@{|/images/cards/${#strings.substring(play.card.suit.name().toLowerCase(), 0, #strings.length(play.card.suit.name()) - 1)}_${#strings.toLowerCase(play.card.rank.name()) == 'ace' ? '1' : (#strings.toLowerCase(play.card.rank.name()) == 'two' ? '2' : (#strings.toLowerCase(play.card.rank.name()) == 'three' ? '3' : (#strings.toLowerCase(play.card.rank.name()) == 'four' ? '4' : (#strings.toLowerCase(play.card.rank.name()) == 'five' ? '5' : (#strings.toLowerCase(play.card.rank.name()) == 'six' ? '6' : (#strings.toLowerCase(play.card.rank.name()) == 'seven' ? '7' : (#strings.toLowerCase(play.card.rank.name()) == 'eight' ? '8' : (#strings.toLowerCase(play.card.rank.name()) == 'nine' ? '9' : (#strings.toLowerCase(play.card.rank.name()) == 'ten' ? '10' : (#strings.toLowerCase(play.card.rank.name()) == 'jack' ? 'jack' : (#strings.toLowerCase(play.card.rank.name()) == 'queen' ? 'queen' : 'king')))))))))))}.png|}"
+                                         alt="Card">
+                                </div>
                             </div>
                         </div>
-
-                        <div th:if="${(game.currentTrick == null or game.currentTrick.size() == 0) and completedTrick == null}" class="trick-empty">
+                        
+                        <div th:if="${completedTrick == null and (game.currentTrick == null or game.currentTrick.size() == 0)}" 
+                             class="waiting-message">
                             <p>Waiting for first card...</p>
                         </div>
                     </div>
@@ -450,12 +536,18 @@
                                 </div>
                             </form>
                         </div>
+                        
+                        <!-- SURGICAL ADDITION #1: Sort Hand Button -->
+                        <div class="sort-hand-button">
+                            <form th:action="@{/highlowjack/sort-hand}" method="post">
+                                <button type="submit">🔄 Sort Hand (♠ ♥ ♦ ♣)</button>
+                            </form>
+                        </div>
                     </div>
                     
                     <div class="buttons">
-                        <form th:action="@{/highlowjack/new}" method="post" style="display: inline;">
-                            <button type="submit" class="btn">New Game</button>
-                        </form>
+                        <!-- SURGICAL MODIFICATION: Changed to use modal confirmation -->
+                        <button type="button" class="btn" onclick="confirmNewGame()">New Game</button>
                     </div>
                 </div>
             </div>
@@ -467,43 +559,25 @@
                     <div class="scoreboard-score" th:text="${game.getScore(player)}">0</div>
                     <div class="scoreboard-progress">
                         <div class="scoreboard-progress-fill" 
-                             th:style="'width: ' + (${game.getScore(player)} * 100 / 11) + '%'">
+                             th:style="'width: ' + (${game.getScore(player)} * 100.0 / 11) + '%;'">
                         </div>
                     </div>
                 </div>
+                <div class="win-message">First to 11 wins!</div>
                 
-                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.2); text-align: center; font-size: 0.9rem;">
-                    First to <strong>11</strong> wins!
-                </div>
-                
-                <div class="point-tracker" th:if="${game.trumpSuit != null}">
+                <div class="point-tracker" th:if="${game.trumpSuit != null and pointStatus != null and !pointStatus.isEmpty()}">
                     <div class="point-tracker-title">🎯 Points</div>
-                    
-                    <div class="point-item">
-                        <div class="point-label">⬆️ HIGH</div>
-                        <div class="point-value" 
-                             th:classappend="${pointStatus.get('High') == null} ? 'not-yet'"
-                             th:text="${pointStatus.get('High') != null ? pointStatus.get('High') : 'Not yet played'}">
-                            Not yet played
-                        </div>
+                    <div class="point-item" th:if="${pointStatus.containsKey('High')}">
+                        <div class="point-label">⬆️ High</div>
+                        <div class="point-value" th:text="${pointStatus.get('High')}">Not yet played</div>
                     </div>
-                    
-                    <div class="point-item">
-                        <div class="point-label">⬇️ LOW</div>
-                        <div class="point-value"
-                             th:classappend="${pointStatus.get('Low') == null} ? 'not-yet'"
-                             th:text="${pointStatus.get('Low') != null ? pointStatus.get('Low') : 'Not yet played'}">
-                            Not yet played
-                        </div>
+                    <div class="point-item" th:if="${pointStatus.containsKey('Low')}">
+                        <div class="point-label">⬇️ Low</div>
+                        <div class="point-value" th:text="${pointStatus.get('Low')}">Not yet played</div>
                     </div>
-                    
-                    <div class="point-item">
-                        <div class="point-label">💎 JACK</div>
-                        <div class="point-value"
-                             th:classappend="${pointStatus.get('Jack') == null} ? 'not-yet'"
-                             th:text="${pointStatus.get('Jack') != null ? pointStatus.get('Jack') : 'Not yet played'}">
-                            Not yet played
-                        </div>
+                    <div class="point-item" th:if="${pointStatus.containsKey('Jack')}">
+                        <div class="point-label">💎 Jack</div>
+                        <div class="point-value" th:text="${pointStatus.get('Jack')}">Not yet played</div>
                     </div>
                 </div>
             </div>
@@ -514,7 +588,19 @@
             by David Bellot (LGPL-2.1)
         </footer>
     </div>
-
+    
+    <!-- SURGICAL ADDITION #2: Confirmation Modal -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <h2>⚠️ Start New Game?</h2>
+            <p>Are you sure you want to start a new game? All current progress will be lost.</p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="modal-btn modal-btn-confirm" onclick="submitNewGame()">Start New Game</button>
+            </div>
+        </div>
+    </div>
+    
     <script th:inline="javascript">
         /*<![CDATA[*/
         const isAITurn = /*[[${isAITurn}]]*/ false;
@@ -538,6 +624,30 @@
             setTimeout(() => {
                 location.reload();
             }, delay);
+        }
+        
+        // SURGICAL ADDITION #3: Modal Functions
+        function confirmNewGame() {
+            document.getElementById('confirmModal').style.display = 'block';
+        }
+        
+        function closeModal() {
+            document.getElementById('confirmModal').style.display = 'none';
+        }
+        
+        function submitNewGame() {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/highlowjack/new';
+            document.body.appendChild(form);
+            form.submit();
+        }
+        
+        window.onclick = function(event) {
+            const modal = document.getElementById('confirmModal');
+            if (event.target === modal) {
+                closeModal();
+            }
         }
         /*]]>*/
     </script>

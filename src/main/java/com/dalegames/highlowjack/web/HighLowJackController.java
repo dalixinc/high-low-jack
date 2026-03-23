@@ -25,7 +25,7 @@ import jakarta.servlet.http.HttpSession;
  * Web controller for High Low Jack card game.
  * 
  * @author Dale &amp; Primus
- * @version 6.0
+ * @version 6.1
  */
 @Controller
 @RequestMapping("/highlowjack")
@@ -118,6 +118,19 @@ public class HighLowJackController {
     public String newGame(HttpSession session) {
         session.removeAttribute("hlj_game");
         session.removeAttribute("hlj_clearTrick");
+        return "redirect:/highlowjack";
+    }
+    
+    @PostMapping("/sort-hand")
+    public String sortHand(HttpSession session) {
+        Game game = (Game) session.getAttribute("hlj_game");
+        
+        if (game != null) {
+            Hand hand = game.getHand(HUMAN_PLAYER);
+            hand.sort();
+            session.setAttribute("hlj_game", game);
+        }
+        
         return "redirect:/highlowjack";
     }
     

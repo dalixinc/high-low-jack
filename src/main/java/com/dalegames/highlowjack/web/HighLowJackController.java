@@ -1,6 +1,7 @@
 package com.dalegames.highlowjack.web;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -15,8 +16,11 @@ import com.dalegames.highlowjack.SimpleAI;
 import com.dalegames.highlowjack.engine.GameEngine;
 import com.dalegames.highlowjack.model.Card;
 import com.dalegames.highlowjack.model.Game;
+import com.dalegames.highlowjack.model.GameSetup;
 import com.dalegames.highlowjack.model.Hand;
+import com.dalegames.highlowjack.model.PlayerInfo;
 import com.dalegames.highlowjack.model.RoundResult;
+import com.dalegames.highlowjack.model.SetResult;
 import com.dalegames.highlowjack.model.Trick;
 
 import jakarta.servlet.http.HttpSession;
@@ -25,20 +29,27 @@ import jakarta.servlet.http.HttpSession;
  * Web controller for High Low Jack card game.
  * 
  * @author Dale &amp; Primus
- * @version 6.1
+ * @version 7.0 - Added setup screen, match tracking, and game controller permissions
  */
 @Controller
 @RequestMapping("/highlowjack")
 public class HighLowJackController {
     
-    private static final String HUMAN_PLAYER = "Dale";
-    
     @GetMapping
     public String showGame(Model model, HttpSession session) {
+        GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
+        
+        // No setup exists - redirect to setup screen
+        if (setup == null) {
+            return "redirect:/highlowjack/setup";
+        }
+        
         Game game = (Game) session.getAttribute("hlj_game");
         
+        // Setup exists but no game - create new game
         if (game == null) {
-            game = createNewGame();
+            game = new Game(setup);
+            game.dealCards();
             session.setAttribute("hlj_game", game);
         }
         
@@ -60,7 +71,7 @@ public class HighLowJackController {
             session.setAttribute("hlj_clearTrick", true);
         } 
         else if (game.getState() == Game.GameState.IN_PROGRESS &&
-                 !game.getCurrentPlayer().equals(HUMAN_PLAYER)) {
+                 !isCurrentPlayerHuman(game, setup)) {
             playAITurn(game);
             
             completedTrick = game.getCompletedTrick();
@@ -76,8 +87,9 @@ public class HighLowJackController {
             session.setAttribute("hlj_game", game);
         }
         
-        List<Card> validCards = calculateValidCards(game, HUMAN_PLAYER);
-        boolean isAITurn = !game.getCurrentPlayer().equals(HUMAN_PLAYER);
+        String humanPlayer = getHumanPlayerName(setup);
+        List<Card> validCards = calculateValidCards(game, humanPlayer);
+        boolean isAITurn = !isCurrentPlayerHuman(game, setup);
         
         Card.Suit leadSuit = null;
         if (game.getCurrentTrick() != null && game.getCurrentTrick().size() > 0) {
@@ -87,7 +99,9 @@ public class HighLowJackController {
         Map<String, String> pointStatus = GameEngine.getCurrentPointStatus(game);
         
         model.addAttribute("game", game);
-        model.addAttribute("humanPlayer", HUMAN_PLAYER);
+        model.addAttribute("setup", setup);
+        model.addAttribute("humanPlayer", humanPlayer);
+        model.addAttribute("isController", true); // For now, always player 1
         model.addAttribute("isAITurn", isAITurn);
         model.addAttribute("completedTrick", completedTrick);
         model.addAttribute("validCards", validCards);
@@ -97,20 +111,58 @@ public class HighLowJackController {
         return "highlowjack/game";
     }
     
+    @GetMapping("/setup")
+    public String showSetup(Model model) {
+        return "highlowjack/setup";
+    }
+    
+    @PostMapping("/setup")
+    public String processSetup(
+            @RequestParam String player1Name,
+            @RequestParam String player2Name,
+            @RequestParam String player3Name,
+            @RequestParam String player4Name,
+            @RequestParam PlayerInfo.PlayerType player1Type,
+            @RequestParam PlayerInfo.PlayerType player2Type,
+            @RequestParam PlayerInfo.PlayerType player3Type,
+            @RequestParam PlayerInfo.PlayerType player4Type,
+            @RequestParam GameSetup.MatchType matchType,
+            HttpSession session) {
+        
+        // Create player info list
+        List<PlayerInfo> players = new ArrayList<>();
+        players.add(new PlayerInfo(player1Name, player1Type, true));  // Player 1 is controller
+        players.add(new PlayerInfo(player2Name, player2Type, false));
+        players.add(new PlayerInfo(player3Name, player3Type, false));
+        players.add(new PlayerInfo(player4Name, player4Type, false));
+        
+        // Create game setup
+        GameSetup setup = new GameSetup(players, matchType);
+        
+        // Store in session and clear any existing game
+        session.setAttribute("hlj_setup", setup);
+        session.removeAttribute("hlj_game");
+        session.removeAttribute("hlj_clearTrick");
+        
+        return "redirect:/highlowjack";
+    }
+    
     @PostMapping("/play")
     public String playCard(@RequestParam int cardIndex, HttpSession session) {
         Game game = (Game) session.getAttribute("hlj_game");
+        GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
         
-        if (game != null && 
-            game.getCurrentPlayer().equals(HUMAN_PLAYER) &&
-            game.getState() == Game.GameState.IN_PROGRESS) {
+        if (game != null && setup != null &&
+            game.getState() == Game.GameState.IN_PROGRESS &&
+            isCurrentPlayerHuman(game, setup)) {
             
-            Hand hand = game.getHand(HUMAN_PLAYER);
+            String currentPlayer = game.getCurrentPlayer();
+            Hand hand = game.getHand(currentPlayer);
             
             if (cardIndex >= 0 && cardIndex < hand.getCards().size()) {
                 Card card = hand.getCards().get(cardIndex);
                 
-                if (GameEngine.isValidPlay(game, HUMAN_PLAYER, card)) {
+                if (GameEngine.isValidPlay(game, currentPlayer, card)) {
                     game.playCard(card);
                     session.setAttribute("hlj_game", game);
                 }
@@ -122,17 +174,20 @@ public class HighLowJackController {
     
     @PostMapping("/new")
     public String newGame(HttpSession session) {
+        // Clear game but keep setup - redirect to setup screen
         session.removeAttribute("hlj_game");
         session.removeAttribute("hlj_clearTrick");
-        return "redirect:/highlowjack";
+        return "redirect:/highlowjack/setup";
     }
     
     @PostMapping("/sort-hand")
     public String sortHand(HttpSession session) {
         Game game = (Game) session.getAttribute("hlj_game");
+        GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
         
-        if (game != null) {
-            Hand hand = game.getHand(HUMAN_PLAYER);
+        if (game != null && setup != null) {
+            String humanPlayer = getHumanPlayerName(setup);
+            Hand hand = game.getHand(humanPlayer);
             hand.sort();
             session.setAttribute("hlj_game", game);
         }
@@ -143,16 +198,38 @@ public class HighLowJackController {
     @GetMapping("/scoring")
     public String showScoring(Model model, HttpSession session) {
         Game game = (Game) session.getAttribute("hlj_game");
+        GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
         
-        if (game == null) {
+        if (game == null || setup == null) {
             return "redirect:/highlowjack";
         }
         
         RoundResult results = GameEngine.calculateRoundResults(game);
         
+        // Check for set winner using tiebreaker logic
+        // Calculate scores BEFORE this round by subtracting points just awarded
+        Map<String, Integer> scoresBefore = new HashMap<>();
+        for (String player : game.getPlayerNames()) {
+            int currentScore = game.getScore(player);
+            int roundPoints = 0;
+            for (String category : new String[]{"High", "Low", "Jack", "Game"}) {
+                if (player.equals(results.getRoundPointWinner(category))) {
+                    roundPoints++;
+                }
+            }
+            scoresBefore.put(player, currentScore - roundPoints);
+        }
+        
+        SetResult setResult = SetResult.determineWinner(scoresBefore, results.getRoundPointWinners());
+        
         model.addAttribute("results", results);
+        model.addAttribute("setup", setup);
         model.addAttribute("playerNames", game.getPlayerNames());
         model.addAttribute("winningScore", 11);
+        model.addAttribute("setResult", setResult);
+        model.addAttribute("currentSetNumber", game.getCurrentSetNumber());
+        model.addAttribute("setsWon", game.getSetsWon());
+        model.addAttribute("isController", true); // For now, always player 1
         
         return "highlowjack/scoring";
     }
@@ -160,26 +237,48 @@ public class HighLowJackController {
     @PostMapping("/continue")
     public String continueGame(HttpSession session) {
         Game game = (Game) session.getAttribute("hlj_game");
+        GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
         
-        if (game != null) {
+        if (game != null && setup != null) {
+            // Check for set winner
+            RoundResult results = GameEngine.calculateRoundResults(game);
+            
+            // Get scores before this round
+            Map<String, Integer> scoresBefore = new HashMap<>();
             for (String player : game.getPlayerNames()) {
-                if (game.getScore(player) >= 11) {
-                    session.removeAttribute("hlj_game");
-                    return "redirect:/highlowjack";
+                int currentScore = game.getScore(player);
+                int roundPoints = 0;
+                for (String category : new String[]{"High", "Low", "Jack", "Game"}) {
+                    if (player.equals(results.getRoundPointWinner(category))) {
+                        roundPoints++;
+                    }
                 }
+                scoresBefore.put(player, currentScore - roundPoints);
             }
             
-            game.dealCards();
-            session.setAttribute("hlj_game", game);
+            SetResult setResult = SetResult.determineWinner(scoresBefore, results.getRoundPointWinners());
+            
+            if (setResult != null) {
+                // Someone won the set!
+                game.recordSetWin(setResult.getWinner());
+                session.setAttribute("hlj_game", game);
+                
+                if (game.isMatchComplete()) {
+                    // Match is over - redirect to match results (for now, just setup)
+                    return "redirect:/highlowjack/setup";
+                } else {
+                    // Start new set
+                    game.startNewSet();
+                    session.setAttribute("hlj_game", game);
+                }
+            } else {
+                // No set winner yet - deal new round
+                game.dealCards();
+                session.setAttribute("hlj_game", game);
+            }
         }
         
         return "redirect:/highlowjack";
-    }
-
-    private Game createNewGame() {
-        Game game = new Game("Dale", "Kreep", "Carryn", "Primus");
-        game.dealCards();
-        return game;
     }
     
     private void playAITurn(Game game) {
@@ -209,5 +308,21 @@ public class HighLowJackController {
         }
         
         return validCards;
+    }
+    
+    private boolean isCurrentPlayerHuman(Game game, GameSetup setup) {
+        String currentPlayer = game.getCurrentPlayer();
+        return setup.isHumanPlayer(currentPlayer);
+    }
+    
+    private String getHumanPlayerName(GameSetup setup) {
+        // Return the first human player found
+        for (PlayerInfo player : setup.getPlayers()) {
+            if (player.isHuman()) {
+                return player.getName();
+            }
+        }
+        // Fallback to Player 1
+        return setup.getPlayer(0).getName();
     }
 }

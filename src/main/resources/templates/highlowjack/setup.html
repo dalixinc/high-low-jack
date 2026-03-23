@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Setup - High Low Jack</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .setup-container {
+            max-width: 800px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .subtitle {
+            text-align: center;
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 2rem;
+        }
+        
+        .setup-section {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #ffd700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: #ffd700;
+            border-radius: 2px;
+        }
+        
+        .player-row {
+            display: grid;
+            grid-template-columns: 100px 1fr 200px;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        
+        .player-label {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        
+        .player-label.controller {
+            color: #ffd700;
+        }
+        
+        .player-label .controller-badge {
+            display: inline-block;
+            font-size: 0.8rem;
+            background: rgba(255, 215, 0, 0.3);
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 5px;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #ffd700;
+            background: white;
+        }
+        
+        .player-type-select {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .type-button {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        
+        .type-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .type-button.active {
+            background: rgba(76, 175, 80, 0.6);
+            border-color: #4caf50;
+            color: white;
+        }
+        
+        .type-button.active.computer {
+            background: rgba(33, 150, 243, 0.6);
+            border-color: #2196f3;
+        }
+        
+        input[type="radio"] {
+            display: none;
+        }
+        
+        .match-type-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+        
+        .match-type-option {
+            position: relative;
+        }
+        
+        .match-type-label {
+            display: block;
+            padding: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .match-type-label:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        input[type="radio"]:checked + .match-type-label {
+            background: rgba(255, 215, 0, 0.4);
+            border-color: #ffd700;
+            border-width: 3px;
+        }
+        
+        .match-type-name {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .match-type-desc {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .start-button {
+            width: 100%;
+            padding: 18px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+        }
+        
+        .start-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+        }
+        
+        .start-button:active {
+            transform: translateY(0);
+        }
+        
+        .info-note {
+            background: rgba(33, 150, 243, 0.2);
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .info-note strong {
+            color: #ffd700;
+        }
+        
+        @media (max-width: 768px) {
+            .player-row {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .match-type-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <h1>🃏 High Low Jack 🃏</h1>
+        <p class="subtitle">Configure Your Match</p>
+        
+        <form th:action="@{/highlowjack/setup}" method="post">
+            <!-- PLAYER SETUP SECTION -->
+            <div class="setup-section">
+                <div class="section-title">👥 Player Setup</div>
+                
+                <div class="player-row">
+                    <div class="player-label controller">
+                        Player 1
+                        <span class="controller-badge">👑 Controller</span>
+                    </div>
+                    <input type="text" name="player1Name" value="Dale" required 
+                           placeholder="Enter player name" maxlength="20">
+                    <div class="player-type-select">
+                        <label class="type-button active">
+                            <input type="radio" name="player1Type" value="HUMAN" checked>
+                            👤 Human
+                        </label>
+                        <label class="type-button computer">
+                            <input type="radio" name="player1Type" value="COMPUTER">
+                            🤖 Computer
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="player-row">
+                    <div class="player-label">Player 2</div>
+                    <input type="text" name="player2Name" value="Kreep" required 
+                           placeholder="Enter player name" maxlength="20">
+                    <div class="player-type-select">
+                        <label class="type-button">
+                            <input type="radio" name="player2Type" value="HUMAN">
+                            👤 Human
+                        </label>
+                        <label class="type-button computer active">
+                            <input type="radio" name="player2Type" value="COMPUTER" checked>
+                            🤖 Computer
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="player-row">
+                    <div class="player-label">Player 3</div>
+                    <input type="text" name="player3Name" value="Carryn" required 
+                           placeholder="Enter player name" maxlength="20">
+                    <div class="player-type-select">
+                        <label class="type-button">
+                            <input type="radio" name="player3Type" value="HUMAN">
+                            👤 Human
+                        </label>
+                        <label class="type-button computer active">
+                            <input type="radio" name="player3Type" value="COMPUTER" checked>
+                            🤖 Computer
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="player-row">
+                    <div class="player-label">Player 4</div>
+                    <input type="text" name="player4Name" value="Primus" required 
+                           placeholder="Enter player name" maxlength="20">
+                    <div class="player-type-select">
+                        <label class="type-button">
+                            <input type="radio" name="player4Type" value="HUMAN">
+                            👤 Human
+                        </label>
+                        <label class="type-button computer active">
+                            <input type="radio" name="player4Type" value="COMPUTER" checked>
+                            🤖 Computer
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="info-note">
+                    <strong>Game Controller:</strong> Player 1 is the game controller and has exclusive 
+                    access to the New Game and Continue buttons. Only human players can see and play cards.
+                </div>
+            </div>
+            
+            <!-- MATCH TYPE SECTION -->
+            <div class="setup-section">
+                <div class="section-title">🏆 Match Type</div>
+                
+                <div class="match-type-grid">
+                    <div class="match-type-option">
+                        <input type="radio" name="matchType" value="SINGLE_SET" id="single" checked>
+                        <label for="single" class="match-type-label">
+                            <div class="match-type-name">Just One Set</div>
+                            <div class="match-type-desc">First to 11 wins</div>
+                        </label>
+                    </div>
+                    
+                    <div class="match-type-option">
+                        <input type="radio" name="matchType" value="BEST_OF_THREE" id="best3">
+                        <label for="best3" class="match-type-label">
+                            <div class="match-type-name">Best of 3 Sets</div>
+                            <div class="match-type-desc">First to 2 sets wins</div>
+                        </label>
+                    </div>
+                    
+                    <div class="match-type-option">
+                        <input type="radio" name="matchType" value="BEST_OF_FIVE" id="best5">
+                        <label for="best5" class="match-type-label">
+                            <div class="match-type-name">Best of 5 Sets</div>
+                            <div class="match-type-desc">First to 3 sets wins</div>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="info-note">
+                    <strong>Set:</strong> A set is won by the first player to reach 11 points. 
+                    Points are awarded for High, Low, Jack, and Game in each round.
+                </div>
+            </div>
+            
+            <!-- START BUTTON -->
+            <button type="submit" class="start-button">🎮 Start Game!</button>
+        </form>
+    </div>
+    
+    <script>
+        // Handle player type button styling
+        document.querySelectorAll('.player-type-select').forEach(container => {
+            const buttons = container.querySelectorAll('.type-button');
+            const radios = container.querySelectorAll('input[type="radio"]');
+            
+            buttons.forEach((button, index) => {
+                button.addEventListener('click', () => {
+                    buttons.forEach(b => b.classList.remove('active'));
+                    button.classList.add('active');
+                    radios[index].checked = true;
+                });
+            });
+        });
+        
+        // Prevent form submission if player names are empty or duplicate
+        document.querySelector('form').addEventListener('submit', (e) => {
+            const names = [
+                document.querySelector('input[name="player1Name"]').value.trim(),
+                document.querySelector('input[name="player2Name"]').value.trim(),
+                document.querySelector('input[name="player3Name"]').value.trim(),
+                document.querySelector('input[name="player4Name"]').value.trim()
+            ];
+            
+            // Check for empty names
+            if (names.some(name => name === '')) {
+                e.preventDefault();
+                alert('All player names are required!');
+                return;
+            }
+            
+            // Check for duplicate names
+            const uniqueNames = new Set(names);
+            if (uniqueNames.size !== names.length) {
+                e.preventDefault();
+                alert('Player names must be unique!');
+                return;
+            }
+        });
+    </script>
+</body>
+</html>

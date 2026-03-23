@@ -47,6 +47,108 @@
             font-size: 1.2rem;
             opacity: 0.9;
         }
+        
+        .set-info {
+            font-size: 1rem;
+            opacity: 0.85;
+            margin-top: 10px;
+        }
+
+        /* SET WINNER CELEBRATION */
+        .set-winner-fanfare {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            padding: 40px;
+            text-align: center;
+            border-bottom: 5px solid #f0c000;
+            animation: fadeInScale 0.6s ease-out;
+        }
+        
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .winner-trophy {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            animation: bounce 1s ease-in-out infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+        
+        .winner-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #1e3c72;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .winner-name {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #764ba2;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.15);
+        }
+        
+        .winner-details {
+            font-size: 1.3rem;
+            color: #2c3e50;
+            line-height: 1.8;
+        }
+        
+        .winning-point-badge {
+            display: inline-block;
+            background: rgba(118, 75, 162, 0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            color: #764ba2;
+        }
+        
+        .tiebreaker-note {
+            margin-top: 15px;
+            font-size: 1rem;
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        
+        .sets-won-display {
+            margin-top: 25px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .set-score {
+            text-align: center;
+        }
+        
+        .set-score-name {
+            font-size: 1.1rem;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .set-score-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #1e3c72;
+        }
 
         .scoring-content {
             padding: 30px;
@@ -218,11 +320,38 @@
 </head>
 <body>
     <div class="scoring-container">
+        <!-- SET WINNER FANFARE (only shown if setResult exists) -->
+        <div th:if="${setResult != null}" class="set-winner-fanfare">
+            <div class="winner-trophy">🏆</div>
+            <div class="winner-title">SET WINNER!</div>
+            <div class="winner-name" th:text="${setResult.winner}">Player Name</div>
+            <div class="winner-details">
+                Won Set <span th:text="${currentSetNumber}">1</span> by reaching 11 points!
+                <br>
+                Winning point: <span class="winning-point-badge" th:text="${setResult.winningPoint}">High</span>
+                <span th:if="${setResult.wasTiebreaker()}" class="tiebreaker-note">
+                    ⚡ Won by tiebreaker precedence!
+                </span>
+            </div>
+            
+            <!-- Sets Won Display -->
+            <div class="sets-won-display">
+                <div th:each="player : ${playerNames}" class="set-score">
+                    <div class="set-score-name" th:text="${player}">Player</div>
+                    <div class="set-score-value" th:text="${setsWon.get(player)}">0</div>
+                </div>
+            </div>
+        </div>
+    
         <div class="scoring-header">
             <h1>🏆 Round Complete! 🏆</h1>
             <div class="trump-display">
                 Trump: <strong th:text="${results.trumpSuit.name()}">SUIT</strong>
                 <span th:text="${results.trumpSuit.symbol}" style="font-size: 1.5rem;">♠</span>
+            </div>
+            <div class="set-info">
+                Set <span th:text="${currentSetNumber}">1</span> - 
+                <span th:text="${setup.matchType.displayName}">Match Type</span>
             </div>
         </div>
 
@@ -284,9 +413,9 @@
                 </div>
             </div>
 
-            <!-- GAME SCORE -->
+            <!-- SET SCORE -->
             <div class="section">
-                <div class="section-title">📈 Game Score (First to <span th:text="${winningScore}">11</span> wins!)</div>
+                <div class="section-title">📈 Set Score (First to <span th:text="${winningScore}">11</span> wins!)</div>
                 <div class="score-bars">
                     <div th:each="player : ${playerNames}" class="score-bar-row">
                         <div class="score-player-name" th:text="${player}">Player</div>
@@ -300,9 +429,14 @@
                 </div>
             </div>
 
-            <!-- CONTINUE BUTTON -->
-            <form th:action="@{/highlowjack/continue}" method="post">
-                <button type="submit" class="continue-button">Continue to Next Round</button>
+            <!-- CONTINUE BUTTON (only shown for controller) -->
+            <form th:if="${isController}" th:action="@{/highlowjack/continue}" method="post">
+                <button type="submit" class="continue-button">
+                    <span th:if="${setResult != null}">
+                        <span th:text="${setResult != null && setsWon.get(setResult.winner) >= setup.setsToWin} ? '🎊 Match Complete!' : '▶️ Start Next Set'">Continue</span>
+                    </span>
+                    <span th:unless="${setResult != null}">▶️ Continue to Next Round</span>
+                </button>
             </form>
         </div>
     </div>

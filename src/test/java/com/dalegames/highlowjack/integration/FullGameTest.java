@@ -133,12 +133,17 @@ class FullGameTest {
         
         // Add points manually
         game.addScore("Dale", 3);
-        assertFalse(game.isGameOver());
-        assertNull(game.getWinner());
+        assertFalse(game.isMatchComplete());
+        assertNull(game.getMatchWinner());
         
-        game.addScore("Dale", 4);  // Total = 7
-        assertTrue(game.isGameOver());
-        assertEquals("Dale", game.getWinner());
+        // Game now requires 11 points to win a set, and recordSetWin must be called
+        game.addScore("Dale", 8);  // Total = 11
+        assertFalse(game.isMatchComplete());  // No match winner yet - must call recordSetWin
+        
+        // Record the set win
+        game.recordSetWin("Dale");
+        assertTrue(game.isMatchComplete());  // Single set match, so match is complete
+        assertEquals("Dale", game.getMatchWinner());
     }
     
     /**

@@ -454,21 +454,15 @@
             <div class="main-game-area">
                 <div class="game-board">
                     <div class="scores">
-                        <div class="player-score" th:classappend="${game.currentPlayer == 'Dale'} ? 'current'">
-                            <div class="player-name">👤 Dale</div>
-                            <div class="score" th:text="${game.getScore('Dale')}">0</div>
-                        </div>
-                        <div class="player-score" th:classappend="${game.currentPlayer == 'Kreep'} ? 'current'">
-                            <div class="player-name">🤖 Kreep</div>
-                            <div class="score" th:text="${game.getScore('Kreep')}">0</div>
-                        </div>
-                        <div class="player-score" th:classappend="${game.currentPlayer == 'Carryn'} ? 'current'">
-                            <div class="player-name">🤖 Carryn</div>
-                            <div class="score" th:text="${game.getScore('Carryn')}">0</div>
-                        </div>
-                        <div class="player-score" th:classappend="${game.currentPlayer == 'Primus'} ? 'current'">
-                            <div class="player-name">🤖 Primus</div>
-                            <div class="score" th:text="${game.getScore('Primus')}">0</div>
+                        <div th:each="player : ${game.playerNames}" 
+                            class="player-score" 
+                            th:classappend="${game.currentPlayer == player} ? 'current'">
+                            <div class="player-name">
+                                <span th:if="${setup != null && setup.isHumanPlayer(player)}">👤</span>
+                                <span th:unless="${setup != null && setup.isHumanPlayer(player)}">🤖</span>
+                                <span th:text="${player}">Player</span>
+                            </div>
+                            <div class="score" th:text="${game.getScore(player)}">0</div>
                         </div>
                     </div>
                     

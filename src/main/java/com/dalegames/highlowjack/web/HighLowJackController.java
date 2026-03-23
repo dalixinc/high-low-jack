@@ -48,6 +48,12 @@ public class HighLowJackController {
             session.removeAttribute("hlj_clearTrick");
         }
         
+        // Check if round is complete and redirect to scoring
+        if (game.getState() == Game.GameState.ROUND_COMPLETE) {
+            session.setAttribute("hlj_game", game);
+            return "redirect:/highlowjack/scoring";
+        }
+        
         Trick completedTrick = game.getCompletedTrick();
         
         if (completedTrick != null) {

@@ -177,11 +177,17 @@ public class GameEngine {
             status.put("Low", lowestTrump.toString() + " - " + lowPlayer);
         }
         
-        String jackWinner = null;
+String jackWinner = null;
         for (Trick trick : allTricks) {
             for (Trick.CardPlay play : trick.getPlays()) {
                 if (play.card.getSuit() == trump && play.card.getRank() == Card.Rank.JACK) {
-                    jackWinner = trick.getWinner();
+                    // Only get winner if trick is complete (4 cards)
+                    if (trick.isComplete()) {
+                        jackWinner = trick.getWinner();
+                    } else {
+                        // For incomplete trick, show who played the Jack
+                        jackWinner = play.playerName;
+                    }
                     break;
                 }
             }

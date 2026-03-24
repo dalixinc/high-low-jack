@@ -469,6 +469,9 @@
                     <div class="trump-display" th:if="${game.trumpSuit != null}">
                         <strong>Trump Suit:</strong> 
                         <span th:text="${game.trumpSuit.getSymbol()}" style="font-size: 2rem;">♠</span>
+                        <span th:if="${game.pitcherName != null}" style="font-size: 0.9rem; opacity: 0.8;">
+                            (pitched by <span th:text="${game.pitcherName}">Dale</span>)
+                        </span>
                     </div>
                     
                     <div class="trick-area">
@@ -601,16 +604,18 @@
         const hasCompletedTrick = /*[[${completedTrick != null}]]*/ false;
         const currentPlayer = /*[[${game.currentPlayer}]]*/ 'Dale';
         const humanPlayer = /*[[${humanPlayer}]]*/ 'Dale';
+        const isRoundComplete = /*[[${game.state.name() == 'ROUND_COMPLETE'}]]*/ false;
         
-        if (hasCompletedTrick) {
+        // BUG #1 FIX: Longer pause for completed tricks, especially the last one
+        if (hasCompletedTrick && !isRoundComplete) {
             if (currentPlayer === humanPlayer) {
                 setTimeout(() => {
                     location.reload();
-                }, 3000);
+                }, 5000);  // CHANGED: 5 seconds instead of 3
             } else {
                 setTimeout(() => {
                     location.reload();
-                }, 2000);
+                }, 4500);  // CHANGED: 4.5 seconds instead of 2
             }
         } 
         else if (isAITurn) {

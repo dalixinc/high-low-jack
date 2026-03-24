@@ -25,7 +25,7 @@ import java.util.Map;
  * </ol>
  *
  * @author Dale &amp; Primus
- * @version 1.2 - Added match and set tracking
+ * @version 1.3 - Added match and set tracking
  */
 public class Game implements Serializable{
     private static final long serialVersionUID = 1L;
@@ -48,6 +48,7 @@ public class Game implements Serializable{
     private GameState state;
     private Trick completedTrick;
     private int currentSetNumber;
+    private int pitcherIndex;  // BUG #3 FIX: Tracks who pitched this round
 
     /**
      * Constructs a new game with the specified game setup.
@@ -77,6 +78,7 @@ public class Game implements Serializable{
         
         this.currentPlayerIndex = 0;
         this.state = GameState.NOT_STARTED;
+         this.pitcherIndex = 0;  // Player 0 pitches first round
     }
     
     /**
@@ -154,16 +156,23 @@ public class Game implements Serializable{
         if (state != GameState.NOT_STARTED && state != GameState.ROUND_COMPLETE) {
             throw new IllegalStateException("Cannot deal cards during active game");
         }
-        
+
+        // BUG #3 FIX: Rotate pitcher clockwise each round (except first)
+        if (state == GameState.ROUND_COMPLETE) {
+            pitcherIndex = (pitcherIndex + 1) % NUM_PLAYERS;
+        }
+
         deck = new Deck();
         deck.shuffle();
-        
+
         // Deal 7 cards to each player
         for (String playerName : playerNames) {
             Hand hand = hands.get(playerName);
             hand.addCards(deck.dealHand(CARDS_PER_PLAYER));
         }
 
+        // BUG #3 FIX: Start with pitcher as current player
+        currentPlayerIndex = pitcherIndex;
         trumpSuit = null;
         currentTrick = null;
         completedTrick = null;
@@ -509,7 +518,17 @@ public class Game implements Serializable{
     public String getWinner() {
         return getMatchWinner();
     }
-    
+
+    /**
+     * Gets the name of the player who pitched (led) this round.
+     * FEATURE #1: For display purposes.
+     *
+     * @return pitcher's name
+     */
+    public String getPitcherName() {
+        return playerNames.get(pitcherIndex);
+    }
+
     /**
      * Returns a string representation of the current game state.
      * 

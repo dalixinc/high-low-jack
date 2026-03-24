@@ -205,6 +205,7 @@ public class HighLowJackController {
         }
         
         RoundResult results = GameEngine.calculateRoundResults(game);
+        session.setAttribute("hlj_roundResult", results);  // Store for continueGame()
         
         // Check for set winner using tiebreaker logic
         // Calculate scores BEFORE this round by subtracting points just awarded
@@ -238,12 +239,10 @@ public class HighLowJackController {
     public String continueGame(HttpSession session) {
         Game game = (Game) session.getAttribute("hlj_game");
         GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
+        RoundResult results = (RoundResult) session.getAttribute("hlj_roundResult");
         
-        if (game != null && setup != null) {
-            // Check for set winner
-            RoundResult results = GameEngine.calculateRoundResults(game);
-            
-            // Get scores before this round
+        if (game != null && setup != null && results != null) {
+            // Get scores BEFORE the round (subtract the points just awarded)
             Map<String, Integer> scoresBefore = new HashMap<>();
             for (String player : game.getPlayerNames()) {
                 int currentScore = game.getScore(player);
@@ -264,22 +263,26 @@ public class HighLowJackController {
                 session.setAttribute("hlj_game", game);
                 
                 if (game.isMatchComplete()) {
-                    // Match is over - redirect to match results (for now, just setup)
+                    // Match is over
+                    session.removeAttribute("hlj_roundResult");
                     return "redirect:/highlowjack/setup";
                 } else {
                     // Start new set
                     game.startNewSet();
                     session.setAttribute("hlj_game", game);
+                    session.removeAttribute("hlj_roundResult");
                 }
             } else {
                 // No set winner yet - deal new round
                 game.dealCards();
                 session.setAttribute("hlj_game", game);
+                session.removeAttribute("hlj_roundResult");
             }
         }
         
         return "redirect:/highlowjack";
     }
+
     
     private void playAITurn(Game game) {
         String currentPlayer = game.getCurrentPlayer();

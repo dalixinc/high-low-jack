@@ -112,6 +112,27 @@
             flex-wrap: wrap;
             min-height: 150px;
         }
+
+        .trick-counter {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .trick-progress {
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            font-family: monospace;
+        }
+
+        .trick-progress .filled {
+            color: #ffd700;
+            text-shadow: 0 0 3px rgba(255, 215, 0, 0.5);
+        }
+
+        .trick-progress .empty {
+            color: rgba(255, 255, 255, 0.3);
+        }
         
         .played-card {
             text-align: center;
@@ -444,6 +465,9 @@
                 position: static;
             }
         }
+        
+
+        
     </style>
 </head>
 <body>
@@ -467,11 +491,27 @@
                     </div>
                     
                     <div class="trump-display" th:if="${game.trumpSuit != null}">
-                        <strong>Trump Suit:</strong> 
-                        <span th:text="${game.trumpSuit.getSymbol()}" style="font-size: 2rem;">♠</span>
-                        <span th:if="${game.pitcherName != null}" style="font-size: 0.9rem; opacity: 0.8;">
-                            (pitched by <span th:text="${game.pitcherName}">Dale</span>)
-                        </span>
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+                            <div>
+                                <strong>Trump Suit:</strong> 
+                                <span th:text="${game.trumpSuit.getSymbol()}" style="font-size: 2rem;">♠</span>
+                                <span th:if="${game.pitcherName != null}" style="font-size: 0.9rem; opacity: 0.8;">
+                                    (pitched by <span th:text="${game.pitcherName}">Dale</span>)
+                                </span>
+                            </div>
+                            
+                            <div class="trick-counter" th:if="${game.state.name() == 'IN_PROGRESS'}">
+                                <span style="font-size: 0.95rem; font-weight: bold;">
+                                    Trick <span th:text="${game.tricks.size() + 1}">1</span> of 7
+                                </span>
+                                <span class="trick-progress" th:attr="data-current=${game.tricks.size() + 1}">
+                                    <span class="trick-progress-fill" th:each="i : ${#numbers.sequence(1, 7)}">
+                                        <span th:if="${i <= game.tricks.size() + 1}" class="filled">▓</span>
+                                        <span th:unless="${i <= game.tricks.size() + 1}" class="empty">░</span>
+                                    </span>
+                                </span>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="trick-area">

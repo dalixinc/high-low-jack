@@ -451,21 +451,21 @@
                 <!-- TEAM MODE SCORING -->
                 <div th:if="${game.isTeamMode()}" class="score-bars">
                     <div th:each="team : ${game.teams}" class="score-bar-row">
-                    <div class="score-player-name" style="display: flex; flex-direction: column; gap: 2px;">
-                        <div>
-                            <span th:if="${team.name.contains('North-South')}">🟢</span>
-                            <span th:if="${team.name.contains('East-West')}">🔴</span>
-                            <span th:text="${team.name}">Team</span>
+                        <div class="score-player-name">
+                            <div>
+                                <span th:if="${team.name.contains('North-South')}">🟢</span>
+                                <span th:if="${team.name.contains('East-West')}">🔴</span>
+                                <span th:text="${team.name}">Team</span>
+                            </div>
+                            <div style="font-size: 0.75rem; opacity: 0.7; margin-top: 2px;">
+                                <span th:text="${team.player1Name}">P1</span> & 
+                                <span th:text="${team.player2Name}">P2</span>
+                            </div>
                         </div>
-                        <div style="font-size: 0.75rem; opacity: 0.7;">
-                            <span th:text="${team.player1Name}">P1</span> & 
-                            <span th:text="${team.player2Name}">P2</span>
-                        </div>
-                    </div>
                         <div class="score-value" th:text="${game.getScore(team.name)}">0</div>
                         <div class="progress-bar-container">
                             <div class="progress-bar-fill" 
-                                th:style="'width: ' + (${results.getScore(team.name)} * 100 / ${winningScore}) + '%'">
+                                th:style="'width: ' + (${game.getScore(team.name)} * 100 / ${winningScore}) + '%'">
                             </div>
                         </div>
                     </div>

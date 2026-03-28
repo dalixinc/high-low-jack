@@ -506,6 +506,11 @@
                                     (pitched by <span th:text="${game.pitcherName}">Dale</span>)
                                 </span>
                             </div>
+
+                            <!-- NEW: Round counter -->
+                            <div style="font-size: 0.95rem; font-weight: bold; opacity: 0.9;">
+                                📊 Round <span th:text="${roundNumber}">1</span> of Set <span th:text="${game.currentSetNumber}">1</span>
+                            </div>
                             
                             <div class="trick-counter" th:if="${game.state.name() == 'IN_PROGRESS'}">
                                 <span style="font-size: 0.95rem; font-weight: bold;">

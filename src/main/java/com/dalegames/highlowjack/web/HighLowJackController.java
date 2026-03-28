@@ -124,7 +124,15 @@ public class HighLowJackController {
             tricksWon.put(player, tricks);
         }
         model.addAttribute("tricksWon", tricksWon);
-        
+
+        // Round counter: Initialize if needed
+        Integer roundNumber = (Integer) session.getAttribute("hlj_roundNumber");
+        if (roundNumber == null) {
+            roundNumber = 1;
+            session.setAttribute("hlj_roundNumber", roundNumber);
+        }
+        model.addAttribute("roundNumber", roundNumber);
+
         return "highlowjack/game";
     }
     
@@ -345,18 +353,25 @@ public class HighLowJackController {
                 if (game.isMatchComplete()) {
                     // Match is over
                     session.removeAttribute("hlj_roundResult");
+                    session.removeAttribute("hlj_roundNumber");
                     return "redirect:/highlowjack/setup";
                 } else {
                     // Start new set
                     game.startNewSet();
                     session.setAttribute("hlj_game", game);
                     session.removeAttribute("hlj_roundResult");
+                    session.setAttribute("hlj_roundNumber", 1);  // Reset round counter for new set
                 }
             } else {
                 // No set winner yet - deal new round
                 game.dealCards();
                 session.setAttribute("hlj_game", game);
                 session.removeAttribute("hlj_roundResult");
+                
+                // Increment round number
+                Integer roundNumber = (Integer) session.getAttribute("hlj_roundNumber");
+                if (roundNumber == null) roundNumber = 1;
+                session.setAttribute("hlj_roundNumber", roundNumber + 1);
             }
         }
         

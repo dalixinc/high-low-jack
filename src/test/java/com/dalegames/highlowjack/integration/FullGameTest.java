@@ -71,7 +71,7 @@ class FullGameTest {
         
         // Play first card
         String firstPlayer = game.getCurrentPlayer();
-        Hand hand = game.getHand(firstPlayer);
+        com.dalegames.highlowjack.model.Hand hand = game.getHand(firstPlayer);
         Card firstCard = hand.getCards().get(0);
         
         game.playCard(firstCard);
@@ -87,7 +87,7 @@ class FullGameTest {
         
         // Play first card to establish lead suit
         String player1 = game.getCurrentPlayer();
-        Hand hand1 = game.getHand(player1);
+        com.dalegames.highlowjack.model.Hand hand1 = game.getHand(player1);
         Card leadCard = hand1.getCards().get(0);
         Card.Suit leadSuit = leadCard.getSuit();
         
@@ -95,7 +95,7 @@ class FullGameTest {
         
         // Next player must follow suit if possible
         String player2 = game.getCurrentPlayer();
-        Hand hand2 = game.getHand(player2);
+        com.dalegames.highlowjack.model.Hand hand2 = game.getHand(player2);
         
         if (hand2.hasSuit(leadSuit)) {
             // Try to play non-lead suit
@@ -159,7 +159,7 @@ class FullGameTest {
             
             while (cardsInTrick < 4) {
                 String player = game.getCurrentPlayer();
-                Hand hand = game.getHand(player);
+                com.dalegames.highlowjack.model.Hand hand = game.getHand(player);
                 
                 if (hand.isEmpty()) {
                     break;
@@ -184,8 +184,8 @@ class FullGameTest {
     /**
      * Finds a valid card for the player to play based on current trick.
      */
-    private Card findValidCard(Game game, String player, Hand hand) {
-        Trick currentTrick = game.getCurrentTrick();
+    private Card findValidCard(Game game, String player, com.dalegames.highlowjack.model.Hand hand) {
+        com.dalegames.highlowjack.model.Trick currentTrick = game.getCurrentTrick();
         
         // If leading, play any card
         if (currentTrick == null || currentTrick.size() == 0) {

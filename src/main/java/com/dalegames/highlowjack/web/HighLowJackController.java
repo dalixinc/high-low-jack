@@ -29,7 +29,7 @@ import jakarta.servlet.http.HttpSession;
  * Web controller for High Low Jack card game.
  * 
  * @author Dale &amp; Primus
- * @version 7.0 - Added setup screen, match tracking, and game controller permissions
+ * @version 8.0 - Added setup screen, match tracking, and game controller permissions
  */
 @Controller
 @RequestMapping("/highlowjack")
@@ -118,26 +118,70 @@ public class HighLowJackController {
     
     @PostMapping("/setup")
     public String processSetup(
-            @RequestParam String player1Name,
-            @RequestParam String player2Name,
-            @RequestParam String player3Name,
-            @RequestParam String player4Name,
-            @RequestParam PlayerInfo.PlayerType player1Type,
-            @RequestParam PlayerInfo.PlayerType player2Type,
-            @RequestParam PlayerInfo.PlayerType player3Type,
-            @RequestParam PlayerInfo.PlayerType player4Type,
+            @RequestParam(required = false) String gameMode,
+            // Individual mode parameters
+            @RequestParam(required = false) String player1Name,
+            @RequestParam(required = false) String player2Name,
+            @RequestParam(required = false) String player3Name,
+            @RequestParam(required = false) String player4Name,
+            @RequestParam(required = false) PlayerInfo.PlayerType player1Type,
+            @RequestParam(required = false) PlayerInfo.PlayerType player2Type,
+            @RequestParam(required = false) PlayerInfo.PlayerType player3Type,
+            @RequestParam(required = false) PlayerInfo.PlayerType player4Type,
+            // Team mode parameters
+            @RequestParam(required = false) String player1NameTeam,
+            @RequestParam(required = false) String player2NameTeam,
+            @RequestParam(required = false) String player3NameTeam,
+            @RequestParam(required = false) String player4NameTeam,
+            @RequestParam(required = false) PlayerInfo.PlayerType player1TypeTeam,
+            @RequestParam(required = false) PlayerInfo.PlayerType player2TypeTeam,
+            @RequestParam(required = false) PlayerInfo.PlayerType player3TypeTeam,
+            @RequestParam(required = false) PlayerInfo.PlayerType player4TypeTeam,
             @RequestParam GameSetup.MatchType matchType,
             HttpSession session) {
         
-        // Create player info list
-        List<PlayerInfo> players = new ArrayList<>();
-        players.add(new PlayerInfo(player1Name, player1Type, true));  // Player 1 is controller
-        players.add(new PlayerInfo(player2Name, player2Type, false));
-        players.add(new PlayerInfo(player3Name, player3Type, false));
-        players.add(new PlayerInfo(player4Name, player4Type, false));
+        // Determine which mode and use appropriate parameters
+        boolean isTeamMode = "TEAM".equals(gameMode);
         
-        // Create game setup
-        GameSetup setup = new GameSetup(players, matchType);
+        String p1Name, p2Name, p3Name, p4Name;
+        PlayerInfo.PlayerType p1Type, p2Type, p3Type, p4Type;
+        
+        if (isTeamMode) {
+            // Use team mode parameters
+            p1Name = player1NameTeam;
+            p2Name = player2NameTeam;
+            p3Name = player3NameTeam;
+            p4Name = player4NameTeam;
+            p1Type = player1TypeTeam;
+            p2Type = player2TypeTeam;
+            p3Type = player3TypeTeam;
+            p4Type = player4TypeTeam;
+        } else {
+            // Use individual mode parameters
+            p1Name = player1Name;
+            p2Name = player2Name;
+            p3Name = player3Name;
+            p4Name = player4Name;
+            p1Type = player1Type;
+            p2Type = player2Type;
+            p3Type = player3Type;
+            p4Type = player4Type;
+        }
+        
+        // Create player info list (same for both modes)
+        List<PlayerInfo> players = new ArrayList<>();
+        players.add(new PlayerInfo(p1Name, p1Type, true));  // Player 1 is controller
+        players.add(new PlayerInfo(p2Name, p2Type, false));
+        players.add(new PlayerInfo(p3Name, p3Type, false));
+        players.add(new PlayerInfo(p4Name, p4Type, false));
+        
+        // Create game setup based on mode
+        GameSetup setup;
+        if (isTeamMode) {
+            setup = GameSetup.createTeam(players, matchType);
+        } else {
+            setup = GameSetup.createIndividual(players, matchType);
+        }
         
         // Store in session and clear any existing game
         session.setAttribute("hlj_setup", setup);

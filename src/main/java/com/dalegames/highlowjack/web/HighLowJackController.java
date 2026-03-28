@@ -29,7 +29,7 @@ import jakarta.servlet.http.HttpSession;
  * Web controller for High Low Jack card game.
  * 
  * @author Dale &amp; Primus
- * @version 8.0 - Added setup screen, match tracking, and game controller permissions
+ * @version 8.1 - Added pitcher indicator and tricks won counter
  */
 @Controller
 @RequestMapping("/highlowjack")
@@ -107,6 +107,23 @@ public class HighLowJackController {
         model.addAttribute("validCards", validCards);
         model.addAttribute("leadSuit", leadSuit);
         model.addAttribute("pointStatus", pointStatus);
+
+        // PHASE 5: Add pitcher name
+        String pitcherName = game.getPitcherName();
+        model.addAttribute("pitcherName", pitcherName);
+        
+        // PHASE 5: Calculate tricks won per player
+        Map<String, Integer> tricksWon = new HashMap<>();
+        for (String player : game.getPlayerNames()) {
+            int tricks = 0;
+            for (Trick trick : game.getTricks()) {
+                if (trick.getWinner().equals(player)) {
+                    tricks++;
+                }
+            }
+            tricksWon.put(player, tricks);
+        }
+        model.addAttribute("tricksWon", tricksWon);
         
         return "highlowjack/game";
     }
@@ -276,6 +293,25 @@ public class HighLowJackController {
         model.addAttribute("setsWon", game.getSetsWon());
         model.addAttribute("isController", true); // For now, always player 1
         
+        // PHASE 5: Add pitcher name
+        model.addAttribute("pitcherName", game.getPitcherName());
+        
+        // PHASE 5: Calculate tricks won
+        Map<String, Integer> tricksWon = new HashMap<>();
+        for (String player : game.getPlayerNames()) {
+            int tricks = 0;
+            for (Trick trick : game.getTricks()) {
+                if (trick.getWinner().equals(player)) {
+                    tricks++;
+                }
+            }
+            tricksWon.put(player, tricks);
+        }
+        model.addAttribute("tricksWon", tricksWon);
+
+        // PHASE 5: need to pass the game reference to the scoring page to display current scores and sets won
+        model.addAttribute("game", game);
+
         return "highlowjack/scoring";
     }
 

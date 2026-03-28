@@ -485,8 +485,15 @@
                                 <span th:if="${setup != null && setup.isHumanPlayer(player)}">👤</span>
                                 <span th:unless="${setup != null && setup.isHumanPlayer(player)}">🤖</span>
                                 <span th:text="${player}">Player</span>
+                                <span th:if="${pitcherName != null && pitcherName == player}" 
+                                    title="Pitched trump this round">🎺</span>
                             </div>
                             <div class="score" th:text="${game.getScore(player)}">0</div>
+                            <div class="tricks-count" style="font-size: 0.85rem; opacity: 0.8; margin-top: 3px;">
+                                <span>Tricks: </span>
+                                <span th:text="${tricksWon.get(player)}">0</span>
+                                <span>🏆</span>
+                            </div>
                         </div>
                     </div>
                     
@@ -589,18 +596,45 @@
                 </div>
             </div>
             
-            <div class="scoreboard-sidebar">
-                <div class="scoreboard-title">📊 Score</div>
-                <div th:each="player : ${game.playerNames}" class="scoreboard-player">
-                    <div class="scoreboard-player-name" th:text="${player}">Player</div>
-                    <div class="scoreboard-score" th:text="${game.getScore(player)}">0</div>
-                    <div class="scoreboard-progress">
-                        <div class="scoreboard-progress-fill" 
-                             th:style="'width: ' + (${game.getScore(player)} * 100.0 / 11) + '%;'">
-                        </div>
-                    </div>
+  <div class="scoreboard-sidebar">
+    <!-- TEAM MODE SCOREBOARD -->
+    <div th:if="${game.isTeamMode()}">
+        <div class="scoreboard-title">📊 Team Score</div>
+        <div th:each="team : ${game.teams}" class="scoreboard-player">
+            <div class="scoreboard-player-name">
+                <span th:if="${team.name.contains('North-South')}">🟢</span>
+                <span th:if="${team.name.contains('East-West')}">🔴</span>
+                <span th:text="${team.name}">Team</span>
+            </div>
+            <div class="scoreboard-score" th:text="${game.getScore(team.name)}">0</div>
+            <div class="scoreboard-progress">
+                <div class="scoreboard-progress-fill" 
+                     th:style="'width: ' + (${game.getScore(team.name)} * 100.0 / 11) + '%;'">
                 </div>
-                <div class="win-message">First to 11 wins!</div>
+            </div>
+            <div style="font-size: 0.75rem; opacity: 0.7; margin-top: 3px;">
+                <span th:text="${team.player1Name}">P1</span> & 
+                <span th:text="${team.player2Name}">P2</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- INDIVIDUAL MODE SCOREBOARD -->
+    <div th:unless="${game.isTeamMode()}">
+        <div class="scoreboard-title">📊 Score</div>
+        <div th:each="player : ${game.playerNames}" class="scoreboard-player">
+            <div class="scoreboard-player-name" th:text="${player}">Player</div>
+            <div class="scoreboard-score" th:text="${game.getScore(player)}">0</div>
+            <div class="scoreboard-progress">
+                <div class="scoreboard-progress-fill" 
+                     th:style="'width: ' + (${game.getScore(player)} * 100.0 / 11) + '%;'">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="win-message">First to 11 wins!</div>
+                <!--div class="win-message">First to 11 wins!</div> -->
                 
                 <div class="point-tracker" th:if="${game.trumpSuit != null and pointStatus != null and !pointStatus.isEmpty()}">
                     <div class="point-tracker-title">🎯 Points</div>

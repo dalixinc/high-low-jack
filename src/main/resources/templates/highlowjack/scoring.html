@@ -348,6 +348,9 @@
             <div class="trump-display">
                 Trump: <strong th:text="${results.trumpSuit.name()}">SUIT</strong>
                 <span th:text="${results.trumpSuit.symbol}" style="font-size: 1.5rem;">♠</span>
+                <span th:if="${pitcherName != null}" style="font-size: 0.9rem; opacity: 0.9;">
+                    <br>Pitched by <span th:text="${pitcherName}">Player</span> 🎺
+                </span>
             </div>
             <div class="set-info">
                 Set <span th:text="${currentSetNumber}">1</span> - 
@@ -374,15 +377,34 @@
                 </div>
             </div>
 
+            <!-- TRICKS WON DISTRIBUTION -->
+            <div class="section">
+                <div class="section-title">🏆 Tricks Won This Round</div>
+                <div class="score-bars">
+                    <div th:each="player : ${playerNames}" class="score-bar-row">
+                        <div class="score-player-name" th:text="${player}">Player</div>
+                        <div class="score-value" th:text="${tricksWon.get(player)}">0</div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" 
+                                 th:style="'width: ' + (${tricksWon.get(player)} * 100.0 / 7) + '%'">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- ROUND POINTS AWARDED -->
             <div class="section">
                 <div class="section-title">🎯 Round Points Awarded</div>
                 <div class="round-points-grid">
-                    <div class="round-point-card" th:if="${results.getRoundPointWinner('High') != null}">
+                   <div class="round-point-card" th:if="${results.getRoundPointWinner('High') != null}">
                         <div class="round-point-category">⬆️ HIGH</div>
                         <div class="round-point-winner" th:text="${results.getRoundPointWinner('High')}">Player</div>
+                        <div th:if="${game.isTeamMode()}" style="font-size: 0.85rem; margin-top: 3px; opacity: 0.9;">
+                            (<span th:text="${game.getTeamForPlayer(results.getRoundPointWinner('High')).name}">Team</span>)
+                        </div>
                         <div class="round-point-detail" th:if="${results.highCard != null}" 
-                             th:text="'(' + ${results.highCard.rank.name()} + ${results.highCard.suit.symbol} + ')'">
+                            th:text="'(' + ${results.highCard.rank.name()} + ${results.highCard.suit.symbol} + ')'">
                             (Card)
                         </div>
                         <div style="font-size: 0.9rem; margin-top: 5px;">+1 point</div>
@@ -390,8 +412,11 @@
                     <div class="round-point-card" th:if="${results.getRoundPointWinner('Low') != null}">
                         <div class="round-point-category">⬇️ LOW</div>
                         <div class="round-point-winner" th:text="${results.getRoundPointWinner('Low')}">Player</div>
+                        <div th:if="${game.isTeamMode()}" style="font-size: 0.85rem; margin-top: 3px; opacity: 0.9;">
+                            (<span th:text="${game.getTeamForPlayer(results.getRoundPointWinner('Low')).name}">Team</span>)
+                        </div>
                         <div class="round-point-detail" th:if="${results.lowCard != null}" 
-                             th:text="'(' + ${results.lowCard.rank.name()} + ${results.lowCard.suit.symbol} + ')'">
+                            th:text="'(' + ${results.lowCard.rank.name()} + ${results.lowCard.suit.symbol} + ')'">
                             (Card)
                         </div>
                         <div style="font-size: 0.9rem; margin-top: 5px;">+1 point</div>
@@ -399,30 +424,61 @@
                     <div class="round-point-card" th:if="${results.getRoundPointWinner('Jack') != null}">
                         <div class="round-point-category">💎 JACK</div>
                         <div class="round-point-winner" th:text="${results.getRoundPointWinner('Jack')}">Player</div>
+                        <div th:if="${game.isTeamMode()}" style="font-size: 0.85rem; margin-top: 3px; opacity: 0.9;">
+                            (<span th:text="${game.getTeamForPlayer(results.getRoundPointWinner('Jack')).name}">Team</span>)
+                        </div>
                         <div style="font-size: 0.9rem; margin-top: 5px;">+1 point</div>
                     </div>
                     <div class="round-point-card" th:if="${results.getRoundPointWinner('Game') != null}">
                         <div class="round-point-category">🎯 GAME</div>
                         <div class="round-point-winner" th:text="${results.getRoundPointWinner('Game')}">Player</div>
-                        <div class="round-point-detail" th:if="${results.gameWinnerPoints != null}" 
-                             th:text="'(' + ${results.gameWinnerPoints} + ' points)'">
-                            (Points)
+                        <div th:if="${game.isTeamMode()}" style="font-size: 0.85rem; margin-top: 3px; opacity: 0.9;">
+                            (<span th:text="${game.getTeamForPlayer(results.getRoundPointWinner('Game')).name}">Team</span>)
                         </div>
-                        <div style="font-size: 0.9rem; margin-top: 5px;">+1 point</div>
+                    <div class="round-point-detail" th:if="${results.gameWinnerPoints != null}" 
+                        th:text="'(' + ${results.gameWinnerPoints} + ' points)'">
+                        (Points)
                     </div>
+                    <div style="font-size: 0.9rem; margin-top: 5px;">+1 point</div>
+                </div>
                 </div>
             </div>
 
             <!-- SET SCORE -->
             <div class="section">
                 <div class="section-title">📈 Set Score (First to <span th:text="${winningScore}">11</span> wins!)</div>
-                <div class="score-bars">
+                
+                <!-- TEAM MODE SCORING -->
+                <div th:if="${game.isTeamMode()}" class="score-bars">
+                    <div th:each="team : ${game.teams}" class="score-bar-row">
+                    <div class="score-player-name" style="display: flex; flex-direction: column; gap: 2px;">
+                        <div>
+                            <span th:if="${team.name.contains('North-South')}">🟢</span>
+                            <span th:if="${team.name.contains('East-West')}">🔴</span>
+                            <span th:text="${team.name}">Team</span>
+                        </div>
+                        <div style="font-size: 0.75rem; opacity: 0.7;">
+                            <span th:text="${team.player1Name}">P1</span> & 
+                            <span th:text="${team.player2Name}">P2</span>
+                        </div>
+                    </div>
+                        <div class="score-value" th:text="${game.getScore(team.name)}">0</div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" 
+                                th:style="'width: ' + (${results.getScore(team.name)} * 100 / ${winningScore}) + '%'">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- INDIVIDUAL MODE SCORING -->
+                <div th:unless="${game.isTeamMode()}" class="score-bars">
                     <div th:each="player : ${playerNames}" class="score-bar-row">
                         <div class="score-player-name" th:text="${player}">Player</div>
                         <div class="score-value" th:text="${results.getScore(player)}">0</div>
                         <div class="progress-bar-container">
                             <div class="progress-bar-fill" 
-                                 th:style="'width: ' + (${results.getScore(player)} * 100 / ${winningScore}) + '%'">
+                                th:style="'width: ' + (${results.getScore(player)} * 100 / ${winningScore}) + '%'">
                             </div>
                         </div>
                     </div>

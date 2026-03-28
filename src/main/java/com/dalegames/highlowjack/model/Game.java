@@ -11,7 +11,7 @@ import java.util.Map;
  * Represents the complete state of a High Low Jack game.
  * 
  * <p>Manages the game flow including dealing cards, playing tricks, tracking scores,
- * and determining the winner. Supports exactly 4 players.</p>
+ * and determining the winner. Supports exactly 4 players in either individual or team mode.</p>
  * 
  * <p>Game flow:
  * <ol>
@@ -20,15 +20,15 @@ import java.util.Map;
  *   <li>First card played determines trump suit</li>
  *   <li>Play 7 tricks</li>
  *   <li>Score High, Low, Jack, Game points</li>
- *   <li>First to 11 total points wins the SET</li>
+ *   <li>First to 11 total points wins the SET (individual or team)</li>
  *   <li>First to win required sets wins the MATCH</li>
  * </ol>
  *
  * @author Dale &amp; Primus
- * @version 1.3 - Added match and set tracking
+ * @version 2.1 - Added team mode support
  */
 public class Game implements Serializable{
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;  // Incremented for team mode
 
     private static final int NUM_PLAYERS = 4;
     private static final int CARDS_PER_PLAYER = 7;
@@ -36,10 +36,13 @@ public class Game implements Serializable{
     
     private final List<String> playerNames;
     private final Map<String, Hand> hands;
-    private final Map<String, Integer> scores;
+    private final Map<String, Integer> scores;  // Player scores (individual) OR Team scores (team mode)
     private final List<Trick> tricks;
     private final GameSetup gameSetup;
-    private final Map<String, Integer> setsWon;
+    private final Map<String, Integer> setsWon;  // Player sets (individual) OR Team sets (team mode)
+    
+    // NEW: Team mode support
+    private final List<Team> teams;  // null for individual mode, 2 teams for team mode
     
     private Deck deck;
     private Card.Suit trumpSuit;
@@ -53,7 +56,7 @@ public class Game implements Serializable{
     /**
      * Constructs a new game with the specified game setup.
      * 
-     * @param gameSetup the game configuration including players and match type
+     * @param gameSetup the game configuration including players, match type, and game mode
      * @throws IllegalArgumentException if gameSetup is null
      */
     public Game(GameSetup gameSetup) {
@@ -68,22 +71,39 @@ public class Game implements Serializable{
         this.tricks = new ArrayList<>();
         this.setsWon = new HashMap<>();
         this.currentSetNumber = 1;
+        this.pitcherIndex = 0;  // Player 0 pitches first round
         
-        // Initialize hands, scores, and sets won
+        // Initialize teams if team mode
+        if (gameSetup.isTeamMode()) {
+            this.teams = new ArrayList<>(gameSetup.getTeams());
+            
+            // Initialize scores and sets won by TEAM
+            for (Team team : teams) {
+                scores.put(team.getName(), 0);
+                setsWon.put(team.getName(), 0);
+            }
+        } else {
+            this.teams = null;
+            
+            // Initialize scores and sets won by PLAYER
+            for (String name : playerNames) {
+                scores.put(name, 0);
+                setsWon.put(name, 0);
+            }
+        }
+        
+        // Initialize hands for all players (always individual)
         for (String name : playerNames) {
             hands.put(name, new Hand(name));
-            scores.put(name, 0);
-            setsWon.put(name, 0);
         }
         
         this.currentPlayerIndex = 0;
         this.state = GameState.NOT_STARTED;
-         this.pitcherIndex = 0;  // Player 0 pitches first round
     }
     
     /**
      * Legacy constructor for backwards compatibility.
-     * Creates a simple single-set game with all human players.
+     * Creates a simple single-set game with all human players in individual mode.
      * 
      * @param playerNames exactly 4 player names
      * @throws IllegalArgumentException if not exactly 4 players or any name is null/empty
@@ -101,7 +121,7 @@ public class Game implements Serializable{
             }
         }
         
-        // Create default GameSetup with all human players
+        // Create default GameSetup with all human players in individual mode
         List<PlayerInfo> players = new ArrayList<>();
         for (int i = 0; i < playerNames.size(); i++) {
             players.add(new PlayerInfo(
@@ -111,15 +131,17 @@ public class Game implements Serializable{
             ));
         }
         
-        this.gameSetup = new GameSetup(players, GameSetup.MatchType.SINGLE_SET);
+        this.gameSetup = GameSetup.createIndividual(players, GameSetup.MatchType.SINGLE_SET);
         this.playerNames = new ArrayList<>(playerNames);
         this.hands = new HashMap<>();
         this.scores = new HashMap<>();
         this.tricks = new ArrayList<>();
         this.setsWon = new HashMap<>();
         this.currentSetNumber = 1;
+        this.pitcherIndex = 0;
+        this.teams = null;  // Individual mode
         
-        // Initialize hands, scores, and sets won
+        // Initialize hands, scores, and sets won by PLAYER
         for (String name : playerNames) {
             hands.put(name, new Hand(name));
             scores.put(name, 0);
@@ -192,8 +214,15 @@ public class Game implements Serializable{
         }
         
         // Reset scores for new set
-        for (String player : playerNames) {
-            scores.put(player, 0);
+        if (gameSetup.isTeamMode()) {
+            for (Team team : teams) {
+                team.resetScore();
+                scores.put(team.getName(), 0);
+            }
+        } else {
+            for (String player : playerNames) {
+                scores.put(player, 0);
+            }
         }
         
         currentSetNumber++;
@@ -202,18 +231,28 @@ public class Game implements Serializable{
     }
     
     /**
-     * Records a set win for a player.
+     * Records a set win for a player or team.
      * 
-     * @param winner the name of the set winner
+     * @param winner the name of the set winner (player name or team name)
      * @throws IllegalArgumentException if winner is not in the game
      */
     public void recordSetWin(String winner) {
         if (!setsWon.containsKey(winner)) {
-            throw new IllegalArgumentException("Player not in game: " + winner);
+            throw new IllegalArgumentException("Winner not in game: " + winner);
         }
         
         int newTotal = setsWon.get(winner) + 1;
         setsWon.put(winner, newTotal);
+        
+        // Update team object if team mode
+        if (gameSetup.isTeamMode()) {
+            for (Team team : teams) {
+                if (team.getName().equals(winner)) {
+                    team.incrementSetsWon();
+                    break;
+                }
+            }
+        }
         
         // Check if match is complete
         if (newTotal >= gameSetup.getSetsToWin()) {
@@ -269,7 +308,7 @@ public class Game implements Serializable{
         // Play the card
         hand.playCard(card);
         currentTrick.playCard(currentPlayer, card);
-
+        
         // Check if trick is complete
         if (currentTrick.isComplete()) {
             tricks.add(currentTrick);
@@ -294,69 +333,52 @@ public class Game implements Serializable{
         return currentTrick;
     }
     
-    /**
-     * Returns the name of the current player whose turn it is.
-     * 
-     * @return the current player's name
-     */
+    // Getters and utility methods
+    
     public String getCurrentPlayer() {
         return playerNames.get(currentPlayerIndex);
     }
     
-    /**
-     * Returns the hand for the specified player.
-     * 
-     * @param playerName the player's name
-     * @return the player's hand
-     * @throws IllegalArgumentException if player name is not in game
-     */
-    public Hand getHand(String playerName) {
-        Hand hand = hands.get(playerName);
-        if (hand == null) {
-            throw new IllegalArgumentException("Player not in game: " + playerName);
-        }
-        return hand;
+    public int getCurrentPlayerIndex() {
+        return currentPlayerIndex;
     }
     
-    /**
-     * Returns all player names in turn order.
-     * 
-     * @return a copy of the player names list
-     */
+    public Hand getHand(String playerName) {
+        return hands.get(playerName);
+    }
+    
+    public Card.Suit getTrumpSuit() {
+        return trumpSuit;
+    }
+    
+    public Trick getCurrentTrick() {
+        return currentTrick;
+    }
+    
+    public List<Trick> getTricks() {
+        return new ArrayList<>(tricks);
+    }
+    
+    public GameState getState() {
+        return state;
+    }
+    
     public List<String> getPlayerNames() {
         return new ArrayList<>(playerNames);
     }
     
     /**
-     * Returns the current trump suit, or null if not yet determined.
-     * Trump is set by the first card played in the game.
-     * 
-     * @return the trump suit, or null if game hasn't started
+     * Gets the name of the player who pitched (led) this round.
+     * FEATURE #1: For display purposes.
+     *
+     * @return pitcher's name
      */
-    public Card.Suit getTrumpSuit() {
-        return trumpSuit;
+    public String getPitcherName() {
+        return playerNames.get(pitcherIndex);
     }
     
     /**
-     * Returns all completed tricks in the order they were played.
-     * 
-     * @return a copy of the tricks list
-     */
-    public List<Trick> getTricks() {
-        return new ArrayList<>(tricks);
-    }
-    
-    /**
-     * Returns the current trick being played, or null if between tricks.
-     * 
-     * @return the current trick, or null
-     */
-    public Trick getCurrentTrick() {
-        return currentTrick;
-    }
-
-    /**
-     * Returns the last completed trick that hasn't been cleared yet.
+     * Gets the most recently completed trick.
      * This allows the UI to display the completed trick before starting the next one.
      *
      * @return the completed trick, or null if no trick has been completed recently
@@ -372,45 +394,35 @@ public class Game implements Serializable{
     public void clearCompletedTrick() { 
         this.completedTrick = null; 
     }
-
-    /**
-     * Returns the current game state.
-     * 
-     * @return the current state
-     */
-    public GameState getState() {
-        return state;
-    }
     
     /**
-     * Returns a copy of the current scores map.
+     * Gets current scores.
+     * In individual mode: returns player scores.
+     * In team mode: returns team scores.
      * 
-     * @return map of player names to their scores
+     * @return map of player/team names to scores
      */
     public Map<String, Integer> getScores() {
         return new HashMap<>(scores);
     }
     
     /**
-     * Returns the score for a specific player.
+     * Gets a specific score.
+     * In individual mode: player score.
+     * In team mode: team score.
      * 
-     * @param playerName the player's name
-     * @return the player's current score
-     * @throws IllegalArgumentException if player name is not in game
+     * @param name player or team name
+     * @return the score
      */
-    public int getScore(String playerName) {
-        Integer score = scores.get(playerName);
-        if (score == null) {
-            throw new IllegalArgumentException("Player not in game: " + playerName);
-        }
-        return score;
+    public int getScore(String name) {
+        return scores.getOrDefault(name, 0);
     }
     
     /**
-     * Adds points to a player's score.
+     * Adds points to a player's score (individual mode) or their team's score (team mode).
      * Does NOT check for set winner - use SetResult.determineWinner() for that.
      * 
-     * @param playerName the player's name
+     * @param playerName the player's name (even in team mode, pass player name)
      * @param points the points to add
      * @throws IllegalArgumentException if player name is not in game or points is negative
      */
@@ -418,10 +430,58 @@ public class Game implements Serializable{
         if (points < 0) {
             throw new IllegalArgumentException("Points cannot be negative");
         }
-        if (!scores.containsKey(playerName)) {
+        if (!playerNames.contains(playerName)) {
             throw new IllegalArgumentException("Player not in game: " + playerName);
         }
-        scores.put(playerName, scores.get(playerName) + points);
+        
+        if (gameSetup.isTeamMode()) {
+            // Award to team
+            Team team = getTeamForPlayer(playerName);
+            team.addScore(points);
+            scores.put(team.getName(), team.getScore());
+        } else {
+            // Award to individual
+            if (!scores.containsKey(playerName)) {
+                throw new IllegalArgumentException("Player not in game: " + playerName);
+            }
+            scores.put(playerName, scores.get(playerName) + points);
+        }
+    }
+    
+    /**
+     * Gets the team for a given player (team mode only).
+     * 
+     * @param playerName the player's name
+     * @return the team containing this player
+     * @throws IllegalStateException if not in team mode
+     */
+    public Team getTeamForPlayer(String playerName) {
+        if (!gameSetup.isTeamMode()) {
+            throw new IllegalStateException("Not in team mode");
+        }
+        return gameSetup.getTeamForPlayer(playerName);
+    }
+    
+    /**
+     * Gets all teams (team mode only).
+     * 
+     * @return list of teams
+     * @throws IllegalStateException if not in team mode
+     */
+    public List<Team> getTeams() {
+        if (!gameSetup.isTeamMode()) {
+            throw new IllegalStateException("Not in team mode");
+        }
+        return new ArrayList<>(teams);
+    }
+    
+    /**
+     * Checks if this game is in team mode.
+     * 
+     * @return true if team mode, false if individual mode
+     */
+    public boolean isTeamMode() {
+        return gameSetup.isTeamMode();
     }
     
     /**
@@ -434,25 +494,25 @@ public class Game implements Serializable{
     }
     
     /**
-     * Gets all sets won by all players.
+     * Gets all sets won by all players/teams.
      * 
-     * @return map of player names to sets won
+     * @return map of player/team names to sets won
      */
     public Map<String, Integer> getSetsWon() {
         return new HashMap<>(setsWon);
     }
     
     /**
-     * Gets sets won by a specific player.
+     * Gets sets won by a specific player/team.
      * 
-     * @param playerName the player's name
+     * @param name the player or team name
      * @return number of sets won
-     * @throws IllegalArgumentException if player name is not in game
+     * @throws IllegalArgumentException if name is not in game
      */
-    public int getSetsWonByPlayer(String playerName) {
-        Integer sets = setsWon.get(playerName);
+    public int getSetsWonByPlayer(String name) {
+        Integer sets = setsWon.get(name);
         if (sets == null) {
-            throw new IllegalArgumentException("Player not in game: " + playerName);
+            throw new IllegalArgumentException("Player/team not in game: " + name);
         }
         return sets;
     }
@@ -467,7 +527,7 @@ public class Game implements Serializable{
     }
     
     /**
-     * Checks if the match is complete (a player has won required sets).
+     * Checks if the match is complete (a player/team has won required sets).
      * 
      * @return true if match is over
      */
@@ -478,7 +538,7 @@ public class Game implements Serializable{
     /**
      * Returns the match winner, or null if match is not complete.
      * 
-     * @return the winning player's name, or null
+     * @return the winning player/team name, or null
      */
     public String getMatchWinner() {
         if (state != GameState.MATCH_COMPLETE) {
@@ -511,24 +571,14 @@ public class Game implements Serializable{
     /**
      * Legacy method - returns the winner.
      * 
-     * @return the winning player's name, or null
+     * @return the winning player/team name, or null
      * @deprecated Use getMatchWinner() instead
      */
     @Deprecated
     public String getWinner() {
         return getMatchWinner();
     }
-
-    /**
-     * Gets the name of the player who pitched (led) this round.
-     * FEATURE #1: For display purposes.
-     *
-     * @return pitcher's name
-     */
-    public String getPitcherName() {
-        return playerNames.get(pitcherIndex);
-    }
-
+    
     /**
      * Returns a string representation of the current game state.
      * 
@@ -538,19 +588,31 @@ public class Game implements Serializable{
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("High Low Jack Game\n");
+        sb.append("Mode: ").append(gameSetup.getGameMode()).append("\n");
         sb.append("Match: ").append(gameSetup.getMatchType().getDisplayName()).append("\n");
         sb.append("Set: ").append(currentSetNumber).append("\n");
         sb.append("State: ").append(state).append("\n");
         sb.append("Trump: ").append(trumpSuit != null ? trumpSuit.getSymbol() : "Not set").append("\n");
-        sb.append("\nPlayers, Scores, and Sets Won:\n");
         
-        for (String player : playerNames) {
-            sb.append("  ").append(player).append(": ").append(scores.get(player));
-            sb.append(" points, ").append(setsWon.get(player)).append(" sets");
-            if (player.equals(getCurrentPlayer()) && state == GameState.IN_PROGRESS) {
-                sb.append(" (current)");
+        if (gameSetup.isTeamMode()) {
+            sb.append("\nTeams, Scores, and Sets Won:\n");
+            for (Team team : teams) {
+                sb.append("  ").append(team.getName()).append(": ");
+                sb.append(scores.get(team.getName())).append(" points, ");
+                sb.append(setsWon.get(team.getName())).append(" sets\n");
+                sb.append("    Players: ").append(team.getPlayer1Name());
+                sb.append(" & ").append(team.getPlayer2Name()).append("\n");
             }
-            sb.append("\n");
+        } else {
+            sb.append("\nPlayers, Scores, and Sets Won:\n");
+            for (String player : playerNames) {
+                sb.append("  ").append(player).append(": ").append(scores.get(player));
+                sb.append(" points, ").append(setsWon.get(player)).append(" sets");
+                if (player.equals(getCurrentPlayer()) && state == GameState.IN_PROGRESS) {
+                    sb.append(" (current)");
+                }
+                sb.append("\n");
+            }
         }
         
         if (currentTrick != null) {
@@ -574,7 +636,7 @@ public class Game implements Serializable{
         ROUND_COMPLETE,
         /** A set has been won, ready to start new set or end match */
         SET_COMPLETE,
-        /** Match is complete, a player has won required sets */
+        /** Match is complete, a player/team has won required sets */
         MATCH_COMPLETE
     }
 }

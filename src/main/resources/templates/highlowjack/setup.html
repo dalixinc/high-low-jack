@@ -23,7 +23,7 @@
         }
         
         .setup-container {
-            max-width: 800px;
+            max-width: 900px;
             width: 100%;
             background: rgba(255, 255, 255, 0.1);
             border-radius: 20px;
@@ -71,12 +71,131 @@
             border-radius: 2px;
         }
         
+        /* GAME MODE SELECTOR */
+        .game-mode-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .game-mode-option {
+            position: relative;
+        }
+        
+        .game-mode-label {
+            display: block;
+            padding: 25px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .game-mode-label:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        input[name="gameMode"]:checked + .game-mode-label {
+            background: rgba(255, 215, 0, 0.5);
+            border-color: #ffd700;
+            border-width: 4px;
+        }
+        
+        .game-mode-name {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .game-mode-desc {
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        /* PLAYER SETUP LAYOUTS */
         .player-row {
             display: grid;
             grid-template-columns: 100px 1fr 200px;
             gap: 15px;
             margin-bottom: 15px;
             align-items: center;
+        }
+        
+        /* TEAM LAYOUT */
+        .team-layout {
+            display: none;
+        }
+        
+        .team-layout.active {
+            display: block;
+        }
+        
+        .teams-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+        
+        .team-box {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .team-box.team1 {
+            border-color: rgba(76, 175, 80, 0.6);
+            background: rgba(76, 175, 80, 0.1);
+        }
+        
+        .team-box.team2 {
+            border-color: rgba(244, 67, 54, 0.6);
+            background: rgba(244, 67, 54, 0.1);
+        }
+        
+        .team-header {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .team1 .team-header {
+            color: #4caf50;
+        }
+        
+        .team2 .team-header {
+            color: #f44336;
+        }
+        
+        .team-player {
+            margin-bottom: 20px;
+        }
+        
+        .team-player-position {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 5px;
+        }
+        
+        .team-player-name {
+            margin-bottom: 8px;
+        }
+        
+        /* INDIVIDUAL LAYOUT */
+        .individual-layout {
+            display: block;
+        }
+        
+        .individual-layout.hidden {
+            display: none;
         }
         
         .player-label {
@@ -94,6 +213,15 @@
             background: rgba(255, 215, 0, 0.3);
             padding: 2px 8px;
             border-radius: 10px;
+            margin-left: 5px;
+        }
+        
+        .position-badge {
+            display: inline-block;
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 8px;
+            border-radius: 8px;
             margin-left: 5px;
         }
         
@@ -236,6 +364,14 @@
         }
         
         @media (max-width: 768px) {
+            .game-mode-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .teams-grid {
+                grid-template-columns: 1fr;
+            }
+            
             .player-row {
                 grid-template-columns: 1fr;
                 gap: 10px;
@@ -253,80 +389,195 @@
         <p class="subtitle">Configure Your Match</p>
         
         <form th:action="@{/highlowjack/setup}" method="post">
+            <!-- GAME MODE SECTION -->
+            <div class="setup-section">
+                <div class="section-title">🎮 Game Mode</div>
+                
+                <div class="game-mode-grid">
+                    <div class="game-mode-option">
+                        <input type="radio" name="gameMode" value="INDIVIDUAL" id="individual" checked>
+                        <label for="individual" class="game-mode-label">
+                            <div class="game-mode-name">Individual Play</div>
+                            <div class="game-mode-desc">4 players compete separately</div>
+                        </label>
+                    </div>
+                    
+                    <div class="game-mode-option">
+                        <input type="radio" name="gameMode" value="TEAM" id="team">
+                        <label for="team" class="game-mode-label">
+                            <div class="game-mode-name">Team Play (2v2)</div>
+                            <div class="game-mode-desc">Partners North-South vs East-West</div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
             <!-- PLAYER SETUP SECTION -->
             <div class="setup-section">
                 <div class="section-title">👥 Player Setup</div>
                 
-                <div class="player-row">
-                    <div class="player-label controller">
-                        Player 1
-                        <span class="controller-badge">👑 Controller</span>
+                <!-- INDIVIDUAL LAYOUT (default) -->
+                <div class="individual-layout" id="individualLayout">
+                    <div class="player-row">
+                        <div class="player-label controller">
+                            Player 1
+                            <span class="controller-badge">👑</span>
+                        </div>
+                        <input type="text" name="player1Name" value="Dale" required 
+                               placeholder="Enter player name" maxlength="20">
+                        <div class="player-type-select">
+                            <label class="type-button active">
+                                <input type="radio" name="player1Type" value="HUMAN" checked>
+                                👤 Human
+                            </label>
+                            <label class="type-button computer">
+                                <input type="radio" name="player1Type" value="COMPUTER">
+                                🤖 Computer
+                            </label>
+                        </div>
                     </div>
-                    <input type="text" name="player1Name" value="Dale" required 
-                           placeholder="Enter player name" maxlength="20">
-                    <div class="player-type-select">
-                        <label class="type-button active">
-                            <input type="radio" name="player1Type" value="HUMAN" checked>
-                            👤 Human
-                        </label>
-                        <label class="type-button computer">
-                            <input type="radio" name="player1Type" value="COMPUTER">
-                            🤖 Computer
-                        </label>
+                    
+                    <div class="player-row">
+                        <div class="player-label">Player 2</div>
+                        <input type="text" name="player2Name" value="Kreep" required 
+                               placeholder="Enter player name" maxlength="20">
+                        <div class="player-type-select">
+                            <label class="type-button">
+                                <input type="radio" name="player2Type" value="HUMAN">
+                                👤 Human
+                            </label>
+                            <label class="type-button computer active">
+                                <input type="radio" name="player2Type" value="COMPUTER" checked>
+                                🤖 Computer
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="player-row">
+                        <div class="player-label">Player 3</div>
+                        <input type="text" name="player3Name" value="Carryn" required 
+                               placeholder="Enter player name" maxlength="20">
+                        <div class="player-type-select">
+                            <label class="type-button">
+                                <input type="radio" name="player3Type" value="HUMAN">
+                                👤 Human
+                            </label>
+                            <label class="type-button computer active">
+                                <input type="radio" name="player3Type" value="COMPUTER" checked>
+                                🤖 Computer
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="player-row">
+                        <div class="player-label">Player 4</div>
+                        <input type="text" name="player4Name" value="Primus" required 
+                               placeholder="Enter player name" maxlength="20">
+                        <div class="player-type-select">
+                            <label class="type-button">
+                                <input type="radio" name="player4Type" value="HUMAN">
+                                👤 Human
+                            </label>
+                            <label class="type-button computer active">
+                                <input type="radio" name="player4Type" value="COMPUTER" checked>
+                                🤖 Computer
+                            </label>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="player-row">
-                    <div class="player-label">Player 2</div>
-                    <input type="text" name="player2Name" value="Kreep" required 
-                           placeholder="Enter player name" maxlength="20">
-                    <div class="player-type-select">
-                        <label class="type-button">
-                            <input type="radio" name="player2Type" value="HUMAN">
-                            👤 Human
-                        </label>
-                        <label class="type-button computer active">
-                            <input type="radio" name="player2Type" value="COMPUTER" checked>
-                            🤖 Computer
-                        </label>
-                    </div>
-                </div>
-                
-                <div class="player-row">
-                    <div class="player-label">Player 3</div>
-                    <input type="text" name="player3Name" value="Carryn" required 
-                           placeholder="Enter player name" maxlength="20">
-                    <div class="player-type-select">
-                        <label class="type-button">
-                            <input type="radio" name="player3Type" value="HUMAN">
-                            👤 Human
-                        </label>
-                        <label class="type-button computer active">
-                            <input type="radio" name="player3Type" value="COMPUTER" checked>
-                            🤖 Computer
-                        </label>
-                    </div>
-                </div>
-                
-                <div class="player-row">
-                    <div class="player-label">Player 4</div>
-                    <input type="text" name="player4Name" value="Primus" required 
-                           placeholder="Enter player name" maxlength="20">
-                    <div class="player-type-select">
-                        <label class="type-button">
-                            <input type="radio" name="player4Type" value="HUMAN">
-                            👤 Human
-                        </label>
-                        <label class="type-button computer active">
-                            <input type="radio" name="player4Type" value="COMPUTER" checked>
-                            🤖 Computer
-                        </label>
+                <!-- TEAM LAYOUT (hidden by default) -->
+                <div class="team-layout" id="teamLayout">
+                    <div class="teams-grid">
+                        <!-- Team 1: North-South -->
+                        <div class="team-box team1">
+                            <div class="team-header">🟢 Team 1 (North-South)</div>
+                            
+                            <div class="team-player">
+                                <div class="team-player-position">
+                                    North <span class="controller-badge">👑</span>
+                                </div>
+                                <div class="team-player-name">
+                                    <input type="text" name="player1NameTeam" value="Dale" 
+                                           placeholder="North player" maxlength="20">
+                                </div>
+                                <div class="player-type-select">
+                                    <label class="type-button active">
+                                        <input type="radio" name="player1TypeTeam" value="HUMAN" checked>
+                                        👤 Human
+                                    </label>
+                                    <label class="type-button computer">
+                                        <input type="radio" name="player1TypeTeam" value="COMPUTER">
+                                        🤖 Computer
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="team-player">
+                                <div class="team-player-position">South</div>
+                                <div class="team-player-name">
+                                    <input type="text" name="player3NameTeam" value="Primus" 
+                                           placeholder="South player" maxlength="20">
+                                </div>
+                                <div class="player-type-select">
+                                    <label class="type-button">
+                                        <input type="radio" name="player3TypeTeam" value="HUMAN">
+                                        👤 Human
+                                    </label>
+                                    <label class="type-button computer active">
+                                        <input type="radio" name="player3TypeTeam" value="COMPUTER" checked>
+                                        🤖 Computer
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Team 2: East-West -->
+                        <div class="team-box team2">
+                            <div class="team-header">🔴 Team 2 (East-West)</div>
+                            
+                            <div class="team-player">
+                                <div class="team-player-position">East</div>
+                                <div class="team-player-name">
+                                    <input type="text" name="player2NameTeam" value="Kreep" 
+                                           placeholder="East player" maxlength="20">
+                                </div>
+                                <div class="player-type-select">
+                                    <label class="type-button">
+                                        <input type="radio" name="player2TypeTeam" value="HUMAN">
+                                        👤 Human
+                                    </label>
+                                    <label class="type-button computer active">
+                                        <input type="radio" name="player2TypeTeam" value="COMPUTER" checked>
+                                        🤖 Computer
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="team-player">
+                                <div class="team-player-position">West</div>
+                                <div class="team-player-name">
+                                    <input type="text" name="player4NameTeam" value="Preezbob" 
+                                           placeholder="West player" maxlength="20">
+                                </div>
+                                <div class="player-type-select">
+                                    <label class="type-button">
+                                        <input type="radio" name="player4TypeTeam" value="HUMAN">
+                                        👤 Human
+                                    </label>
+                                    <label class="type-button computer active">
+                                        <input type="radio" name="player4TypeTeam" value="COMPUTER" checked>
+                                        🤖 Computer
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="info-note">
-                    <strong>Game Controller:</strong> Player 1 is the game controller and has exclusive 
-                    access to the New Game and Continue buttons. Only human players can see and play cards.
+                    <strong>Game Controller:</strong> Player 1 (North in team mode) is the game controller 
+                    and has exclusive access to the New Game and Continue buttons.
                 </div>
             </div>
             
@@ -360,8 +611,8 @@
                     </div>
                 </div>
                 
-                <div class="info-note">
-                    <strong>Set:</strong> A set is won by the first player to reach 11 points. 
+                <div class="info-note" id="setInfo">
+                    <strong>Set:</strong> A set is won by the first player (or team) to reach 11 points. 
                     Points are awarded for High, Low, Jack, and Game in each round.
                 </div>
             </div>
@@ -372,6 +623,28 @@
     </div>
     
     <script>
+        // Toggle between individual and team layouts
+        const individualRadio = document.getElementById('individual');
+        const teamRadio = document.getElementById('team');
+        const individualLayout = document.getElementById('individualLayout');
+        const teamLayout = document.getElementById('teamLayout');
+        const setInfo = document.getElementById('setInfo');
+        
+        function updateLayout() {
+            if (teamRadio.checked) {
+                individualLayout.classList.add('hidden');
+                teamLayout.classList.add('active');
+                setInfo.innerHTML = '<strong>Set:</strong> A set is won by the first <strong>team</strong> to reach 11 points. Points are awarded for High, Low, Jack, and Game in each round.';
+            } else {
+                individualLayout.classList.remove('hidden');
+                teamLayout.classList.remove('active');
+                setInfo.innerHTML = '<strong>Set:</strong> A set is won by the first <strong>player</strong> to reach 11 points. Points are awarded for High, Low, Jack, and Game in each round.';
+            }
+        }
+        
+        individualRadio.addEventListener('change', updateLayout);
+        teamRadio.addEventListener('change', updateLayout);
+        
         // Handle player type button styling
         document.querySelectorAll('.player-type-select').forEach(container => {
             const buttons = container.querySelectorAll('.type-button');
@@ -388,12 +661,24 @@
         
         // Prevent form submission if player names are empty or duplicate
         document.querySelector('form').addEventListener('submit', (e) => {
-            const names = [
-                document.querySelector('input[name="player1Name"]').value.trim(),
-                document.querySelector('input[name="player2Name"]').value.trim(),
-                document.querySelector('input[name="player3Name"]').value.trim(),
-                document.querySelector('input[name="player4Name"]').value.trim()
-            ];
+            const isTeamMode = teamRadio.checked;
+            let names;
+            
+            if (isTeamMode) {
+                names = [
+                    document.querySelector('input[name="player1NameTeam"]').value.trim(),
+                    document.querySelector('input[name="player2NameTeam"]').value.trim(),
+                    document.querySelector('input[name="player3NameTeam"]').value.trim(),
+                    document.querySelector('input[name="player4NameTeam"]').value.trim()
+                ];
+            } else {
+                names = [
+                    document.querySelector('input[name="player1Name"]').value.trim(),
+                    document.querySelector('input[name="player2Name"]').value.trim(),
+                    document.querySelector('input[name="player3Name"]').value.trim(),
+                    document.querySelector('input[name="player4Name"]').value.trim()
+                ];
+            }
             
             // Check for empty names
             if (names.some(name => name === '')) {

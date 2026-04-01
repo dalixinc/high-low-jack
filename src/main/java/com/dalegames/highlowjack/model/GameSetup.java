@@ -12,7 +12,7 @@ import java.util.List;
  * the game controller.</p>
  * 
  * @author Dale &amp; Primus
- * @version 2.0 - Added team mode support
+ * @version 2.1 - Added team mode support - plus editable team names
  */
 public class GameSetup implements Serializable {
     
@@ -114,23 +114,37 @@ public class GameSetup implements Serializable {
     }
     
     /**
-     * Factory method to create team mode setup.
+     * Factory method to create team mode setup with default team names.
      * 
      * @param players the list of 4 players
      * @param matchType the match type
-     * @return a new GameSetup for team mode with auto-generated teams
+     * @return a new GameSetup for team mode with default team names
      */
     public static GameSetup createTeam(List<PlayerInfo> players, MatchType matchType) {
+        return createTeam(players, matchType, "Team 1 (North-South)", "Team 2 (East-West)");
+    }
+
+    /**
+     * Factory method to create team mode setup with custom team names.
+     * 
+     * @param players the list of 4 players
+     * @param matchType the match type
+     * @param team1Name custom name for Team 1 (players 1 & 3)
+     * @param team2Name custom name for Team 2 (players 2 & 4)
+     * @return a new GameSetup for team mode with custom team names
+     */
+    public static GameSetup createTeam(List<PlayerInfo> players, MatchType matchType, 
+                                        String team1Name, String team2Name) {
         // Create Team 1: Players 1 & 3 (North-South)
         Team team1 = new Team(
-            "Team 1 (North-South)",
+            team1Name,
             players.get(0).getName(),  // Player 1 (North)
             players.get(2).getName()   // Player 3 (South)
         );
         
         // Create Team 2: Players 2 & 4 (East-West)
         Team team2 = new Team(
-            "Team 2 (East-West)",
+            team2Name,
             players.get(1).getName(),  // Player 2 (East)
             players.get(3).getName()   // Player 4 (West)
         );

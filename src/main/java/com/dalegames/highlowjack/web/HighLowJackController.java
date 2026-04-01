@@ -29,7 +29,7 @@ import jakarta.servlet.http.HttpSession;
  * Web controller for High Low Jack card game.
  * 
  * @author Dale &amp; Primus
- * @version 8.3 - Fixed Delay on last card so no vanish
+ * @version 8.4 - Fixed Delay on last card so no vanish - plus editable team names
  */
 @Controller
 @RequestMapping("/highlowjack")
@@ -185,6 +185,9 @@ public class HighLowJackController {
             @RequestParam(required = false) PlayerInfo.PlayerType player2TypeTeam,
             @RequestParam(required = false) PlayerInfo.PlayerType player3TypeTeam,
             @RequestParam(required = false) PlayerInfo.PlayerType player4TypeTeam,
+            // Team name parameters
+            @RequestParam(required = false) String team1Name,
+            @RequestParam(required = false) String team2Name,
             @RequestParam GameSetup.MatchType matchType,
             HttpSession session) {
         
@@ -226,7 +229,14 @@ public class HighLowJackController {
         // Create game setup based on mode
         GameSetup setup;
         if (isTeamMode) {
-            setup = GameSetup.createTeam(players, matchType);
+            // Use custom team names or defaults
+            String t1Name = (team1Name != null && !team1Name.trim().isEmpty()) 
+                            ? team1Name.trim() : "North-South";
+            String t2Name = (team2Name != null && !team2Name.trim().isEmpty()) 
+                            ? team2Name.trim() : "East-West";
+            
+            System.out.println("🏆 Creating team mode with custom names: " + t1Name + " vs " + t2Name);
+            setup = GameSetup.createTeam(players, matchType, t1Name, t2Name);
         } else {
             setup = GameSetup.createIndividual(players, matchType);
         }

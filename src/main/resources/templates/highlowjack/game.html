@@ -729,5 +729,17 @@
         }
         /*]]>*/
     </script>
+
+    <script th:if="${showFinalTrick != null && showFinalTrick}">
+        console.log('🎬 Final trick JavaScript activated!');
+        console.log('⏱️ Waiting 2 seconds before redirect to scoring...');
+        
+        // Final trick shown - redirect to scoring after 2 seconds
+        setTimeout(function() {
+            console.log('✈️ Redirecting to scoring now!');
+            window.location.href = '/highlowjack/scoring';
+        }, 2000);
+    </script>
+
 </body>
 </html>

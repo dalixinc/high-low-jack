@@ -29,7 +29,7 @@ import jakarta.servlet.http.HttpSession;
  * Web controller for High Low Jack card game.
  * 
  * @author Dale &amp; Primus
- * @version 8.1 - Added pitcher indicator and tricks won counter
+ * @version 8.3 - Fixed Delay on last card so no vanish
  */
 @Controller
 @RequestMapping("/highlowjack")
@@ -53,16 +53,36 @@ public class HighLowJackController {
             session.setAttribute("hlj_game", game);
         }
         
-        Boolean shouldClearTrick = (Boolean) session.getAttribute("hlj_clearTrick");
-        if (Boolean.TRUE.equals(shouldClearTrick)) {
-            game.clearCompletedTrick();
-            session.removeAttribute("hlj_clearTrick");
+        // Check if we should show final trick before scoring
+        Boolean showFinalTrick = (Boolean) session.getAttribute("hlj_showFinalTrick");
+        System.out.println("🔍 showGame() - showFinalTrick flag: " + showFinalTrick);
+        System.out.println("🔍 showGame() - game state: " + game.getState());
+
+        if (game.getState() == Game.GameState.ROUND_COMPLETE) {
+            if (showFinalTrick != null && showFinalTrick) {
+                // Flag is set - show the final trick, then let JavaScript redirect
+                System.out.println("✅ SHOWING FINAL TRICK - JavaScript will redirect in 2 seconds");
+                session.removeAttribute("hlj_showFinalTrick");
+                model.addAttribute("showFinalTrick", true);
+                // DON'T clear the completed trick - we want to see it!
+                // DON'T return - continue to render the view below
+            } else {
+                // First time seeing ROUND_COMPLETE - set flag and show final trick
+                System.out.println("🎯 ROUND COMPLETE - Setting showFinalTrick flag");
+                session.setAttribute("hlj_showFinalTrick", true);
+                session.setAttribute("hlj_game", game);
+                System.out.println("🎯 Redirecting to /highlowjack to show final trick");
+                return "redirect:/highlowjack";
+            }
         }
         
-        // Check if round is complete and redirect to scoring
-        if (game.getState() == Game.GameState.ROUND_COMPLETE) {
-            session.setAttribute("hlj_game", game);
-            return "redirect:/highlowjack/scoring";
+        // Clear completed trick ONLY if NOT showing final trick
+        Boolean shouldClearTrick = (Boolean) session.getAttribute("hlj_clearTrick");
+        if (Boolean.TRUE.equals(shouldClearTrick) && 
+            !(showFinalTrick != null && showFinalTrick)) {
+            System.out.println("🧹 Clearing completed trick");
+            game.clearCompletedTrick();
+            session.removeAttribute("hlj_clearTrick");
         }
         
         Trick completedTrick = game.getCompletedTrick();
@@ -80,8 +100,11 @@ public class HighLowJackController {
             }
             
             if (game.getState() == Game.GameState.ROUND_COMPLETE) {
+                // Set flag for final trick display
+                System.out.println("🎯 AI completed round - setting showFinalTrick flag");
+                session.setAttribute("hlj_showFinalTrick", true);
                 session.setAttribute("hlj_game", game);
-                return "redirect:/highlowjack/scoring";
+                return "redirect:/highlowjack";
             }
             
             session.setAttribute("hlj_game", game);
@@ -132,7 +155,7 @@ public class HighLowJackController {
             session.setAttribute("hlj_roundNumber", roundNumber);
         }
         model.addAttribute("roundNumber", roundNumber);
-
+        
         return "highlowjack/game";
     }
     
@@ -270,6 +293,10 @@ public class HighLowJackController {
         GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
         
         if (game == null || setup == null) {
+            return "redirect:/highlowjack/setup";
+        }
+        
+        if (game.getState() != Game.GameState.ROUND_COMPLETE) {
             return "redirect:/highlowjack";
         }
         
@@ -292,15 +319,8 @@ public class HighLowJackController {
         
         SetResult setResult = SetResult.determineWinner(scoresBefore, results.getRoundPointWinners());
         
-        model.addAttribute("results", results);
-        model.addAttribute("setup", setup);
-        model.addAttribute("playerNames", game.getPlayerNames());
-        model.addAttribute("winningScore", 11);
-        model.addAttribute("setResult", setResult);
-        model.addAttribute("currentSetNumber", game.getCurrentSetNumber());
-        model.addAttribute("setsWon", game.getSetsWon());
-        model.addAttribute("isController", true); // For now, always player 1
-        
+        boolean isController = true;
+
         // PHASE 5: Add pitcher name
         model.addAttribute("pitcherName", game.getPitcherName());
         
@@ -316,13 +336,22 @@ public class HighLowJackController {
             tricksWon.put(player, tricks);
         }
         model.addAttribute("tricksWon", tricksWon);
-
-        // PHASE 5: need to pass the game reference to the scoring page to display current scores and sets won
+        
         model.addAttribute("game", game);
-
+        model.addAttribute("setup", setup);
+        model.addAttribute("results", results);
+        model.addAttribute("setResult", setResult);
+        model.addAttribute("isController", isController);
+        model.addAttribute("playerNames", game.getPlayerNames());
+        model.addAttribute("currentSetNumber", game.getCurrentSetNumber());
+        model.addAttribute("setsWon", game.getSetsWon());
+        model.addAttribute("winningScore", 11);
+        
+        session.setAttribute("hlj_game", game);
+        
         return "highlowjack/scoring";
     }
-
+    
     @PostMapping("/continue")
     public String continueGame(HttpSession session) {
         Game game = (Game) session.getAttribute("hlj_game");
@@ -378,35 +407,7 @@ public class HighLowJackController {
         return "redirect:/highlowjack";
     }
 
-    
-    private void playAITurn(Game game) {
-        String currentPlayer = game.getCurrentPlayer();
-        Hand hand = game.getHand(currentPlayer);
-        
-        Card card = SimpleAI.chooseCard(game, currentPlayer, hand);
-        game.playCard(card);
-    }
-    
-    private List<Card> calculateValidCards(Game game, String playerName) {
-        List<Card> validCards = new ArrayList<>();
-        
-        if (!game.getCurrentPlayer().equals(playerName)) {
-            return validCards;
-        }
-        
-        if (game.getState() != Game.GameState.IN_PROGRESS) {
-            return validCards;
-        }
-        
-        Hand hand = game.getHand(playerName);
-        for (Card card : hand.getCards()) {
-            if (GameEngine.isValidPlay(game, playerName, card)) {
-                validCards.add(card);
-            }
-        }
-        
-        return validCards;
-    }
+    // Helper methods
     
     private boolean isCurrentPlayerHuman(Game game, GameSetup setup) {
         String currentPlayer = game.getCurrentPlayer();
@@ -414,13 +415,38 @@ public class HighLowJackController {
     }
     
     private String getHumanPlayerName(GameSetup setup) {
-        // Return the first human player found
-        for (PlayerInfo player : setup.getPlayers()) {
-            if (player.isHuman()) {
-                return player.getName();
+        return setup.getPlayers().stream()
+            .filter(p -> p.getType() == PlayerInfo.PlayerType.HUMAN)
+            .map(PlayerInfo::getName)
+            .findFirst()
+            .orElse(null);
+    }
+    
+    private List<Card> calculateValidCards(Game game, String player) {
+        Hand hand = game.getHand(player);
+        if (hand == null) {
+            return new ArrayList<>();
+        }
+        
+        List<Card> validCards = new ArrayList<>();
+        for (Card card : hand.getCards()) {
+            if (GameEngine.isValidPlay(game, player, card)) {
+                validCards.add(card);
             }
         }
-        // Fallback to Player 1
-        return setup.getPlayer(0).getName();
+        
+        return validCards;
+    }
+    
+    private void playAITurn(Game game) {
+        String currentPlayer = game.getCurrentPlayer();
+        Hand hand = game.getHand(currentPlayer);
+        
+        if (hand != null && !hand.isEmpty()) {
+            Card card = SimpleAI.chooseCard(game, currentPlayer, hand);
+            if (card != null) {
+                game.playCard(card);
+            }
+        }
     }
 }

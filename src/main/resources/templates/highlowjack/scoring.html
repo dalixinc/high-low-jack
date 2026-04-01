@@ -401,7 +401,7 @@
                         <div class="round-point-category">⬆️ HIGH</div>
                         <div class="round-point-winner" th:text="${results.getRoundPointWinner('High')}">Player</div>
                         <div th:if="${game.isTeamMode()}" style="font-size: 0.85rem; margin-top: 3px; opacity: 0.9;">
-                            (<span th:text="${game.getTeamForPlayer(results.getRoundPointWinner('High')).name}">Team</span>)
+                             (<span th:text="${results.getRoundPointWinner('High')}">Team</span>)
                         </div>
                         <div class="round-point-detail" th:if="${results.highCard != null}" 
                             th:text="'(' + ${results.highCard.rank.name()} + ${results.highCard.suit.symbol} + ')'">
@@ -413,7 +413,7 @@
                         <div class="round-point-category">⬇️ LOW</div>
                         <div class="round-point-winner" th:text="${results.getRoundPointWinner('Low')}">Player</div>
                         <div th:if="${game.isTeamMode()}" style="font-size: 0.85rem; margin-top: 3px; opacity: 0.9;">
-                            (<span th:text="${game.getTeamForPlayer(results.getRoundPointWinner('Low')).name}">Team</span>)
+                           (<span th:text="${results.getRoundPointWinner('Low')}">Team</span>)
                         </div>
                         <div class="round-point-detail" th:if="${results.lowCard != null}" 
                             th:text="'(' + ${results.lowCard.rank.name()} + ${results.lowCard.suit.symbol} + ')'">
@@ -425,7 +425,7 @@
                         <div class="round-point-category">💎 JACK</div>
                         <div class="round-point-winner" th:text="${results.getRoundPointWinner('Jack')}">Player</div>
                         <div th:if="${game.isTeamMode()}" style="font-size: 0.85rem; margin-top: 3px; opacity: 0.9;">
-                            (<span th:text="${game.getTeamForPlayer(results.getRoundPointWinner('Jack')).name}">Team</span>)
+                            (<span th:text="${results.getRoundPointWinner('Jack')}">Team</span>)
                         </div>
                         <div style="font-size: 0.9rem; margin-top: 5px;">+1 point</div>
                     </div>
@@ -433,7 +433,7 @@
                         <div class="round-point-category">🎯 GAME</div>
                         <div class="round-point-winner" th:text="${results.getRoundPointWinner('Game')}">Player</div>
                         <div th:if="${game.isTeamMode()}" style="font-size: 0.85rem; margin-top: 3px; opacity: 0.9;">
-                            (<span th:text="${game.getTeamForPlayer(results.getRoundPointWinner('Game')).name}">Team</span>)
+                             (<span th:text="${results.getRoundPointWinner('Game')}">Team</span>)
                         </div>
                     <div class="round-point-detail" th:if="${results.gameWinnerPoints != null}" 
                         th:text="'(' + ${results.gameWinnerPoints} + ' points)'">

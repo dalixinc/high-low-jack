@@ -21,6 +21,7 @@ import com.dalegames.highlowjack.model.Hand;
 import com.dalegames.highlowjack.model.PlayerInfo;
 import com.dalegames.highlowjack.model.RoundResult;
 import com.dalegames.highlowjack.model.SetResult;
+import com.dalegames.highlowjack.model.Team;
 import com.dalegames.highlowjack.model.Trick;
 
 import jakarta.servlet.http.HttpSession;
@@ -29,7 +30,7 @@ import jakarta.servlet.http.HttpSession;
  * Web controller for High Low Jack card game.
  * 
  * @author Dale &amp; Primus
- * @version 8.4 - Fixed Delay on last card so no vanish - plus editable team names
+ * @version 8.5 - Fixed team mode set winner determination (check team scores, not player scores)
  */
 @Controller
 @RequestMapping("/highlowjack")
@@ -314,17 +315,37 @@ public class HighLowJackController {
         session.setAttribute("hlj_roundResult", results);  // Store for continueGame()
         
         // Check for set winner using tiebreaker logic
-        // Calculate scores BEFORE this round by subtracting points just awarded
+        // TEAM MODE FIX: Calculate team scores or player scores depending on mode
         Map<String, Integer> scoresBefore = new HashMap<>();
-        for (String player : game.getPlayerNames()) {
-            int currentScore = game.getScore(player);
-            int roundPoints = 0;
-            for (String category : new String[]{"High", "Low", "Jack", "Game"}) {
-                if (player.equals(results.getRoundPointWinner(category))) {
-                    roundPoints++;
+        
+        if (game.isTeamMode()) {
+            // Team mode: calculate team scores before this round
+            for (Team team : game.getTeams()) {
+                String teamName = team.getName();
+                int currentScore = game.getScore(teamName);
+                int roundPoints = 0;
+                
+                // Count points awarded to this team this round
+                for (String category : new String[]{"High", "Low", "Jack", "Game"}) {
+                    String winner = results.getRoundPointWinner(category);
+                    if (teamName.equals(winner)) {
+                        roundPoints++;
+                    }
                 }
+                scoresBefore.put(teamName, currentScore - roundPoints);
             }
-            scoresBefore.put(player, currentScore - roundPoints);
+        } else {
+            // Individual mode: calculate player scores before this round
+            for (String player : game.getPlayerNames()) {
+                int currentScore = game.getScore(player);
+                int roundPoints = 0;
+                for (String category : new String[]{"High", "Low", "Jack", "Game"}) {
+                    if (player.equals(results.getRoundPointWinner(category))) {
+                        roundPoints++;
+                    }
+                }
+                scoresBefore.put(player, currentScore - roundPoints);
+            }
         }
         
         SetResult setResult = SetResult.determineWinner(scoresBefore, results.getRoundPointWinners());
@@ -370,19 +391,72 @@ public class HighLowJackController {
         
         if (game != null && setup != null && results != null) {
             // Get scores BEFORE the round (subtract the points just awarded)
+            // TEAM MODE FIX: Use team scores for team mode
             Map<String, Integer> scoresBefore = new HashMap<>();
-            for (String player : game.getPlayerNames()) {
-                int currentScore = game.getScore(player);
-                int roundPoints = 0;
-                for (String category : new String[]{"High", "Low", "Jack", "Game"}) {
-                    if (player.equals(results.getRoundPointWinner(category))) {
-                        roundPoints++;
+            
+            if (game.isTeamMode()) {
+                // Team mode: calculate team scores before this round
+                for (Team team : game.getTeams()) {
+                    String teamName = team.getName();
+                    int currentScore = game.getScore(teamName);
+                    int roundPoints = 0;
+                    
+                    // Count points awarded to this team this round
+                    for (String category : new String[]{"High", "Low", "Jack", "Game"}) {
+                        String winner = results.getRoundPointWinner(category);
+                        if (teamName.equals(winner)) {
+                            roundPoints++;
+                        }
                     }
+                    scoresBefore.put(teamName, currentScore - roundPoints);
                 }
-                scoresBefore.put(player, currentScore - roundPoints);
+                
+                // DEBUG: Print team scores
+                System.out.println("═══ TEAM SCORES CHECK (continueGame) ═══");
+                for (Team team : game.getTeams()) {
+                    String teamName = team.getName();
+                    int currentScore = game.getScore(teamName);
+                    System.out.println(teamName + " current: " + currentScore);
+                }
+                
+                System.out.println("\n═══ SCORES BEFORE THIS ROUND ═══");
+                for (Map.Entry<String, Integer> entry : scoresBefore.entrySet()) {
+                    System.out.println(entry.getKey() + ": " + entry.getValue());
+                }
+                
+                System.out.println("\n═══ ROUND POINT WINNERS ═══");
+                for (String category : new String[]{"High", "Low", "Jack", "Game"}) {
+                    String winner = results.getRoundPointWinner(category);
+                    System.out.println(category + ": " + (winner != null ? winner : "none"));
+                }
+                
+            } else {
+                // Individual mode: calculate player scores before this round
+                for (String player : game.getPlayerNames()) {
+                    int currentScore = game.getScore(player);
+                    int roundPoints = 0;
+                    for (String category : new String[]{"High", "Low", "Jack", "Game"}) {
+                        if (player.equals(results.getRoundPointWinner(category))) {
+                            roundPoints++;
+                        }
+                    }
+                    scoresBefore.put(player, currentScore - roundPoints);
+                }
             }
             
             SetResult setResult = SetResult.determineWinner(scoresBefore, results.getRoundPointWinners());
+            
+            // DEBUG: Print result
+            System.out.println("\n═══ SET RESULT ═══");
+            if (setResult != null) {
+                System.out.println("WINNER: " + setResult.getWinner());
+                System.out.println("WINNING POINT: " + setResult.getWinningPoint());
+            } else {
+                System.out.println("NO WINNER YET");
+            }
+            System.out.println("═════════════════════════\n");
+            
+            
             
             if (setResult != null) {
                 // Someone won the set!

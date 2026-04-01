@@ -25,7 +25,7 @@ import java.util.Map;
  * </ol>
  *
  * @author Dale &amp; Primus
- * @version 2.1 - Added team mode support
+ * @version 2.2 - Fixed addScore() to accept both player and team names in team mode
  */
 public class Game implements Serializable{
     private static final long serialVersionUID = 2L;  // Incremented for team mode
@@ -422,29 +422,52 @@ public class Game implements Serializable{
      * Adds points to a player's score (individual mode) or their team's score (team mode).
      * Does NOT check for set winner - use SetResult.determineWinner() for that.
      * 
-     * @param playerName the player's name (even in team mode, pass player name)
+     * <p>In team mode, accepts either a player name OR a team name.
+     * If a team name is passed, the points are added directly to that team.</p>
+     * 
+     * @param name the player's name or team name (in team mode)
      * @param points the points to add
-     * @throws IllegalArgumentException if player name is not in game or points is negative
+     * @throws IllegalArgumentException if name is not valid or points is negative
      */
-    public void addScore(String playerName, int points) {
+    public void addScore(String name, int points) {
         if (points < 0) {
             throw new IllegalArgumentException("Points cannot be negative");
         }
-        if (!playerNames.contains(playerName)) {
-            throw new IllegalArgumentException("Player not in game: " + playerName);
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Name cannot be null or empty");
         }
         
         if (gameSetup.isTeamMode()) {
-            // Award to team
-            Team team = getTeamForPlayer(playerName);
-            team.addScore(points);
-            scores.put(team.getName(), team.getScore());
-        } else {
-            // Award to individual
-            if (!scores.containsKey(playerName)) {
-                throw new IllegalArgumentException("Player not in game: " + playerName);
+            // Check if this is a team name
+            boolean isTeamName = teams.stream()
+                .anyMatch(team -> team.getName().equals(name));
+            
+            if (isTeamName) {
+                // Direct team name - add to team
+                Team team = teams.stream()
+                    .filter(t -> t.getName().equals(name))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Team not in game: " + name));
+                
+                team.addScore(points);
+                scores.put(team.getName(), team.getScore());
+            } else if (playerNames.contains(name)) {
+                // Player name - find their team and add
+                Team team = getTeamForPlayer(name);
+                team.addScore(points);
+                scores.put(team.getName(), team.getScore());
+            } else {
+                throw new IllegalArgumentException("Player or team not in game: " + name);
             }
-            scores.put(playerName, scores.get(playerName) + points);
+        } else {
+            // Individual mode - must be a player name
+            if (!playerNames.contains(name)) {
+                throw new IllegalArgumentException("Player not in game: " + name);
+            }
+            if (!scores.containsKey(name)) {
+                throw new IllegalArgumentException("Player not in game: " + name);
+            }
+            scores.put(name, scores.get(name) + points);
         }
     }
     

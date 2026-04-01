@@ -8,13 +8,14 @@ import java.util.Map;
 import com.dalegames.highlowjack.model.Card;
 import com.dalegames.highlowjack.model.Game;
 import com.dalegames.highlowjack.model.RoundResult;
+import com.dalegames.highlowjack.model.Team;
 import com.dalegames.highlowjack.model.Trick;
 
 /**
  * Game engine for High Low Jack scoring and validation.
  * 
  * @author Dale &amp; Primus
- * @version 2.2 - Added card detail extraction for scoring display
+ * @version 2.3 - Added team mode support for Game point calculation (combines partners' game points)
  */
 public class GameEngine {
     
@@ -52,7 +53,8 @@ public class GameEngine {
             results.put("Jack", jackWinner);
         }
         
-        String gameWinner = findGameWinner(tricks);
+        // TEAM MODE FIX: Pass game object to combine partners' game points
+        String gameWinner = findGameWinner(tricks, game);
         if (gameWinner != null) {
             game.addScore(gameWinner, 1);
             results.put("Game", gameWinner);
@@ -311,12 +313,24 @@ String jackWinner = null;
         return null;
     }
     
-    public static String findGameWinner(List<Trick> tricks) {
-        if (tricks == null || tricks.isEmpty()) {
+    /**
+     * Finds the winner of the "Game" point.
+     * 
+     * <p>In INDIVIDUAL mode: Player with the most game points wins.
+     * In TEAM mode: Team with the most combined game points wins.
+     * If there's a tie, no one wins the Game point.</p>
+     * 
+     * @param tricks the completed tricks
+     * @param game the game object (to check team mode and get teams)
+     * @return the winner's name (player or team name), or null if tie
+     */
+    public static String findGameWinner(List<Trick> tricks, Game game) {
+        if (tricks == null || tricks.isEmpty() || game == null) {
             return null;
         }
         
-        Map<String, Integer> gamePoints = new HashMap<>();
+        // Calculate individual player game points
+        Map<String, Integer> playerGamePoints = new HashMap<>();
         
         for (Trick trick : tricks) {
             String winner = trick.getWinner();
@@ -326,14 +340,47 @@ String jackWinner = null;
                 points += play.card.getRank().getPoints();
             }
             
-            gamePoints.put(winner, gamePoints.getOrDefault(winner, 0) + points);
+            playerGamePoints.put(winner, playerGamePoints.getOrDefault(winner, 0) + points);
         }
         
+        // TEAM MODE: Combine partners' game points
+        if (game.isTeamMode()) {
+            Map<String, Integer> teamGamePoints = new HashMap<>();
+            
+            // Sum each team's combined game points
+            for (Map.Entry<String, Integer> entry : playerGamePoints.entrySet()) {
+                String player = entry.getKey();
+                Team team = game.getTeamForPlayer(player);
+                String teamName = team.getName();
+                
+                teamGamePoints.put(teamName, 
+                    teamGamePoints.getOrDefault(teamName, 0) + entry.getValue());
+            }
+            
+            // Find winning team
+            String gameWinner = null;
+            int maxPoints = 0;
+            boolean tie = false;
+            
+            for (Map.Entry<String, Integer> entry : teamGamePoints.entrySet()) {
+                if (entry.getValue() > maxPoints) {
+                    maxPoints = entry.getValue();
+                    gameWinner = entry.getKey();
+                    tie = false;
+                } else if (entry.getValue() == maxPoints && maxPoints > 0) {
+                    tie = true;
+                }
+            }
+            
+            return tie ? null : gameWinner;
+        }
+        
+        // INDIVIDUAL MODE: Original logic (highest individual game points)
         String gameWinner = null;
         int maxPoints = 0;
         boolean tie = false;
         
-        for (Map.Entry<String, Integer> entry : gamePoints.entrySet()) {
+        for (Map.Entry<String, Integer> entry : playerGamePoints.entrySet()) {
             if (entry.getValue() > maxPoints) {
                 maxPoints = entry.getValue();
                 gameWinner = entry.getKey();

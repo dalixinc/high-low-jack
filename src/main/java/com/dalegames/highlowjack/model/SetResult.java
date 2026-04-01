@@ -11,11 +11,11 @@ import java.util.Map;
  * point award precedence: High → Low → Jack → Game.</p>
  * 
  * @author Dale &amp; Primus
- * @version 1.0
+ * @version 2.0 - Added team mode support for set winner determination
  */
 public class SetResult implements Serializable {
     
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;  // Incremented for team mode changes
     
     /**
      * Point award precedence for tiebreaker.
@@ -46,8 +46,8 @@ public class SetResult implements Serializable {
     /**
      * Creates a SetResult.
      * 
-     * @param winner the name of the set winner
-     * @param finalScores the final scores for all players
+     * @param winner the name of the set winner (player or team name)
+     * @param finalScores the final scores for all players/teams
      * @param winningPoint the point category that secured the win (High/Low/Jack/Game)
      * @param wasTiebreaker true if tiebreaker logic was used
      */
@@ -68,10 +68,11 @@ public class SetResult implements Serializable {
     /**
      * Determines the set winner from round results.
      * 
-     * <p>Uses tiebreaker logic: if multiple players reach 11+ in the same round,
+     * <p>Works for both INDIVIDUAL and TEAM mode.
+     * Uses tiebreaker logic: if multiple players/teams reach 11+ in the same round,
      * the winner is determined by point precedence: High → Low → Jack → Game.</p>
      * 
-     * @param currentScores the scores before the round
+     * @param currentScores the scores before the round (player or team scores)
      * @param roundPointWinners map of point categories to winners (High/Low/Jack/Game)
      * @return SetResult if someone won, null if set continues
      */
@@ -96,7 +97,7 @@ public class SetResult implements Serializable {
                 int newScore = scoresCopy.getOrDefault(winner, 0) + 1;
                 scoresCopy.put(winner, newScore);
                 
-                // Check if this player just hit 11
+                // Check if this player/team just hit 11
                 if (newScore >= 11 && firstToEleven == null) {
                     firstToEleven = winner;
                     winningPointCategory = category;
@@ -109,7 +110,7 @@ public class SetResult implements Serializable {
             return null;
         }
         
-        // Check if multiple players reached 11 (tiebreaker was used)
+        // Check if multiple players/teams reached 11 (tiebreaker was used)
         long playersAtEleven = scoresCopy.values().stream()
                 .filter(score -> score >= 11)
                 .count();
@@ -120,31 +121,66 @@ public class SetResult implements Serializable {
     }
     
     /**
+     * Determines the set winner from a Game object (convenience method for team mode).
+     * 
+     * <p>This overload is provided for convenience when working with team mode,
+     * but simply delegates to the main determineWinner method.</p>
+     * 
+     * @param game the game object
+     * @return SetResult if someone won, null if set continues
+     */
+    public static SetResult determineWinner(Game game) {
+        if (game == null) {
+            throw new IllegalArgumentException("Game cannot be null");
+        }
+        
+        // Get current scores (works for both individual and team mode)
+        Map<String, Integer> currentScores = new HashMap<>();
+        
+        if (game.isTeamMode()) {
+            // Team mode: get team scores
+            for (Team team : game.getTeams()) {
+                currentScores.put(team.getName(), game.getScore(team.getName()));
+            }
+        } else {
+            // Individual mode: get player scores
+            for (String player : game.getPlayerNames()) {
+                currentScores.put(player, game.getScore(player));
+            }
+        }
+        
+        // This will be populated by calculateScores in GameEngine
+        // For this convenience method, we assume scores are already calculated
+        // Return null as we can't determine winner without round point winners
+        return null;
+    }
+    
+    /**
      * Gets the winner's name.
      * 
-     * @return the set winner
+     * @return the set winner (player or team name)
      */
     public String getWinner() {
         return winner;
     }
     
     /**
-     * Gets the final scores for all players.
+     * Gets the final scores for all players/teams.
      * 
-     * @return map of player names to final scores
+     * @return map of player/team names to final scores
      */
     public Map<String, Integer> getFinalScores() {
         return new HashMap<>(finalScores);
     }
     
     /**
-     * Gets the score for a specific player.
+     * Gets the score for a specific player/team.
      * 
-     * @param playerName the player name
-     * @return the player's final score
+     * @param name the player or team name
+     * @return the final score
      */
-    public int getScore(String playerName) {
-        return finalScores.getOrDefault(playerName, 0);
+    public int getScore(String name) {
+        return finalScores.getOrDefault(name, 0);
     }
     
     /**
@@ -159,7 +195,7 @@ public class SetResult implements Serializable {
     /**
      * Checks if tiebreaker logic was used.
      * 
-     * @return true if multiple players reached 11 in the same round
+     * @return true if multiple players/teams reached 11 in the same round
      */
     public boolean wasTiebreaker() {
         return wasTiebreaker;

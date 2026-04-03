@@ -94,16 +94,25 @@ public class SetResult implements Serializable {
         for (String category : precedenceOrder) {
             String winner = roundPointWinners.get(category);
             if (winner != null) {
-                int newScore = scoresCopy.getOrDefault(winner, 0) + 1;
+                System.out.println("  " + category + ": winner=" + winner);
+                int oldScore = scoresCopy.getOrDefault(winner, 0);
+                int newScore = oldScore + 1;
                 scoresCopy.put(winner, newScore);
+                System.out.println("    " + winner + ": " + oldScore + " → " + newScore);
                 
                 // Check if this player/team just hit 11
                 if (newScore >= 11 && firstToEleven == null) {
                     firstToEleven = winner;
                     winningPointCategory = category;
+                    System.out.println("    ✅ FIRST TO 11! Winner: " + winner + ", Point: " + category);
                 }
+            } else {
+                System.out.println("  " + category + ": none");
             }
         }
+
+        System.out.println("Final firstToEleven: " + firstToEleven);
+        System.out.println("Final winningPointCategory: " + winningPointCategory);
         
         // No winner yet
         if (firstToEleven == null) {

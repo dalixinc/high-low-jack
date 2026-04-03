@@ -30,7 +30,7 @@ import jakarta.servlet.http.HttpSession;
  * Web controller for High Low Jack card game.
  * 
  * @author Dale &amp; Primus
- * @version 8.5 - Fixed team mode set winner determination (check team scores, not player scores)
+ * @version 8.6 - Fixed team score calculation to include all point types (High/Low/Jack/Game)
  */
 @Controller
 @RequestMapping("/highlowjack")
@@ -56,8 +56,8 @@ public class HighLowJackController {
         
         // Check if we should show final trick before scoring
         Boolean showFinalTrick = (Boolean) session.getAttribute("hlj_showFinalTrick");
-        System.out.println("🔍 showGame() - showFinalTrick flag: " + showFinalTrick);
-        System.out.println("🔍 showGame() - game state: " + game.getState());
+        ////System.out.println("🔍 showGame() - showFinalTrick flag: " + showFinalTrick);
+        ////System.out.println("🔍 showGame() - game state: " + game.getState());
 
         if (game.getState() == Game.GameState.ROUND_COMPLETE) {
             if (showFinalTrick != null && showFinalTrick) {
@@ -328,8 +328,11 @@ public class HighLowJackController {
                 // Count points awarded to this team this round
                 for (String category : new String[]{"High", "Low", "Jack", "Game"}) {
                     String winner = results.getRoundPointWinner(category);
-                    if (teamName.equals(winner)) {
-                        roundPoints++;
+                    if (winner != null) {
+                        // Check if winner is team name OR a player on this team
+                        if (teamName.equals(winner) || team.hasPlayer(winner)) {
+                            roundPoints++;
+                        }
                     }
                 }
                 scoresBefore.put(teamName, currentScore - roundPoints);
@@ -349,6 +352,37 @@ public class HighLowJackController {
         }
         
         SetResult setResult = SetResult.determineWinner(scoresBefore, results.getRoundPointWinners());
+        
+     // DEBUG: Print set result in showScoring
+        boolean doADebug = true;
+        if (game.isTeamMode() && doADebug) {
+            System.out.println("\n╔══════════════════════════════════════╗");
+            System.out.println("║  SHOW SCORING - SET RESULT CHECK    ║");
+            System.out.println("╚══════════════════════════════════════╝");
+            System.out.println("CURRENT SCORES:");
+            for (Team team : game.getTeams()) {
+                System.out.println("  " + team.getName() + ": " + game.getScore(team.getName()));
+            }
+            System.out.println("\nSCORES BEFORE THIS ROUND:");
+            for (Map.Entry<String, Integer> entry : scoresBefore.entrySet()) {
+                System.out.println("  " + entry.getKey() + ": " + entry.getValue());
+            }
+            System.out.println("\nROUND POINT WINNERS:");
+            for (String category : new String[]{"High", "Low", "Jack", "Game"}) {
+                String winner = results.getRoundPointWinner(category);
+                System.out.println("  " + category + ": " + (winner != null ? winner : "none"));
+            }
+            System.out.println("\nSET RESULT:");
+            if (setResult != null) {
+                System.out.println("  ✅ WINNER: " + setResult.getWinner());
+                System.out.println("  WINNING POINT: " + setResult.getWinningPoint());
+                System.out.println("  WAS TIEBREAKER: " + setResult.wasTiebreaker());
+            } else {
+                System.out.println("  ❌ NO WINNER YET");
+            }
+            System.out.println("════════════════════════════════════════\n");
+        }
+
         
         boolean isController = true;
 
@@ -404,12 +438,17 @@ public class HighLowJackController {
                     // Count points awarded to this team this round
                     for (String category : new String[]{"High", "Low", "Jack", "Game"}) {
                         String winner = results.getRoundPointWinner(category);
-                        if (teamName.equals(winner)) {
-                            roundPoints++;
+                        if (winner != null) {
+                            // Check if winner is team name OR a player on this team
+                            if (teamName.equals(winner) || team.hasPlayer(winner)) {
+                                roundPoints++;
+                            }
                         }
                     }
                     scoresBefore.put(teamName, currentScore - roundPoints);
                 }
+                
+                // DEBUG: Print team scores
                 
                 // DEBUG: Print team scores
                 System.out.println("═══ TEAM SCORES CHECK (continueGame) ═══");
@@ -451,6 +490,8 @@ public class HighLowJackController {
             if (setResult != null) {
                 System.out.println("WINNER: " + setResult.getWinner());
                 System.out.println("WINNING POINT: " + setResult.getWinningPoint());
+                System.out.println("WAS TIEBREAKER: " + setResult.wasTiebreaker());
+                System.out.println("FINAL SCORES: " + setResult.getFinalScores());
             } else {
                 System.out.println("NO WINNER YET");
             }

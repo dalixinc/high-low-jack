@@ -15,7 +15,7 @@ import com.dalegames.highlowjack.model.Trick;
  * Game engine for High Low Jack scoring and validation.
  * 
  * @author Dale &amp; Primus
- * @version 2.3 - Added team mode support for Game point calculation (combines partners' game points)
+ * @version 2.4 - All point finders return team names in team mode (High/Low/Jack/Game)
  */
 public class GameEngine {
     
@@ -35,19 +35,19 @@ public class GameEngine {
             throw new IllegalStateException("Trump suit not set");
         }
         
-        String highWinner = findHighTrump(tricks, trump);
+        String highWinner = findHighTrump(tricks, trump, game);
         if (highWinner != null) {
             game.addScore(highWinner, 1);
             results.put("High", highWinner);
         }
         
-        String lowWinner = findLowTrump(tricks, trump);
+        String lowWinner = findLowTrump(tricks, trump, game);
         if (lowWinner != null) {
             game.addScore(lowWinner, 1);
             results.put("Low", lowWinner);
         }
         
-        String jackWinner = findJackWinner(tricks, trump);
+        String jackWinner = findJackWinner(tricks, trump, game);
         if (jackWinner != null) {
             game.addScore(jackWinner, 1);
             results.put("Jack", jackWinner);
@@ -179,7 +179,7 @@ public class GameEngine {
             status.put("Low", lowestTrump.toString() + " - " + lowPlayer);
         }
         
-String jackWinner = null;
+        String jackWinner = null;
         for (Trick trick : allTricks) {
             for (Trick.CardPlay play : trick.getPlays()) {
                 if (play.card.getSuit() == trump && play.card.getRank() == Card.Rank.JACK) {
@@ -202,8 +202,16 @@ String jackWinner = null;
         
         return status;
     }
-        
-    public static String findHighTrump(List<Trick> tricks, Card.Suit trump) {
+    
+    /**
+     * Finds the player or team who won the High trump point.
+     * 
+     * @param tricks the completed tricks
+     * @param trump the trump suit
+     * @param game the game object (for team mode conversion)
+     * @return player name in individual mode, team name in team mode
+     */
+    public static String findHighTrump(List<Trick> tricks, Card.Suit trump, Game game) {
         if (tricks == null || trump == null) {
             return null;
         }
@@ -221,6 +229,12 @@ String jackWinner = null;
                     }
                 }
             }
+        }
+        
+        // Convert to team name in team mode
+        if (winner != null && game != null && game.isTeamMode()) {
+            Team team = game.getTeamForPlayer(winner);
+            return team.getName();
         }
         
         return winner;
@@ -250,7 +264,15 @@ String jackWinner = null;
         return highestTrump;
     }
     
-    public static String findLowTrump(List<Trick> tricks, Card.Suit trump) {
+    /**
+     * Finds the player or team who won the Low trump point.
+     * 
+     * @param tricks the completed tricks
+     * @param trump the trump suit
+     * @param game the game object (for team mode conversion)
+     * @return player name in individual mode, team name in team mode
+     */
+    public static String findLowTrump(List<Trick> tricks, Card.Suit trump, Game game) {
         if (tricks == null || trump == null) {
             return null;
         }
@@ -268,6 +290,12 @@ String jackWinner = null;
                     }
                 }
             }
+        }
+        
+        // Convert to team name in team mode
+        if (winner != null && game != null && game.isTeamMode()) {
+            Team team = game.getTeamForPlayer(winner);
+            return team.getName();
         }
         
         return winner;
@@ -297,7 +325,15 @@ String jackWinner = null;
         return lowestTrump;
     }
     
-    public static String findJackWinner(List<Trick> tricks, Card.Suit trump) {
+    /**
+     * Finds the player or team who won the Jack point.
+     * 
+     * @param tricks the completed tricks
+     * @param trump the trump suit
+     * @param game the game object (for team mode conversion)
+     * @return player name in individual mode, team name in team mode
+     */
+    public static String findJackWinner(List<Trick> tricks, Card.Suit trump, Game game) {
         if (tricks == null || trump == null) {
             return null;
         }
@@ -305,7 +341,15 @@ String jackWinner = null;
         for (Trick trick : tricks) {
             for (Trick.CardPlay play : trick.getPlays()) {
                 if (play.card.getSuit() == trump && play.card.getRank() == Card.Rank.JACK) {
-                    return trick.getWinner();
+                    String winner = trick.getWinner();
+                    
+                    // Convert to team name in team mode
+                    if (winner != null && game != null && game.isTeamMode()) {
+                        Team team = game.getTeamForPlayer(winner);
+                        return team.getName();
+                    }
+                    
+                    return winner;
                 }
             }
         }

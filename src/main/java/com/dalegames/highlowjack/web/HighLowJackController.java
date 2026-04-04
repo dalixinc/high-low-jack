@@ -25,18 +25,24 @@ import com.dalegames.highlowjack.model.Team;
 import com.dalegames.highlowjack.model.Trick;
 import com.dalegames.highlowjack.model.Match;
 import com.dalegames.highlowjack.model.MatchResult;
+import com.dalegames.highlowjack.persistence.service.PlayerService;
 
 import jakarta.servlet.http.HttpSession;
+
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Web controller for High Low Jack card game.
  * 
  * @author Dale &amp; Primus
- * @version 8.7 - Aded code to make full matches (game - set - match work
+ * @version 8.8 - Wiring in to the datbase to accumulate stats
  */
 @Controller
 @RequestMapping("/highlowjack")
 public class HighLowJackController {
+	
+    @Autowired
+    private PlayerService playerService; 
     
     @GetMapping
     public String showGame(Model model, HttpSession session) {
@@ -474,6 +480,24 @@ public class HighLowJackController {
                     System.out.println(category + ": " + (winner != null ? winner : "none"));
                 }
                 
+                // Track individual point wins in database
+                try {
+                    for (String category : new String[]{"High", "Low", "Jack", "Game"}) {
+                        String winner = results.getRoundPointWinner(category);
+                        if (winner != null) {
+                            // Get actual player name (not team name)
+                            String playerName = game.isTeamMode() ? 
+                                results.getRoundPointPlayer(category) : winner;
+                            
+                            if (playerName != null) {
+                                playerService.recordPoint(playerName, category);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("❌ Error tracking round points: " + e.getMessage());
+                }
+                
             } else {
                 // Individual mode: calculate player scores before this round
                 for (String player : game.getPlayerNames()) {
@@ -519,6 +543,38 @@ public class HighLowJackController {
                     MatchResult matchResult = new MatchResult(match);
                     model.addAttribute("matchResult", matchResult);
                     model.addAttribute("game", game);
+                    
+                    // ═══════════════════════════════════════════════════════════════
+                    // UPDATE DATABASE - Record match stats for all players
+                    // ═══════════════════════════════════════════════════════════════
+                    try {
+                        if (game.isTeamMode()) {
+                            // Team mode: update stats for each player
+                            for (Team team : game.getTeams()) {
+                                boolean teamWon = team.getName().equals(matchResult.getWinner());
+                                int teamSetsWon = matchResult.getFinalSetWins().getOrDefault(team.getName(), 0);
+                                
+                                for (String playerName : team.getPlayerNames()) {
+                                    playerService.updateMatchStats(playerName, teamWon, teamSetsWon);
+                                    System.out.println("📊 Updated stats for " + playerName + 
+                                                     " (team " + team.getName() + "): " + 
+                                                     (teamWon ? "WIN" : "LOSS"));
+                                }
+                            }
+                        } else {
+                            // Individual mode: update stats for each player
+                            for (String playerName : game.getPlayerNames()) {
+                                boolean won = playerName.equals(matchResult.getWinner());
+                                int setsWon = matchResult.getFinalSetWins().getOrDefault(playerName, 0);
+                                playerService.updateMatchStats(playerName, won, setsWon);
+                                System.out.println("📊 Updated stats for " + playerName + ": " + 
+                                                 (won ? "WIN" : "LOSS"));
+                            }
+                        }
+                    } catch (Exception e) {
+                        System.err.println("❌ Error updating player stats: " + e.getMessage());
+                        e.printStackTrace();
+                    }
                     
                     // Clear session for new match
                     session.removeAttribute("hlj_roundResult");

@@ -15,10 +15,14 @@ import com.dalegames.highlowjack.model.Trick;
  * Game engine for High Low Jack scoring and validation.
  * 
  * @author Dale &amp; Primus
- * @version 2.4 - All point finders return team names in team mode (High/Low/Jack/Game)
+ * @version 2.5 - Track both players and teams for display purposes
  */
 public class GameEngine {
     
+    /**
+     * Calculates scores and returns team/player names who won each point.
+     * Stores the results in game.playerPointWinners for later access.
+     */
     public static Map<String, String> calculateScores(Game game) {
         if (game == null) {
             throw new IllegalArgumentException("Game cannot be null");
@@ -35,22 +39,26 @@ public class GameEngine {
             throw new IllegalStateException("Trump suit not set");
         }
         
-        String highWinner = findHighTrump(tricks, trump, game);
-        if (highWinner != null) {
-            game.addScore(highWinner, 1);
-            results.put("High", highWinner);
+        // Get PLAYER names first, then score to teams
+        String highPlayer = findHighTrump(tricks, trump, null);  // null = return player name
+        if (highPlayer != null) {
+            String scoreTo = game.isTeamMode() ? game.getTeamForPlayer(highPlayer).getName() : highPlayer;
+            game.addScore(scoreTo, 1);
+            results.put("High", scoreTo);  // Store team/player for scoring
         }
         
-        String lowWinner = findLowTrump(tricks, trump, game);
-        if (lowWinner != null) {
-            game.addScore(lowWinner, 1);
-            results.put("Low", lowWinner);
+        String lowPlayer = findLowTrump(tricks, trump, null);  // null = return player name
+        if (lowPlayer != null) {
+            String scoreTo = game.isTeamMode() ? game.getTeamForPlayer(lowPlayer).getName() : lowPlayer;
+            game.addScore(scoreTo, 1);
+            results.put("Low", scoreTo);  // Store team/player for scoring
         }
         
-        String jackWinner = findJackWinner(tricks, trump, game);
-        if (jackWinner != null) {
-            game.addScore(jackWinner, 1);
-            results.put("Jack", jackWinner);
+        String jackPlayer = findJackWinner(tricks, trump, null);  // null = return player name
+        if (jackPlayer != null) {
+            String scoreTo = game.isTeamMode() ? game.getTeamForPlayer(jackPlayer).getName() : jackPlayer;
+            game.addScore(scoreTo, 1);
+            results.put("Jack", scoreTo);  // Store team/player for scoring
         }
         
         // TEAM MODE FIX: Pass game object to combine partners' game points
@@ -61,6 +69,43 @@ public class GameEngine {
         }
         
         return results;
+    }
+    
+    /**
+     * Gets the player point winners (before team conversion).
+     * Used for display purposes in team mode.
+     */
+    public static Map<String, String> getPlayerPointWinners(Game game) {
+        Map<String, String> players = new HashMap<>();
+        List<Trick> tricks = game.getTricks();
+        Card.Suit trump = game.getTrumpSuit();
+        
+        if (trump == null) {
+            return players;
+        }
+        
+        String highPlayer = findHighTrump(tricks, trump, null);
+        if (highPlayer != null) {
+            players.put("High", highPlayer);
+        }
+        
+        String lowPlayer = findLowTrump(tricks, trump, null);
+        if (lowPlayer != null) {
+            players.put("Low", lowPlayer);
+        }
+        
+        String jackPlayer = findJackWinner(tricks, trump, null);
+        if (jackPlayer != null) {
+            players.put("Jack", jackPlayer);
+        }
+        
+        // For Game point in team mode, show team name; in individual mode, show player
+        String gameWinner = findGameWinner(tricks, game);
+        if (gameWinner != null) {
+            players.put("Game", gameWinner);
+        }
+        
+        return players;
     }
 
     public static RoundResult calculateRoundResults(Game game) {
@@ -77,6 +122,7 @@ public class GameEngine {
         Map<String, List<Card>> capturedCards = calculateCapturedCards(tricks);
         Map<String, Integer> gamePointTotals = calculateGamePointTotals(capturedCards);
         Map<String, String> roundPointWinners = calculateScores(game);
+        Map<String, String> roundPointPlayers = getPlayerPointWinners(game);  // NEW: Get player names
         
         // Extract card details for display
         Card highCard = findHighTrumpCard(tricks, trump);
@@ -84,7 +130,24 @@ public class GameEngine {
         Integer gameWinnerPoints = null;
         String gameWinner = roundPointWinners.get("Game");
         if (gameWinner != null) {
-            gameWinnerPoints = gamePointTotals.get(gameWinner);
+            if (game.isTeamMode()) {
+                // Sum team's combined game points
+                Team winningTeam = null;
+                for (Team team : game.getTeams()) {
+                    if (team.getName().equals(gameWinner)) {
+                        winningTeam = team;
+                        break;
+                    }
+                }
+                if (winningTeam != null) {
+                    gameWinnerPoints = 0;
+                    for (String player : winningTeam.getPlayerNames()) {
+                        gameWinnerPoints += gamePointTotals.getOrDefault(player, 0);
+                    }
+                }
+            } else {
+                gameWinnerPoints = gamePointTotals.get(gameWinner);
+            }
         }
         
         Map<String, Integer> scores = new HashMap<>();
@@ -93,7 +156,7 @@ public class GameEngine {
         }
         
         return new RoundResult(capturedCards, gamePointTotals, roundPointWinners, scores, trump, 
-                               highCard, lowCard, gameWinnerPoints);
+                               highCard, lowCard, gameWinnerPoints, null, roundPointPlayers);
     }
 
     public static Map<String, List<Card>> calculateCapturedCards(List<Trick> tricks) {

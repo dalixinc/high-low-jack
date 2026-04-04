@@ -13,15 +13,16 @@ import java.util.Map;
  * In team mode, tracks both individual winners (for glory) and team points.
  * 
  * @author Dale &amp; Primus
- * @version 3.0 - Added team mode support
+ * @version 3.1 - Added roundPointPlayers to track actual player who won each point
  */
 public class RoundResult implements Serializable {
     
-    private static final long serialVersionUID = 2L;  // Incremented for team mode
+    private static final long serialVersionUID = 3L;  // Incremented for roundPointPlayers addition
     
     private final Map<String, List<Card>> capturedCards;
     private final Map<String, Integer> gamePointTotals;
-    private final Map<String, String> roundPointWinners;  // Category → Player who won it
+    private final Map<String, String> roundPointWinners;  // Category → Team/Player who won it (for scoring)
+    private final Map<String, String> roundPointPlayers;  // Category → Actual player who won it (for display)
     private final Map<String, Integer> updatedScores;     // Player/Team name → Score
     private final Card.Suit trumpSuit;
     
@@ -46,11 +47,11 @@ public class RoundResult implements Serializable {
             Integer gameWinnerPoints) {
         
         this(capturedCards, gamePointTotals, roundPointWinners, updatedScores, 
-             trumpSuit, highCard, lowCard, gameWinnerPoints, null);
+             trumpSuit, highCard, lowCard, gameWinnerPoints, null, null);
     }
     
     /**
-     * Constructor with team mode support.
+     * Constructor with team mode support (backward compatible).
      */
     public RoundResult(
             Map<String, List<Card>> capturedCards,
@@ -63,9 +64,30 @@ public class RoundResult implements Serializable {
             Integer gameWinnerPoints,
             Map<String, Integer> teamPointsThisRound) {
         
+        this(capturedCards, gamePointTotals, roundPointWinners, updatedScores,
+             trumpSuit, highCard, lowCard, gameWinnerPoints, teamPointsThisRound, null);
+    }
+    
+    /**
+     * Constructor with full team mode support including player tracking.
+     */
+    public RoundResult(
+            Map<String, List<Card>> capturedCards,
+            Map<String, Integer> gamePointTotals,
+            Map<String, String> roundPointWinners,
+            Map<String, Integer> updatedScores,
+            Card.Suit trumpSuit,
+            Card highCard,
+            Card lowCard,
+            Integer gameWinnerPoints,
+            Map<String, Integer> teamPointsThisRound,
+            Map<String, String> roundPointPlayers) {
+        
         this.capturedCards = new HashMap<>(capturedCards);
         this.gamePointTotals = new HashMap<>(gamePointTotals);
         this.roundPointWinners = new HashMap<>(roundPointWinners);
+        this.roundPointPlayers = roundPointPlayers != null ? 
+            new HashMap<>(roundPointPlayers) : new HashMap<>(roundPointWinners);
         this.updatedScores = new HashMap<>(updatedScores);
         this.trumpSuit = trumpSuit;
         this.highCard = highCard;
@@ -92,13 +114,25 @@ public class RoundResult implements Serializable {
     }
     
     /**
-     * Gets the player who won a specific round point category.
+     * Gets the team/player who won a specific round point category.
+     * In team mode, returns team name. In individual mode, returns player name.
      * 
      * @param category the category ("High", "Low", "Jack", or "Game")
-     * @return the player name who won that category
+     * @return the team/player name who won that category
      */
     public String getRoundPointWinner(String category) {
         return roundPointWinners.get(category);
+    }
+    
+    /**
+     * Gets the actual player who won a specific round point category.
+     * In team mode, returns the individual player. In individual mode, same as getRoundPointWinner.
+     * 
+     * @param category the category ("High", "Low", "Jack", or "Game")
+     * @return the player name who actually won that category
+     */
+    public String getRoundPointPlayer(String category) {
+        return roundPointPlayers.get(category);
     }
     
     public int getScore(String playerName) {
@@ -106,12 +140,21 @@ public class RoundResult implements Serializable {
     }
     
     /**
-     * Gets all round point winners (individual players who won High, Low, Jack, Game).
+     * Gets all round point winners (team/player names who won High, Low, Jack, Game).
      * 
-     * @return map of category to player name
+     * @return map of category to team/player name
      */
     public Map<String, String> getRoundPointWinners() {
         return new HashMap<>(roundPointWinners);
+    }
+    
+    /**
+     * Gets all round point players (actual players who won High, Low, Jack, Game).
+     * 
+     * @return map of category to player name
+     */
+    public Map<String, String> getRoundPointPlayers() {
+        return new HashMap<>(roundPointPlayers);
     }
     
     /**

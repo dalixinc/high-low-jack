@@ -24,7 +24,8 @@ public class GameSetup implements Serializable {
     public enum MatchType {
         SINGLE_SET("Just One Set", 1),
         BEST_OF_THREE("Best of 3 Sets", 2),
-        BEST_OF_FIVE("Best of 5 Sets", 3);
+        BEST_OF_FIVE("Best of 5 Sets", 3),
+        BEST_OF_SEVEN("Best of 7 Sets", 4);
         
         private final String displayName;
         private final int setsToWin;

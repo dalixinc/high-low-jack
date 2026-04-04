@@ -25,7 +25,7 @@ import java.util.Map;
  * </ol>
  *
  * @author Dale &amp; Primus
- * @version 2.2 - Fixed addScore() to accept both player and team names in team mode
+ * @version 2.3 - Added mutator method to allow for remote state change
  */
 public class Game implements Serializable{
     private static final long serialVersionUID = 2L;  // Incremented for team mode
@@ -361,6 +361,11 @@ public class Game implements Serializable{
     
     public GameState getState() {
         return state;
+    }
+    
+    // Dale added to allow other classes to set game state
+    public void setState(GameState gs) {
+        this.state = gs;
     }
     
     public List<String> getPlayerNames() {

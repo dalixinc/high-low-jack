@@ -23,6 +23,8 @@ import com.dalegames.highlowjack.model.RoundResult;
 import com.dalegames.highlowjack.model.SetResult;
 import com.dalegames.highlowjack.model.Team;
 import com.dalegames.highlowjack.model.Trick;
+import com.dalegames.highlowjack.model.Match;
+import com.dalegames.highlowjack.model.MatchResult;
 
 import jakarta.servlet.http.HttpSession;
 
@@ -30,7 +32,7 @@ import jakarta.servlet.http.HttpSession;
  * Web controller for High Low Jack card game.
  * 
  * @author Dale &amp; Primus
- * @version 8.6 - Fixed team score calculation to include all point types (High/Low/Jack/Game)
+ * @version 8.7 - Aded code to make full matches (game - set - match work
  */
 @Controller
 @RequestMapping("/highlowjack")
@@ -247,6 +249,10 @@ public class HighLowJackController {
         session.removeAttribute("hlj_game");
         session.removeAttribute("hlj_clearTrick");
         
+     // ADD THIS - Create match tracker
+        Match match = new Match(matchType);
+        session.setAttribute("hlj_match", match);
+        
         return "redirect:/highlowjack";
     }
     
@@ -418,12 +424,13 @@ public class HighLowJackController {
     }
     
     @PostMapping("/continue")
-    public String continueGame(HttpSession session) {
+    public String continueGame(HttpSession session, Model model) {
         Game game = (Game) session.getAttribute("hlj_game");
         GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
         RoundResult results = (RoundResult) session.getAttribute("hlj_roundResult");
+        Match match = (Match) session.getAttribute("hlj_match");  // NEW: Get match
         
-        if (game != null && setup != null && results != null) {
+        if (game != null && setup != null && results != null && match != null) {
             // Get scores BEFORE the round (subtract the points just awarded)
             // TEAM MODE FIX: Use team scores for team mode
             Map<String, Integer> scoresBefore = new HashMap<>();
@@ -447,8 +454,6 @@ public class HighLowJackController {
                     }
                     scoresBefore.put(teamName, currentScore - roundPoints);
                 }
-                
-                // DEBUG: Print team scores
                 
                 // DEBUG: Print team scores
                 System.out.println("═══ TEAM SCORES CHECK (continueGame) ═══");
@@ -497,37 +502,96 @@ public class HighLowJackController {
             }
             System.out.println("═════════════════════════\n");
             
-            
-            
             if (setResult != null) {
-                // Someone won the set!
-                game.recordSetWin(setResult.getWinner());
-                session.setAttribute("hlj_game", game);
+                // ═══════════════════════════════════════════════════════════════
+                // SET WINNER! Record in Match and check for match winner
+                // ═══════════════════════════════════════════════════════════════
                 
-                if (game.isMatchComplete()) {
-                    // Match is over
+                boolean matchWon = match.recordSetWin(setResult);
+                session.setAttribute("hlj_match", match);  // Update match in session
+                
+                if (matchWon) {
+                    // ═══════════════════════════════════════════════════════════
+                    // MATCH WINNER! Show epic victory screen
+                    // ═══════════════════════════════════════════════════════════
+                    System.out.println("🏆 MATCH WINNER: " + match.getMatchWinner());
+                    
+                    MatchResult matchResult = new MatchResult(match);
+                    model.addAttribute("matchResult", matchResult);
+                    model.addAttribute("game", game);
+                    
+                    // Clear session for new match
                     session.removeAttribute("hlj_roundResult");
                     session.removeAttribute("hlj_roundNumber");
-                    return "redirect:/highlowjack/setup";
+                    
+                    return "highlowjack/match-winner";
+                    
                 } else {
-                    // Start new set
-                    game.startNewSet();
+                    // ═══════════════════════════════════════════════════════════
+                    // SET WON, but match continues - show set winner screen
+                    // ═══════════════════════════════════════════════════════════
+                    System.out.println("🏆 SET WINNER: " + setResult.getWinner());
+                    System.out.println("📊 Match score: " + match.getMatchScore(
+                        game.isTeamMode() ? game.getTeams().get(0).getName() : game.getPlayerNames().get(0),
+                        game.isTeamMode() ? game.getTeams().get(1).getName() : game.getPlayerNames().get(1)
+                    ));
+                    
+                    model.addAttribute("setResult", setResult);
+                    model.addAttribute("game", game);
+                    model.addAttribute("match", match);
+                    
+                    // CRITICAL: Set game state so startNewSet() can work later
+                    game.setState(Game.GameState.SET_COMPLETE);
                     session.setAttribute("hlj_game", game);
+                    
+                    // Clear round data (will be reset when next set starts)
                     session.removeAttribute("hlj_roundResult");
-                    session.setAttribute("hlj_roundNumber", 1);  // Reset round counter for new set
+                    
+                    return "highlowjack/set-winner";
                 }
+                
             } else {
-                // No set winner yet - deal new round
+                // ═══════════════════════════════════════════════════════════════
+                // NO SET WINNER YET - Start next round
+                // ═══════════════════════════════════════════════════════════════
                 game.dealCards();
                 session.setAttribute("hlj_game", game);
                 session.removeAttribute("hlj_roundResult");
                 
-                // Increment round number
                 Integer roundNumber = (Integer) session.getAttribute("hlj_roundNumber");
-                if (roundNumber == null) roundNumber = 1;
-                session.setAttribute("hlj_roundNumber", roundNumber + 1);
+                if (roundNumber == null) {
+                    roundNumber = 1;
+                }
+                roundNumber++;
+                session.setAttribute("hlj_roundNumber", roundNumber);
             }
         }
+        
+        return "redirect:/highlowjack";
+    }
+    
+    /**
+     * KIck off the next set
+     * @param session
+     * @return
+     */
+    @PostMapping("/next-set")
+    public String startNextSet(HttpSession session) {
+        Game game = (Game) session.getAttribute("hlj_game");
+        Match match = (Match) session.getAttribute("hlj_match");
+        
+        if (game == null || match == null) {
+            return "redirect:/highlowjack/setup";
+        }
+        
+        // Reset game for new set (clears scores, tricks, rounds)
+        game.startNewSet();
+        session.setAttribute("hlj_game", game);
+        
+        // Reset round counter
+        session.setAttribute("hlj_roundNumber", 1);
+        
+        System.out.println("🎮 Starting Set " + match.getCurrentSetNumber());
         
         return "redirect:/highlowjack";
     }

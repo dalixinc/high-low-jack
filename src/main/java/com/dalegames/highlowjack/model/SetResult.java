@@ -16,6 +16,7 @@ import java.util.Map;
 public class SetResult implements Serializable {
     
     private static final long serialVersionUID = 2L;  // Incremented for team mode changes
+    private final Map<String, String> roundPointWinners;  // High/Low/Jack/Game → winner
     
     /**
      * Point award precedence for tiebreaker.
@@ -51,19 +52,23 @@ public class SetResult implements Serializable {
      * @param winningPoint the point category that secured the win (High/Low/Jack/Game)
      * @param wasTiebreaker true if tiebreaker logic was used
      */
-    public SetResult(String winner, Map<String, Integer> finalScores, String winningPoint, boolean wasTiebreaker) {
-        if (winner == null || winner.trim().isEmpty()) {
-            throw new IllegalArgumentException("Winner cannot be null or empty");
-        }
-        if (finalScores == null) {
-            throw new IllegalArgumentException("Final scores cannot be null");
-        }
-        
-        this.winner = winner;
-        this.finalScores = new HashMap<>(finalScores);
-        this.winningPoint = winningPoint;
-        this.wasTiebreaker = wasTiebreaker;
+    public SetResult(String winner, Map<String, Integer> finalScores, String winningPoint, 
+            	boolean wasTiebreaker, Map<String, String> roundPointWinners) {
+		if (winner == null || winner.trim().isEmpty()) {
+		   throw new IllegalArgumentException("Winner cannot be null or empty");
+		}
+		if (finalScores == null) {
+		   throw new IllegalArgumentException("Final scores cannot be null");
+		}
+		
+		this.winner = winner;
+		this.finalScores = new HashMap<>(finalScores);
+		this.winningPoint = winningPoint;
+		this.wasTiebreaker = wasTiebreaker;
+		this.roundPointWinners = roundPointWinners != null ? 
+		   new HashMap<>(roundPointWinners) : new HashMap<>();
     }
+
     
     /**
      * Determines the set winner from round results.
@@ -126,7 +131,9 @@ public class SetResult implements Serializable {
         
         boolean wasTiebreaker = playersAtEleven > 1;
         
-        return new SetResult(firstToEleven, scoresCopy, winningPointCategory, wasTiebreaker);
+
+        return new SetResult(firstToEleven, scoresCopy, winningPointCategory, 
+                     wasTiebreaker, roundPointWinners);
     }
     
     /**
@@ -208,6 +215,15 @@ public class SetResult implements Serializable {
      */
     public boolean wasTiebreaker() {
         return wasTiebreaker;
+    }
+    
+    /**
+     * Gets all round point winners (High, Low, Jack, Game).
+     * 
+     * @return map of category to winner name
+     */
+    public Map<String, String> getRoundPointWinners() {
+        return new HashMap<>(roundPointWinners);
     }
     
     @Override

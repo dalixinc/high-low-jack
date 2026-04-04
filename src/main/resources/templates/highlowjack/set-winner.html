@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Set Winner - High Low Jack</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" th:href="@{/css/game.css}">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .victory-container {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            max-width: 600px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .trophy {
+            font-size: 80px;
+            animation: bounce 1s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .set-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 20px 0;
+        }
+        
+        .winner-name {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #8b4789;
+            margin: 20px 0;
+        }
+        
+        .winning-details {
+            font-size: 1.2rem;
+            color: #2c3e50;
+            margin: 20px 0;
+        }
+        
+        .winning-point {
+            display: inline-block;
+            background: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 10px;
+        }
+        
+        .tiebreaker-badge {
+            color: #e74c3c;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .match-progress {
+            background: rgba(255,255,255,0.3);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        
+        .match-score {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .next-set-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 30px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .next-set-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="victory-container">
+        <div class="trophy">🏆</div>
+        
+        <div class="set-title">SET WINNER!</div>
+        
+        <div class="winner-name" th:text="${setResult.winner}">Winner</div>
+        
+        <div class="winning-details">
+            <div>Won Set <span th:text="${match.currentSetNumber - 1}">1</span> by reaching 11 points!</div>
+            <div style="margin-top: 10px;">
+                Winning point: 
+                <span class="winning-point" th:text="${setResult.winningPoint}">High</span>
+                <span th:if="${setResult.wasTiebreaker()}" class="tiebreaker-badge">
+                    ⚡ Won by tiebreaker precedence!
+                </span>
+            </div>
+        </div>
+        
+        <!-- Show match progress if not Just One Set -->
+        <div th:if="${match.matchType.name() != 'JUST_ONE_SET'}" class="match-progress">
+            <div style="font-size: 1.1rem; color: #2c3e50; margin-bottom: 10px;">
+                <span th:text="${match.matchType.displayName}">Match Type</span>
+            </div>
+            <div class="match-score">
+                <span th:each="entry : ${match.setWins}">
+                    <span th:text="${entry.key}">Team</span>: 
+                    <span th:text="${entry.value}">0</span>
+                    <span th:if="${!entryStat.last}"> | </span>
+                </span>
+            </div>
+            <div style="font-size: 0.9rem; color: #666; margin-top: 5px;">
+                First to <span th:text="${match.matchType.setsToWin}">2</span> sets wins the match!
+            </div>
+        </div>
+        
+        <!-- Player names for team mode -->
+        <div th:if="${game.isTeamMode()}" style="background: rgba(255,255,255,0.3); border-radius: 10px; padding: 15px; margin: 20px 0;">
+            <div th:each="team : ${game.teams}" style="margin: 10px 0;">
+                <span th:if="${team.name == setResult.winner}" style="font-weight: bold; color: #27ae60;">✓</span>
+                <span th:text="${team.name}">Team</span>: 
+                <span th:text="${#strings.listJoin(team.playerNames, ' & ')}">Players</span>
+            </div>
+        </div>
+        
+        <!-- Continue button -->
+        <form th:action="@{/highlowjack/next-set}" method="post">
+            <button type="submit" class="next-set-button">
+                <span th:if="${match.matchType.name() == 'JUST_ONE_SET'}">🎮 Play Again</span>
+                <span th:if="${match.matchType.name() != 'JUST_ONE_SET'}">▶️ Start Next Set</span>
+            </button>
+        </form>
+    </div>
+</body>
+</html>

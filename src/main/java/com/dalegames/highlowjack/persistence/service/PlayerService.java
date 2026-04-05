@@ -1,20 +1,21 @@
 package com.dalegames.highlowjack.persistence.service;
 
-import com.dalegames.highlowjack.persistence.entity.Player;
-import com.dalegames.highlowjack.persistence.repository.PlayerRepository;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
+import com.dalegames.highlowjack.persistence.entity.Player;
+import com.dalegames.highlowjack.persistence.repository.PlayerRepository;
 
 /**
  * Service layer for Player operations.
  * Handles business logic and transactions.
  * 
  * @author Dale & Primus
- * @version 1.1
+ * @version 1.2 - Added player/team separation and stats methods
  */
 @Service
 @Transactional
@@ -72,6 +73,13 @@ public class PlayerService {
     }
     
     /**
+     * Gets player-only leaderboard (excludes teams).
+     */
+    public List<Player> getPlayerLeaderboard() {
+        return playerRepository.findByIsTeamFalseOrderByTotalMatchesWonDesc();
+    }
+    
+    /**
      * Gets players by win percentage (minimum 5 games).
      */
     public List<Player> getPlayersByWinPercentage() {
@@ -83,6 +91,22 @@ public class PlayerService {
      */
     public List<Player> getPlayersOnWinStreaks() {
         return playerRepository.findPlayersOnWinStreaks();
+    }
+    
+    /**
+     * Gets total number of unique matches played.
+     * Uses the maximum matches played by any single player.
+     */
+    public int getTotalMatches() {
+        List<Player> allPlayers = playerRepository.findByIsTeamFalse();
+        
+        if (allPlayers.isEmpty()) return 0;
+        
+        // Get the player with most matches (they've played in all matches)
+        return allPlayers.stream()
+            .mapToInt(Player::getTotalMatchesPlayed)
+            .max()
+            .orElse(0);
     }
     
     /**
@@ -134,29 +158,6 @@ public class PlayerService {
         playerRepository.save(player);
     }
     
-    /**
-     * Gets player-only leaderboard (excludes teams).
-     */
-    public List<Player> getPlayerLeaderboard() {
-        return playerRepository.findByIsTeamFalseOrderByTotalMatchesWonDesc();
-    }
-
-    /**
-     * Gets total number of unique matches played.
-     * Uses the maximum matches played by any single player.
-     */
-    public int getTotalMatches() {
-        List<Player> allPlayers = playerRepository.findByIsTeamFalse();
-        
-        if (allPlayers.isEmpty()) return 0;
-        
-        // Get the player with most matches (they've played in all matches)
-        return allPlayers.stream()
-            .mapToInt(Player::getTotalMatchesPlayed)
-            .max()
-            .orElse(0);
-    }
-
     /**
      * Resets all player statistics to zero.
      */

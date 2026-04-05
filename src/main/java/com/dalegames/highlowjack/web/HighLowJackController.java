@@ -38,7 +38,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  * Web controller for High Low Jack card game.
  * 
  * @author Dale &amp; Primus
- * @version 8.11 - Wiring in the stats screen endpoint (separating Teams and Individuals)
+ * @version 8.12 - Modified (by Primus) for team stats
  */
 @Controller
 @RequestMapping("/highlowjack")

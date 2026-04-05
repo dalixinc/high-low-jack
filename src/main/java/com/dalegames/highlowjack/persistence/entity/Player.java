@@ -1,13 +1,19 @@
 package com.dalegames.highlowjack.persistence.entity;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 /**
  * Player entity - represents a player profile with lifetime statistics.
  * 
  * @author Dale & Primus
- * @version 1.1
+ * @version 1.2 - Added isTeam flag to separate players from teams
  */
 @Entity
 @Table(name = "players")
@@ -19,6 +25,10 @@ public class Player {
     
     @Column(unique = true, nullable = false, length = 50)
     private String name;
+    
+    // Flag to distinguish players from teams
+    @Column(name = "is_team")
+    private boolean isTeam = false;
     
     // Lifetime Statistics
     @Column(name = "total_matches_played")
@@ -78,9 +88,6 @@ public class Player {
     
     @Column(name = "last_played")
     private LocalDateTime lastPlayed = LocalDateTime.now();
-    
-    @Column(name = "is_team")
-    private boolean isTeam = false;
     
     // Constructors
     public Player() {}
@@ -173,6 +180,14 @@ public class Player {
     
     public void setName(String name) {
         this.name = name;
+    }
+    
+    public boolean isTeam() {
+        return isTeam;
+    }
+    
+    public void setTeam(boolean team) {
+        isTeam = team;
     }
     
     public int getTotalMatchesPlayed() {
@@ -315,14 +330,6 @@ public class Player {
         this.lastPlayed = lastPlayed;
     }
     
-    public boolean isTeam() {
-        return isTeam;
-    }
-
-    public void setTeam(boolean team) {
-        isTeam = team;
-    }
-    
     @Override
     public String toString() {
         return "Player{" +
@@ -331,6 +338,7 @@ public class Player {
                 ", played=" + totalMatchesPlayed +
                 ", winPct=" + String.format("%.1f", getWinPercentage()) +
                 ", streak=" + currentWinStreak +
+                ", isTeam=" + isTeam +
                 '}';
     }
 }

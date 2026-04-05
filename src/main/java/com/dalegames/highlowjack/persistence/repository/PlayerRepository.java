@@ -1,18 +1,19 @@
 package com.dalegames.highlowjack.persistence.repository;
 
-import com.dalegames.highlowjack.persistence.entity.Player;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
+import com.dalegames.highlowjack.persistence.entity.Player;
 
 /**
  * Repository for Player entity operations.
  * 
  * @author Dale & Primus
- * @version 1.1
+ * @version 1.2 - Added player/team separation queries
  */
 @Repository
 public interface PlayerRepository extends JpaRepository<Player, Long> {
@@ -53,15 +54,14 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
      * Get only actual players (not teams) ordered by wins.
      */
     List<Player> findByIsTeamFalseOrderByTotalMatchesWonDesc();
-
+    
     /**
      * Get all actual players (not teams).
      */
     List<Player> findByIsTeamFalse();
-
+    
     /**
      * Get teams only.
      */
     List<Player> findByIsTeamTrueOrderByTotalMatchesWonDesc();
-
 }

@@ -25,6 +25,7 @@ import com.dalegames.highlowjack.model.Team;
 import com.dalegames.highlowjack.model.Trick;
 import com.dalegames.highlowjack.model.Match;
 import com.dalegames.highlowjack.model.MatchResult;
+import com.dalegames.highlowjack.persistence.entity.Player;
 import com.dalegames.highlowjack.persistence.service.PlayerService;
 
 import jakarta.servlet.http.HttpSession;
@@ -35,7 +36,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  * Web controller for High Low Jack card game.
  * 
  * @author Dale &amp; Primus
- * @version 8.8 - Wiring in to the datbase to accumulate stats
+ * @version 8.9 - Wiring in the stats screen endpoint
  */
 @Controller
 @RequestMapping("/highlowjack")
@@ -427,6 +428,40 @@ public class HighLowJackController {
         session.setAttribute("hlj_game", game);
         
         return "highlowjack/scoring";
+    }
+    
+    /**
+     * Shows player statistics and leaderboard.
+     */
+    @GetMapping("/stats")
+    public String showStats(Model model) {
+        try {
+            // Get all players ordered by wins
+            List<Player> players = playerService.getLeaderboard();
+            
+            // Calculate summary stats
+            int totalMatches = players.stream()
+                .mapToInt(Player::getTotalMatchesPlayed)
+                .sum();
+            
+            int totalPoints = players.stream()
+                .mapToInt(p -> p.getHighsWon() + p.getLowsWon() + 
+                              p.getJacksWon() + p.getGamesWon())
+                .sum();
+            
+            model.addAttribute("players", players);
+            model.addAttribute("totalMatches", totalMatches);
+            model.addAttribute("totalPoints", totalPoints);
+            
+            return "highlowjack/stats";
+        } catch (Exception e) {
+            System.err.println("❌ Error loading stats: " + e.getMessage());
+            e.printStackTrace();
+            model.addAttribute("players", new ArrayList<>());
+            model.addAttribute("totalMatches", 0);
+            model.addAttribute("totalPoints", 0);
+            return "highlowjack/stats";
+        }
     }
     
     @PostMapping("/continue")

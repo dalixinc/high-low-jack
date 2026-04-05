@@ -52,6 +52,7 @@ public class Game implements Serializable{
     private Trick completedTrick;
     private int currentSetNumber;
     private int pitcherIndex;  // BUG #3 FIX: Tracks who pitched this round
+    private  List<GameEvent> recentEvents;  // Events from current round
 
     /**
      * Constructs a new game with the specified game setup.
@@ -97,6 +98,7 @@ public class Game implements Serializable{
             hands.put(name, new Hand(name));
         }
         
+        this.recentEvents = new ArrayList<>();
         this.currentPlayerIndex = 0;
         this.state = GameState.NOT_STARTED;
     }
@@ -291,6 +293,25 @@ public class Game implements Serializable{
             // First card of first trick determines trump
             if (trumpSuit == null) {
                 trumpSuit = card.getSuit();
+                
+                // DETECT: Trump pitch (first card of round)
+                int pitcherScore = getScore(currentPlayer);
+                recentEvents.add(new GameEvent(
+                    GameEvent.EventType.TRUMP_SET, 
+                    currentPlayer, 
+                    card, 
+                    pitcherScore
+                ));
+                
+                // DETECT: Two pitched
+                if (card.getRank() == Card.Rank.TWO) {
+                    recentEvents.add(new GameEvent(
+                        GameEvent.EventType.TWO_PITCHED, 
+                        currentPlayer, 
+                        card, 
+                        pitcherScore
+                    ));
+                }
             }
             currentTrick = new Trick(trumpSuit);
         }
@@ -308,6 +329,17 @@ public class Game implements Serializable{
         // Play the card
         hand.playCard(card);
         currentTrick.playCard(currentPlayer, card);
+        
+        // DETECT: Ace of Spades played
+        if (card.getRank() == Card.Rank.ACE && card.getSuit() == Card.Suit.SPADES) {
+            int playerScore = getScore(currentPlayer);
+            recentEvents.add(new GameEvent(
+                GameEvent.EventType.ACE_SPADES_PLAYED, 
+                currentPlayer, 
+                card, 
+                playerScore
+            ));
+        }
         
         // Check if trick is complete
         if (currentTrick.isComplete()) {
@@ -398,6 +430,17 @@ public class Game implements Serializable{
      */
     public void clearCompletedTrick() { 
         this.completedTrick = null; 
+    }
+    
+    /**
+     * Accessor/Mutator for Recent Events
+     */
+    public List<GameEvent> getRecentEvents() {
+        return new ArrayList<>(recentEvents);
+    }
+    
+    public void clearRecentEvents() {
+        recentEvents.clear();
     }
     
     /**

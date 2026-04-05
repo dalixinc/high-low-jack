@@ -29,6 +29,7 @@ import com.dalegames.highlowjack.persistence.entity.Player;
 import com.dalegames.highlowjack.persistence.service.PlayerService;
 import com.dalegames.highlowjack.persistence.service.TeamStatsService;
 import com.dalegames.highlowjack.persistence.entity.TeamStats;
+import com.dalegames.highlowjack.service.QuipDetector;
 
 import jakarta.servlet.http.HttpSession;
 
@@ -38,7 +39,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  * Web controller for High Low Jack card game.
  * 
  * @author Dale &amp; Primus
- * @version 8.12 - Modified (by Primus) for team stats
+ * @version 8.13 - Adding quip mechanism
  */
 @Controller
 @RequestMapping("/highlowjack")
@@ -49,6 +50,9 @@ public class HighLowJackController {
     
     @Autowired
     private TeamStatsService teamStatsService;
+    
+    @Autowired
+    private QuipDetector quipDetector;
     
     @GetMapping
     public String showGame(Model model, HttpSession session) {
@@ -370,6 +374,21 @@ public class HighLowJackController {
         }
         
         SetResult setResult = SetResult.determineWinner(scoresBefore, results.getRoundPointWinners());
+
+	     // ═══════════════════════════════════════════════════════════════
+	     // PERSONALITY: Set completion quips
+	     // ═══════════════════════════════════════════════════════════════
+	     try {
+	         List<String> setQuips = quipDetector.checkSetQuips(game, setResult);
+	         if (!setQuips.isEmpty()) {
+	             model.addAttribute("setQuips", setQuips);
+	             System.out.println("🎭 SET QUIPS: " + setQuips);
+	         }
+	     } catch (Exception e) {
+	         System.err.println("❌ Error checking set quips: " + e.getMessage());
+	     }
+
+     // ... rest of the code continues
         
      // DEBUG: Print set result in showScoring
         boolean doADebug = true;
@@ -518,6 +537,36 @@ public class HighLowJackController {
                 }
                 
                 System.out.println("\n═══ ROUND POINT WINNERS ═══");
+                
+                // ═══════════════════════════════════════════════════════════════
+                // PERSONALITY: Check for quips
+                // ═══════════════════════════════════════════════════════════════
+                try {
+                    List<String> quips = quipDetector.checkRoundQuips(game, results);
+                    if (!quips.isEmpty()) {
+                        model.addAttribute("quips", quips);
+                        System.out.println("🎭 QUIPS: " + quips);
+                    }
+                } catch (Exception e) {
+                    System.err.println("❌ Error checking quips: " + e.getMessage());
+                }
+                
+                // ═══════════════════════════════════════════════════════════════
+                // PERSONALITY: Check for real-time event quips
+                // ═══════════════════════════════════════════════════════════════
+                try {
+                    List<String> eventQuips = quipDetector.checkGameEvents(game);
+                    if (!eventQuips.isEmpty()) {
+                        model.addAttribute("eventQuips", eventQuips);
+                        System.out.println("🎭 EVENT QUIPS: " + eventQuips);
+                    }
+                    
+                    // Clear events after checking
+                    game.clearRecentEvents();
+                } catch (Exception e) {
+                    System.err.println("❌ Error checking event quips: " + e.getMessage());
+                }
+                
                 for (String category : new String[]{"High", "Low", "Jack", "Game"}) {
                     String winner = results.getRoundPointWinner(category);
                     System.out.println(category + ": " + (winner != null ? winner : "none"));
@@ -557,6 +606,19 @@ public class HighLowJackController {
             
             SetResult setResult = SetResult.determineWinner(scoresBefore, results.getRoundPointWinners());
             
+            // ═══════════════════════════════════════════════════════════════
+            // PERSONALITY: Set completion quips
+            // ═══════════════════════════════════════════════════════════════
+            try {
+                List<String> setQuips = quipDetector.checkSetQuips(game, setResult);
+                if (!setQuips.isEmpty()) {
+                    model.addAttribute("setQuips", setQuips);
+                    System.out.println("🎭 SET QUIPS: " + setQuips);
+                }
+            } catch (Exception e) {
+                System.err.println("❌ Error checking set quips: " + e.getMessage());
+            }
+            
             // DEBUG: Print result
             System.out.println("\n═══ SET RESULT ═══");
             if (setResult != null) {
@@ -586,6 +648,19 @@ public class HighLowJackController {
                     MatchResult matchResult = new MatchResult(match);
                     model.addAttribute("matchResult", matchResult);
                     model.addAttribute("game", game);
+                    
+                    // ═══════════════════════════════════════════════════════════════
+                    // PERSONALITY: Set completion quips
+                    // ═══════════════════════════════════════════════════════════════
+                    try {
+                        List<String> setQuips = quipDetector.checkSetQuips(game, setResult);
+                        if (!setQuips.isEmpty()) {
+                            model.addAttribute("setQuips", setQuips);
+                            System.out.println("🎭 SET QUIPS: " + setQuips);
+                        }
+                    } catch (Exception e) {
+                        System.err.println("❌ Error checking set quips: " + e.getMessage());
+                    }
                     
                     // ═══════════════════════════════════════════════════════════════
                     // UPDATE DATABASE - Record match stats for all players

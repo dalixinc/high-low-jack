@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
  * Player entity - represents a player profile with lifetime statistics.
  * 
  * @author Dale & Primus
- * @version 1.0
+ * @version 1.1
  */
 @Entity
 @Table(name = "players")
@@ -78,6 +78,9 @@ public class Player {
     
     @Column(name = "last_played")
     private LocalDateTime lastPlayed = LocalDateTime.now();
+    
+    @Column(name = "is_team")
+    private boolean isTeam = false;
     
     // Constructors
     public Player() {}
@@ -310,6 +313,14 @@ public class Player {
     
     public void setLastPlayed(LocalDateTime lastPlayed) {
         this.lastPlayed = lastPlayed;
+    }
+    
+    public boolean isTeam() {
+        return isTeam;
+    }
+
+    public void setTeam(boolean team) {
+        isTeam = team;
     }
     
     @Override

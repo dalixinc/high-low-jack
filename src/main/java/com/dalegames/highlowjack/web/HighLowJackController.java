@@ -27,6 +27,8 @@ import com.dalegames.highlowjack.model.Match;
 import com.dalegames.highlowjack.model.MatchResult;
 import com.dalegames.highlowjack.persistence.entity.Player;
 import com.dalegames.highlowjack.persistence.service.PlayerService;
+import com.dalegames.highlowjack.persistence.service.TeamStatsService;
+import com.dalegames.highlowjack.persistence.entity.TeamStats;
 
 import jakarta.servlet.http.HttpSession;
 
@@ -36,14 +38,17 @@ import org.springframework.beans.factory.annotation.Autowired;
  * Web controller for High Low Jack card game.
  * 
  * @author Dale &amp; Primus
- * @version 8.9 - Wiring in the stats screen endpoint
+ * @version 8.11 - Wiring in the stats screen endpoint (separating Teams and Individuals)
  */
 @Controller
 @RequestMapping("/highlowjack")
 public class HighLowJackController {
 	
     @Autowired
-    private PlayerService playerService; 
+    private PlayerService playerService;
+    
+    @Autowired
+    private TeamStatsService teamStatsService;
     
     @GetMapping
     public String showGame(Model model, HttpSession session) {
@@ -436,20 +441,22 @@ public class HighLowJackController {
     @GetMapping("/stats")
     public String showStats(Model model) {
         try {
-            // Get all players ordered by wins
-            List<Player> players = playerService.getLeaderboard();
+            // Get PLAYER stats only (excluding teams)
+            List<Player> players = playerService.getPlayerLeaderboard();
             
             // Calculate summary stats
-            int totalMatches = players.stream()
-                .mapToInt(Player::getTotalMatchesPlayed)
-                .sum();
+            int totalMatches = playerService.getTotalMatches();
             
             int totalPoints = players.stream()
                 .mapToInt(p -> p.getHighsWon() + p.getLowsWon() + 
                               p.getJacksWon() + p.getGamesWon())
                 .sum();
             
+            // Get team stats (for now, empty - we'll implement this next)
+            List<TeamStats> teams = new ArrayList<>();
+            
             model.addAttribute("players", players);
+            model.addAttribute("teams", teams);
             model.addAttribute("totalMatches", totalMatches);
             model.addAttribute("totalPoints", totalPoints);
             
@@ -458,6 +465,7 @@ public class HighLowJackController {
             System.err.println("❌ Error loading stats: " + e.getMessage());
             e.printStackTrace();
             model.addAttribute("players", new ArrayList<>());
+            model.addAttribute("teams", new ArrayList<>());
             model.addAttribute("totalMatches", 0);
             model.addAttribute("totalPoints", 0);
             return "highlowjack/stats";

@@ -14,7 +14,7 @@ import java.util.Optional;
  * Handles business logic and transactions.
  * 
  * @author Dale & Primus
- * @version 1.0
+ * @version 1.1
  */
 @Service
 @Transactional
@@ -132,6 +132,55 @@ public class PlayerService {
         Player player = getOrCreatePlayer(playerName);
         player.recordAceSpadesPlayed();
         playerRepository.save(player);
+    }
+    
+    /**
+     * Gets player-only leaderboard (excludes teams).
+     */
+    public List<Player> getPlayerLeaderboard() {
+        return playerRepository.findByIsTeamFalseOrderByTotalMatchesWonDesc();
+    }
+
+    /**
+     * Gets total number of unique matches played.
+     * Uses the maximum matches played by any single player.
+     */
+    public int getTotalMatches() {
+        List<Player> allPlayers = playerRepository.findByIsTeamFalse();
+        
+        if (allPlayers.isEmpty()) return 0;
+        
+        // Get the player with most matches (they've played in all matches)
+        return allPlayers.stream()
+            .mapToInt(Player::getTotalMatchesPlayed)
+            .max()
+            .orElse(0);
+    }
+
+    /**
+     * Resets all player statistics to zero.
+     */
+    public void resetAllStats() {
+        List<Player> allPlayers = playerRepository.findByIsTeamFalse();
+        
+        for (Player player : allPlayers) {
+            player.setTotalMatchesPlayed(0);
+            player.setTotalMatchesWon(0);
+            player.setTotalSetsPlayed(0);
+            player.setTotalSetsWon(0);
+            player.setTotalRoundsPlayed(0);
+            player.setHighsWon(0);
+            player.setLowsWon(0);
+            player.setJacksWon(0);
+            player.setGamesWon(0);
+            player.setTotalPoints(0);
+            player.setCurrentWinStreak(0);
+            player.setLongestWinStreak(0);
+            player.setTotalTwosCut(0);
+            player.setTotalAceSpadesPlayed(0);
+            
+            playerRepository.save(player);
+        }
     }
     
     /**

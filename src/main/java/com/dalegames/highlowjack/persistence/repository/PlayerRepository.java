@@ -12,7 +12,7 @@ import java.util.Optional;
  * Repository for Player entity operations.
  * 
  * @author Dale & Primus
- * @version 1.0
+ * @version 1.1
  */
 @Repository
 public interface PlayerRepository extends JpaRepository<Player, Long> {
@@ -48,4 +48,20 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
      * Gets all players ordered by last played (most recent first).
      */
     List<Player> findAllByOrderByLastPlayedDesc();
+    
+    /**
+     * Get only actual players (not teams) ordered by wins.
+     */
+    List<Player> findByIsTeamFalseOrderByTotalMatchesWonDesc();
+
+    /**
+     * Get all actual players (not teams).
+     */
+    List<Player> findByIsTeamFalse();
+
+    /**
+     * Get teams only.
+     */
+    List<Player> findByIsTeamTrueOrderByTotalMatchesWonDesc();
+
 }

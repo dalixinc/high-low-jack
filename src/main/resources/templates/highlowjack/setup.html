@@ -387,6 +387,23 @@
     <div class="setup-container">
         <h1>🃏 High Low Jack 🃏</h1>
         <p class="subtitle">Configure Your Match</p>
+		
+		<!-- STATS BUTTON -->
+		<div style="text-align: right; margin-bottom: 20px;">
+		    <a th:href="@{/highlowjack/stats}" 
+		       style="display: inline-block;
+		              background: linear-gradient(135deg, #f39c12 0%, #e74c3c 100%);
+		              color: white;
+		              padding: 12px 30px;
+		              border-radius: 25px;
+		              text-decoration: none;
+		              font-weight: bold;
+		              font-size: 1rem;
+		              box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+		              transition: transform 0.2s, box-shadow 0.2s;">
+		        📊 View Stats
+		    </a>
+		</div>
         
         <form th:action="@{/highlowjack/setup}" method="post">
             <!-- GAME MODE SECTION -->

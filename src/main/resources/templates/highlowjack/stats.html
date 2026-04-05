@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Player Statistics - High Low Jack</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" th:href="@{/css/game.css}">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .stats-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .stats-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .stats-title {
+            font-size: 3rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+        
+        .stats-subtitle {
+            font-size: 1.2rem;
+            color: #666;
+        }
+        
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 10px;
+            margin: 30px 0;
+        }
+        
+        .leaderboard-table thead th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        
+        .leaderboard-table thead th:first-child {
+            border-radius: 10px 0 0 10px;
+        }
+        
+        .leaderboard-table thead th:last-child {
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .leaderboard-table tbody tr {
+            background: #f8f9fa;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .leaderboard-table tbody tr:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .leaderboard-table tbody td {
+            padding: 20px 15px;
+        }
+        
+        .leaderboard-table tbody tr td:first-child {
+            border-radius: 10px 0 0 10px;
+        }
+        
+        .leaderboard-table tbody tr td:last-child {
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .rank {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            width: 60px;
+            text-align: center;
+        }
+        
+        .rank-1 { color: #FFD700; }
+        .rank-2 { color: #C0C0C0; }
+        .rank-3 { color: #CD7F32; }
+        
+        .player-name {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .signature-move {
+            font-size: 0.9rem;
+            color: #666;
+            font-style: italic;
+            margin-top: 5px;
+        }
+        
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #667eea;
+            text-align: center;
+        }
+        
+        .win-percentage {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .percentage-high { color: #27ae60; }
+        .percentage-mid { color: #f39c12; }
+        .percentage-low { color: #e74c3c; }
+        
+        .streak-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #f39c12 0%, #e74c3c 100%);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        
+        .section-divider {
+            margin: 50px 0;
+            border-top: 2px solid #eee;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .stat-card-value {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .stat-card-label {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .back-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-top: 30px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .back-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        
+        .button-container {
+            text-align: center;
+            margin-top: 40px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: #999;
+        }
+        
+        .empty-state-icon {
+            font-size: 5rem;
+            margin-bottom: 20px;
+        }
+        
+        .empty-state-text {
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="stats-container">
+        <div class="stats-header">
+            <div class="stats-title">🏆 Player Statistics 🏆</div>
+            <div class="stats-subtitle">Lifetime Performance & Achievements</div>
+        </div>
+        
+        <!-- Overall Stats Summary -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-card-label">Total Matches Played</div>
+                <div class="stat-card-value" th:text="${totalMatches ?: 0}">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-label">Active Players</div>
+                <div class="stat-card-value" th:text="${players.size()}">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-label">Total Points Scored</div>
+                <div class="stat-card-value" th:text="${totalPoints ?: 0}">0</div>
+            </div>
+        </div>
+        
+        <div class="section-divider"></div>
+        
+        <!-- Leaderboard -->
+        <div th:if="${!players.isEmpty()}">
+            <h2 style="font-size: 2rem; color: #2c3e50; margin-bottom: 20px;">📊 Leaderboard</h2>
+            
+            <table class="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">#</th>
+                        <th>Player</th>
+                        <th style="text-align: center;">Matches</th>
+                        <th style="text-align: center;">Wins</th>
+                        <th style="text-align: center;">Win %</th>
+                        <th style="text-align: center;">⬆️ High</th>
+                        <th style="text-align: center;">⬇️ Low</th>
+                        <th style="text-align: center;">💎 Jack</th>
+                        <th style="text-align: center;">🎯 Game</th>
+                        <th style="text-align: center;">🔥 Streak</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="player, iterStat : ${players}">
+                        <td class="rank" 
+                            th:classappend="${iterStat.index == 0} ? 'rank-1' : (${iterStat.index == 1} ? 'rank-2' : (${iterStat.index == 2} ? 'rank-3' : ''))"
+                            th:text="${iterStat.index + 1}">1</td>
+                        <td>
+                            <div class="player-name" th:text="${player.name}">Player Name</div>
+                            <div class="signature-move" th:text="${player.signatureMove}">Signature Move</div>
+                        </td>
+                        <td class="stat-value" th:text="${player.totalMatchesPlayed}">0</td>
+                        <td class="stat-value" th:text="${player.totalMatchesWon}">0</td>
+                        <td class="stat-value">
+                            <span class="win-percentage"
+                                  th:classappend="${player.winPercentage >= 60} ? 'percentage-high' : (${player.winPercentage >= 40} ? 'percentage-mid' : 'percentage-low')"
+                                  th:text="${#numbers.formatDecimal(player.winPercentage, 1, 1)} + '%'">0%</span>
+                        </td>
+                        <td class="stat-value" th:text="${player.highsWon}">0</td>
+                        <td class="stat-value" th:text="${player.lowsWon}">0</td>
+                        <td class="stat-value" th:text="${player.jacksWon}">0</td>
+                        <td class="stat-value" th:text="${player.gamesWon}">0</td>
+                        <td class="stat-value">
+                            <span th:if="${player.currentWinStreak > 0}" 
+                                  class="streak-badge"
+                                  th:text="${player.currentWinStreak}">0</span>
+                            <span th:if="${player.currentWinStreak == 0}">-</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Empty State -->
+        <div th:if="${players.isEmpty()}" class="empty-state">
+            <div class="empty-state-icon">🎴</div>
+            <div class="empty-state-text">No matches played yet!</div>
+            <div style="margin-top: 20px; color: #666;">Play some games to see statistics here.</div>
+        </div>
+        
+        <!-- Back Button -->
+        <div class="button-container">
+            <a th:href="@{/highlowjack/setup}" class="back-button">
+                🎮 Back to Setup
+            </a>
+        </div>
+    </div>
+</body>
+</html>

@@ -514,7 +514,10 @@
                 fetch('/highlowjack/poll')
                     .then(r => r.json())
                     .then(data => {
-                        if (data.gameState === 'IN_PROGRESS' || data.gameState === 'SET_COMPLETE' || data.gameState === 'MATCH_OVER') {
+                        if (data.gameState === 'MATCH_COMPLETE') {
+                            clearInterval(scorePollInterval);
+                            window.location.href = '/highlowjack/match-winner';
+                        } else if (data.gameState === 'IN_PROGRESS' || data.gameState === 'SET_COMPLETE') {
                             clearInterval(scorePollInterval);
                             location.reload();
                         }

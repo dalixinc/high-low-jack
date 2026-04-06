@@ -78,6 +78,11 @@ public class HighLowJackController {
             session.setAttribute("hlj_game", game);
         }
         
+        // Match is over — send all players to the winner page
+        if (game.getState() == Game.GameState.MATCH_COMPLETE) {
+            return "redirect:/highlowjack/match-winner";
+        }
+
         // Check if we should show final trick before scoring
         Boolean showFinalTrick = (Boolean) session.getAttribute("hlj_showFinalTrick");
         ////System.out.println("🔍 showGame() - showFinalTrick flag: " + showFinalTrick);
@@ -564,6 +569,10 @@ public class HighLowJackController {
         if (game != null) {
             response.put("currentPlayer", game.getCurrentPlayer());
             response.put("gameState", game.getState().name());
+            // Extra state for real-time card-play detection
+            int trickSize = (game.getCurrentTrick() != null) ? game.getCurrentTrick().size() : 0;
+            response.put("currentTrickSize", trickSize);
+            response.put("completedTrickCount", game.getTricks().size());
         }
         response.put("humanPlayer", humanPlayer);
         return response;
@@ -726,22 +735,20 @@ public class HighLowJackController {
                     System.out.println("🏆 MATCH WINNER: " + match.getMatchWinner());
                     
                     MatchResult matchResult = new MatchResult(match);
-                    model.addAttribute("matchResult", matchResult);
-                    model.addAttribute("game", game);
-                    
+
                     // ═══════════════════════════════════════════════════════════════
                     // PERSONALITY: Set(match???) completion quips????
                     // ═══════════════════════════════════════════════════════════════
                     try {
                     	List<String> matchQuips = quipDetector.checkMatchQuips(game, matchResult);
                         if (!matchQuips.isEmpty()) {
-                        	model.addAttribute("matchQuips", matchQuips);
+                        	session.setAttribute("hlj_matchQuips", matchQuips);
                         	System.out.println("🎭 MATCH QUIPS: " + matchQuips);
                         }
                     } catch (Exception e) {
                         System.err.println("❌ Error checking set quips: " + e.getMessage());
                     }
-                    
+
                     // ═══════════════════════════════════════════════════════════════
                     // UPDATE DATABASE - Record match stats for all players
                     // ═══════════════════════════════════════════════════════════════
@@ -751,11 +758,11 @@ public class HighLowJackController {
                             for (Team team : game.getTeams()) {
                                 boolean teamWon = team.getName().equals(matchResult.getWinner());
                                 int teamSetsWon = matchResult.getFinalSetWins().getOrDefault(team.getName(), 0);
-                                
+
                                 for (String playerName : team.getPlayerNames()) {
                                     playerService.updateMatchStats(playerName, teamWon, teamSetsWon);
-                                    System.out.println("📊 Updated stats for " + playerName + 
-                                                     " (team " + team.getName() + "): " + 
+                                    System.out.println("📊 Updated stats for " + playerName +
+                                                     " (team " + team.getName() + "): " +
                                                      (teamWon ? "WIN" : "LOSS"));
                                 }
                             }
@@ -765,7 +772,7 @@ public class HighLowJackController {
                                 boolean won = playerName.equals(matchResult.getWinner());
                                 int setsWon = matchResult.getFinalSetWins().getOrDefault(playerName, 0);
                                 playerService.updateMatchStats(playerName, won, setsWon);
-                                System.out.println("📊 Updated stats for " + playerName + ": " + 
+                                System.out.println("📊 Updated stats for " + playerName + ": " +
                                                  (won ? "WIN" : "LOSS"));
                             }
                         }
@@ -773,12 +780,17 @@ public class HighLowJackController {
                         System.err.println("❌ Error updating player stats: " + e.getMessage());
                         e.printStackTrace();
                     }
-                    
-                    // Clear session for new match
+
+                    // Store match result in session so all players (controller + non-controller) can see it
+                    session.setAttribute("hlj_matchResult", matchResult);
+                    game.setState(Game.GameState.MATCH_COMPLETE);
+                    session.setAttribute("hlj_game", game);
+
+                    // Clear round data
                     session.removeAttribute("hlj_roundResult");
                     session.removeAttribute("hlj_roundNumber");
-                    
-                    return "highlowjack/match-winner";
+
+                    return "redirect:/highlowjack/match-winner";
                     
                 } else {
                     // ═══════════════════════════════════════════════════════════
@@ -824,6 +836,32 @@ public class HighLowJackController {
         return "redirect:/highlowjack";
     }
     
+    /**
+     * Shows the match winner screen. Accessible via GET so non-controller multiplayer
+     * players can be polled/redirected here after the match ends.
+     */
+    @GetMapping("/match-winner")
+    public String showMatchWinner(HttpSession session, Model model) {
+        MatchResult matchResult = (MatchResult) session.getAttribute("hlj_matchResult");
+        Game game = (Game) session.getAttribute("hlj_game");
+
+        if (matchResult == null) {
+            return "redirect:/highlowjack/setup";
+        }
+
+        model.addAttribute("matchResult", matchResult);
+        model.addAttribute("game", game);
+
+        @SuppressWarnings("unchecked")
+        List<String> matchQuips = (List<String>) session.getAttribute("hlj_matchQuips");
+        if (matchQuips != null) {
+            model.addAttribute("matchQuips", matchQuips);
+            session.removeAttribute("hlj_matchQuips");
+        }
+
+        return "highlowjack/match-winner";
+    }
+
     /**
      * KIck off the next set
      * @param session

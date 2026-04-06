@@ -801,20 +801,29 @@
             }, delay);
         }
         else if (isMultiplayer && !isMyTurn && !isRoundComplete) {
-            // Multiplayer: poll until it's this player's turn or the round ends
+            // Multiplayer: poll for any game state change so all players see cards in real-time
+            let lastTrickSize = -1;
+            let lastCompletedTricks = -1;
             const mpPollInterval = setInterval(() => {
                 fetch('/highlowjack/poll')
                     .then(r => r.json())
                     .then(data => {
                         const myTurnNow = data.humanPlayer && data.currentPlayer === data.humanPlayer;
                         const roundOver = data.gameState && data.gameState !== 'IN_PROGRESS';
-                        if (myTurnNow || roundOver) {
+                        const trickSizeChanged = data.currentTrickSize !== undefined && lastTrickSize >= 0 && data.currentTrickSize !== lastTrickSize;
+                        const completedTricksChanged = data.completedTrickCount !== undefined && lastCompletedTricks >= 0 && data.completedTrickCount !== lastCompletedTricks;
+
+                        // Update tracked values
+                        if (data.currentTrickSize !== undefined) lastTrickSize = data.currentTrickSize;
+                        if (data.completedTrickCount !== undefined) lastCompletedTricks = data.completedTrickCount;
+
+                        if (myTurnNow || roundOver || trickSizeChanged || completedTricksChanged) {
                             clearInterval(mpPollInterval);
                             location.reload();
                         }
                     })
                     .catch(() => {}); // ignore transient network errors
-            }, 2000);
+            }, 1000);
         }
         
         // SURGICAL ADDITION #3: Modal Functions

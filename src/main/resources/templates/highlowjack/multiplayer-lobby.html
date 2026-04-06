@@ -338,27 +338,35 @@
         <a th:href="@{/highlowjack/setup}" class="back-link">← Leave Lobby</a>
     </div>
     
-    <script th:inline="javascript">
-        /*<![CDATA[*/
-        const joinCode = /*[[${mpGame.joinCode}]]*/ 'ABC123';
-        let lastVersion = /*[[${mpGame.stateVersion}]]*/ 0;
-        
-        // Poll for updates every 2 seconds
-        setInterval(function() {
-            fetch('/highlowjack/multiplayer/poll?code=' + joinCode + '&lastVersion=' + lastVersion)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.updated) {
-                        console.log('🔄 Game state updated, reloading...');
-                        location.reload();
-                    }
-                    lastVersion = data.version;
-                })
-                .catch(error => {
-                    console.error('❌ Polling error:', error);
-                });
-        }, 2000);
-        /*]]>*/
-    </script>
+	<script th:inline="javascript">
+	    /*<![CDATA[*/
+	    const joinCode = /*[[${mpGame.joinCode}]]*/ 'ABC123';
+	    let lastVersion = /*[[${mpGame.stateVersion}]]*/ 0;
+	    
+	    // Poll for updates every 2 seconds
+	    setInterval(function() {
+	        fetch('/highlowjack/multiplayer/poll?code=' + joinCode + '&lastVersion=' + lastVersion)
+	            .then(response => response.json())
+	            .then(data => {
+	                if (data.gameStarted) {
+	                    // Game started! Transfer to game and redirect
+	                    console.log('🚀 Game started! Redirecting...');
+	                    fetch('/highlowjack/multiplayer/start-player', {
+	                        method: 'POST'
+	                    }).then(() => {
+	                        window.location.href = '/highlowjack';
+	                    });
+	                } else if (data.updated) {
+	                    console.log('🔄 Game state updated, reloading...');
+	                    location.reload();
+	                }
+	                lastVersion = data.version;
+	            })
+	            .catch(error => {
+	                console.error('❌ Polling error:', error);
+	            });
+	    }, 2000);
+	    /*]]>*/
+	</script>
 </body>
 </html>

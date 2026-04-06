@@ -23,6 +23,7 @@ public class MultiplayerGame {
     private final Map<Integer, PlayerConnection> players; // position -> player
     private final LocalDateTime createdAt;
     private int stateVersion; // Increments when game state changes
+    private boolean gameStarted; // True when host starts the game
     
     public MultiplayerGame(String joinCode, Game game, GameSetup setup) {
         this.joinCode = joinCode;
@@ -31,6 +32,7 @@ public class MultiplayerGame {
         this.players = new HashMap<>();
         this.createdAt = LocalDateTime.now();
         this.stateVersion = 0;
+        this.gameStarted = false;
     }
     
     /**
@@ -126,6 +128,23 @@ public class MultiplayerGame {
     
     public int getStateVersion() {
         return stateVersion;
+    }
+    
+    /**
+     * Marks the game as started.
+     * Called when host clicks "Start Game".
+     */
+    public void startGame() {
+        this.gameStarted = true;
+        this.stateVersion++;
+        System.out.println("🚀 Game " + joinCode + " has been started!");
+    }
+
+    /**
+     * Checks if the game has been started by the host.
+     */
+    public boolean isGameStarted() {
+        return gameStarted;
     }
     
     /**

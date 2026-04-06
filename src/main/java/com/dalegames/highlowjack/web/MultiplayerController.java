@@ -23,7 +23,7 @@ import java.util.Map;
  * Controller for multiplayer game functionality.
  * 
  * @author Dale & Primus
- * @version 1.2 - Fixed /host to accept form data directly
+ * @version 1.3 - Added auto-AI player addition
  */
 @Controller
 @RequestMapping("/highlowjack/multiplayer")
@@ -82,12 +82,18 @@ public class MultiplayerController {
             
             // Host automatically joins as position 0 (North)
             String hostName = getHostPlayerName(setup);
-            String token = mpGame.joinPlayer(0, hostName);
+            int hostPosition = getHostPosition(setup);
+            String token = mpGame.joinPlayer(hostPosition, hostName);
+            
+            System.out.println("🎮 Host joined: " + hostName + " at position " + hostPosition);
+            
+            // AUTO-ADD AI PLAYERS to their positions
+            autoAddComputerPlayers(mpGame, setup);
             
             // Store multiplayer session info
             session.setAttribute("mp_token", token);
             session.setAttribute("mp_code", joinCode);
-            session.setAttribute("mp_position", 0);
+            session.setAttribute("mp_position", hostPosition);
             session.setAttribute("mp_playerName", hostName);
             
             System.out.println("🎮 Hosting new game: " + joinCode + " (host: " + hostName + ")");
@@ -144,6 +150,28 @@ public class MultiplayerController {
     }
     
     /**
+     * Automatically adds computer players to the game.
+     */
+    private void autoAddComputerPlayers(MultiplayerGame mpGame, GameSetup setup) {
+        List<PlayerInfo> players = setup.getPlayers();
+        
+        for (int i = 0; i < players.size(); i++) {
+            PlayerInfo player = players.get(i);
+            
+            // Skip if position already taken
+            if (mpGame.isPositionTaken(i)) {
+                continue;
+            }
+            
+            // If this is a computer player, auto-add them
+            if (player.isComputer()) {
+                String aiToken = mpGame.joinPlayer(i, player.getName());
+                System.out.println("🤖 Auto-added AI player: " + player.getName() + " at position " + i);
+            }
+        }
+    }
+    
+    /**
      * Helper to get the host's player name from setup.
      */
     private String getHostPlayerName(GameSetup setup) {
@@ -159,6 +187,22 @@ public class MultiplayerController {
     }
     
     /**
+     * Helper to get the host's position (0-3).
+     */
+    private int getHostPosition(GameSetup setup) {
+        // Find position of first human player
+        List<PlayerInfo> players = setup.getPlayers();
+        for (int i = 0; i < players.size(); i++) {
+            if (players.get(i).isHuman()) {
+                return i;
+            }
+        }
+        
+        // Fallback: position 0
+        return 0;
+    }
+    
+    /**
      * Shows the join page where players enter a game code.
      */
     @GetMapping("/join")
@@ -168,6 +212,7 @@ public class MultiplayerController {
             if (mpGame != null) {
                 model.addAttribute("mpGame", mpGame);
                 model.addAttribute("joinCode", code);
+                model.addAttribute("setup", mpGame.getSetup());  // For AI badge display
             } else {
                 model.addAttribute("error", "Invalid game code: " + code);
             }
@@ -237,13 +282,14 @@ public class MultiplayerController {
         
         model.addAttribute("mpGame", mpGame);
         model.addAttribute("myPosition", position);
+        model.addAttribute("setup", mpGame.getSetup());  // Add setup for AI detection
         
         return "highlowjack/multiplayer-lobby";
     }
     
     /**
      * Polling endpoint for lobby updates.
-     * Returns JSON with state version.
+     * Returns JSON with state version and game started status.
      */
     @GetMapping("/poll")
     @ResponseBody
@@ -263,12 +309,13 @@ public class MultiplayerController {
         int currentVersion = mpGame.getStateVersion();
         response.put("version", currentVersion);
         response.put("updated", currentVersion > lastVersion);
+        response.put("gameStarted", mpGame.isGameStarted());  // For detecting game start
         
         return ResponseEntity.ok(response);
     }
     
     /**
-     * Host starts the game (position 0 only).
+     * Host starts the game (any valid player).
      */
     @PostMapping("/start")
     public String startGame(HttpSession session, Model model) {
@@ -276,7 +323,7 @@ public class MultiplayerController {
         Integer position = (Integer) session.getAttribute("mp_position");
         String token = (String) session.getAttribute("mp_token");
         
-        if (code == null || position == null || position != 0) {
+        if (code == null || position == null) {
             return "redirect:/highlowjack/multiplayer/lobby";
         }
         
@@ -286,10 +333,13 @@ public class MultiplayerController {
             return "redirect:/highlowjack/multiplayer/lobby";
         }
         
-        // Verify this is the host
-        if (!mpGame.isValidPlayer(0, token)) {
+        // Verify this is a valid player (not just position 0)
+        if (!mpGame.isValidPlayer(position, token)) {
             return "redirect:/highlowjack/multiplayer/lobby";
         }
+        
+        // MARK GAME AS STARTED (triggers polling for other players)
+        mpGame.startGame();
         
         // Transfer multiplayer game to regular session
         session.setAttribute("hlj_game", mpGame.getGame());
@@ -301,8 +351,79 @@ public class MultiplayerController {
         session.removeAttribute("mp_position");
         session.removeAttribute("mp_playerName");
         
-        System.out.println("🚀 Starting multiplayer game: " + code);
+        System.out.println("🚀 Host starting multiplayer game: " + code);
         
         return "redirect:/highlowjack";
     }
+    
+    /**
+     * Non-host players call this when game starts (detected by polling).
+     * Transfers game to their session and redirects to game.
+     */
+    @PostMapping("/start-player")
+    public String startPlayer(HttpSession session) {
+        String code = (String) session.getAttribute("mp_code");
+        Integer position = (Integer) session.getAttribute("mp_position");
+        String token = (String) session.getAttribute("mp_token");
+        
+        if (code == null || position == null || token == null) {
+            return "redirect:/highlowjack/multiplayer/lobby";
+        }
+        
+        MultiplayerGame mpGame = gameRegistry.getGame(code);
+        
+        if (mpGame == null || !mpGame.isGameStarted()) {
+            return "redirect:/highlowjack/multiplayer/lobby";
+        }
+        
+        // Verify this is a valid player
+        if (!mpGame.isValidPlayer(position, token)) {
+            return "redirect:/highlowjack/multiplayer/lobby";
+        }
+        
+        // Transfer game to this player's session
+        session.setAttribute("hlj_game", mpGame.getGame());
+        session.setAttribute("hlj_setup", mpGame.getSetup());
+        
+        // Clean up multiplayer session
+        session.removeAttribute("mp_token");
+        session.removeAttribute("mp_code");
+        session.removeAttribute("mp_position");
+        session.removeAttribute("mp_playerName");
+        
+        System.out.println("🚀 Player joined game: position " + position);
+        
+        return "redirect:/highlowjack";
+    }
+    
+    /**
+     * Non-host players enter the game after host starts.
+     * Called by lobby polling when gameStarted is detected.
+     */
+//    @PostMapping("/start-player")
+//    public String startPlayer(HttpSession session) {
+//        String code = (String) session.getAttribute("mp_code");
+//        
+//        if (code == null) {
+//            return "redirect:/highlowjack/setup";
+//        }
+//        
+//        MultiplayerGame mpGame = gameRegistry.getGame(code);
+//        
+//        if (mpGame != null && mpGame.isGameStarted()) {
+//            // Transfer game to this player's session
+//            session.setAttribute("hlj_game", mpGame.getGame());
+//            session.setAttribute("hlj_setup", mpGame.getSetup());
+//            
+//            // Clean up multiplayer session
+//            session.removeAttribute("mp_token");
+//            session.removeAttribute("mp_code");
+//            session.removeAttribute("mp_position");
+//            session.removeAttribute("mp_playerName");
+//            
+//            System.out.println("🎮 Player entering started game: " + code);
+//        }
+//        
+//        return "redirect:/highlowjack";
+//    }
 }

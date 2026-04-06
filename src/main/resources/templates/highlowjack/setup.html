@@ -344,9 +344,46 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(0,0,0,0.4);
         }
-        
-        .start-button:active {
+
+		
+		.start-button:active {
             transform: translateY(0);
+        }
+        
+        .button-group {
+            display: grid;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .multiplayer-button {
+            width: 100%;
+            padding: 18px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #f39c12 0%, #e74c3c 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+            text-decoration: none;
+            display: block;
+            text-align: center;
+        }
+        
+        .multiplayer-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+        }
+        
+        .multiplayer-button:active {
+            transform: translateY(0);
+        }
+        
+        .join-button {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
         }
         
         .info-note {
@@ -683,8 +720,18 @@
                 </div>
             </div>
             
-            <!-- START BUTTON -->
-            <button type="submit" class="start-button">🎮 Start Game!</button>
+			<!-- GAME START OPTIONS -->
+            <div class="button-group">
+                <button type="submit" class="start-button">🎮 Start Local Game</button>
+                
+				<button type="submit" formaction="/highlowjack/multiplayer/host" class="multiplayer-button">
+				    🌐 Host Multiplayer Game
+				</button>
+                
+                <a href="/highlowjack/multiplayer/join" class="join-button multiplayer-button">
+                    🔗 Join Multiplayer Game
+                </a>
+            </div>
         </form>
     </div>
     

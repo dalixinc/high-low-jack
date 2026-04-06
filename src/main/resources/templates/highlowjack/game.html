@@ -593,7 +593,102 @@
                             </form>
                         </div>
                     </div>
+        
+                    <!-- ═══════════════════════════════════════════════════════════════ -->
+                    <!-- QUIPS DISPLAY - Shows personality quips after round scoring -->
+                    <!-- ═══════════════════════════════════════════════════════════════ -->
+                    <div th:if="${quips != null and !quips.empty}" 
+                         style="background: linear-gradient(135deg, #f39c12 0%, #e74c3c 100%);
+                                border-radius: 15px;
+                                padding: 25px 35px;
+                                margin: 25px auto;
+                                max-width: 900px;
+                                box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+                                animation: quipSlideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);">
+                        
+                        <div style="text-align: center; font-size: 2.8rem; margin-bottom: 15px;">🎭</div>
+                        
+                        <div th:each="quip : ${quips}" 
+                             style="background: white;
+                                    color: #2c3e50;
+                                    padding: 20px 30px;
+                                    border-radius: 12px;
+                                    margin: 12px 0;
+                                    box-shadow: 0 5px 20px rgba(0,0,0,0.25);
+                                    font-size: 1.4rem;
+                                    font-weight: bold;
+                                    font-style: italic;
+                                    text-align: center;
+                                    border-left: 5px solid #e74c3c;"
+                             th:text="${quip}">
+                            Quip text here
+                        </div>
+                    </div>
                     
+                    <style>
+                        @keyframes quipSlideIn {
+                            from { 
+                                opacity: 0; 
+                                transform: translateY(-40px) scale(0.85); 
+                            }
+                            to { 
+                                opacity: 1; 
+                                transform: translateY(0) scale(1); 
+                            }
+                        }
+                    </style>
+					
+					<!-- ═══════════════════════════════════════════════════════════════ -->
+                    <!-- REALTIME EVENT QUIPS DISPLAY -->
+                    <!-- ═══════════════════════════════════════════════════════════════ -->
+                    <div th:if="${eventQuips != null and !eventQuips.empty}" 
+                         style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+                                border-radius: 15px;
+                                padding: 25px 35px;
+                                margin: 25px auto;
+                                max-width: 900px;
+                                box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+								animation: quipPop 5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;">
+                                <!-- animation: quipPop 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);" -->
+                        
+                        <div style="text-align: center; font-size: 2.8rem; margin-bottom: 15px;">⚡</div>
+                        
+                        <div th:each="quip : ${eventQuips}" 
+                             style="background: white;
+                                    color: #2c3e50;
+                                    padding: 20px 30px;
+                                    border-radius: 12px;
+                                    margin: 12px 0;
+                                    box-shadow: 0 5px 20px rgba(0,0,0,0.25);
+                                    font-size: 1.4rem;
+                                    font-weight: bold;
+                                    text-align: center;
+                                    border-left: 5px solid #9b59b6;"
+                             th:text="${quip}">
+                            Realtime event quip here
+                        </div>
+                    </div>
+                    
+					<style>
+					    @keyframes quipPop {
+					        0% { 
+					            opacity: 0; 
+					            transform: scale(0.3) rotate(-10deg); 
+					        }
+					        10% { 
+					            transform: scale(1.1) rotate(3deg); 
+					        }
+					        15%, 90% { 
+					            opacity: 1; 
+					            transform: scale(1) rotate(0deg); 
+					        }
+					        100% { 
+					            opacity: 0; 
+					            transform: scale(0.9); 
+					        }
+					    }
+					</style>
+					
                     <div class="buttons">
                         <!-- SURGICAL MODIFICATION: Changed to use modal confirmation -->
                         <button type="button" class="btn" onclick="confirmNewGame()">New Game</button>

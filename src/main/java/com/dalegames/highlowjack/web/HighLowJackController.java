@@ -30,6 +30,8 @@ import com.dalegames.highlowjack.persistence.service.PlayerService;
 import com.dalegames.highlowjack.persistence.service.TeamStatsService;
 import com.dalegames.highlowjack.persistence.entity.TeamStats;
 import com.dalegames.highlowjack.service.QuipDetector;
+import com.dalegames.highlowjack.service.RealtimeQuipDetector;
+
 
 import jakarta.servlet.http.HttpSession;
 
@@ -53,6 +55,9 @@ public class HighLowJackController {
     
     @Autowired
     private QuipDetector quipDetector;
+    
+    @Autowired
+    private RealtimeQuipDetector realtimeQuipDetector;
     
     @GetMapping
     public String showGame(Model model, HttpSession session) {
@@ -85,6 +90,16 @@ public class HighLowJackController {
                 model.addAttribute("showFinalTrick", true);
                 // DON'T clear the completed trick - we want to see it!
                 // DON'T return - continue to render the view below
+                
+                // ═══════════════════════════════════════════════════════════════
+                // TEST: FORCE QUIPS TO DISPLAY ON GAME PAGE
+                // ═══════════════════════════════════════════════════════════════
+                List<String> testQuips = new ArrayList<>();
+                testQuips.add("🔥 TEST QUIP - If you see this, the display works!");
+                testQuips.add("⚡ THE ACE OF AFRICA STRIKES!");
+                model.addAttribute("eventQuips", testQuips);
+                System.out.println("🧪 FORCED TEST QUIPS IN showGame(): " + testQuips);
+                
             } else {
                 // First time seeing ROUND_COMPLETE - set flag and show final trick
                 System.out.println("🎯 ROUND COMPLETE - Setting showFinalTrick flag");
@@ -108,7 +123,26 @@ public class HighLowJackController {
         
         if (completedTrick != null) {
             session.setAttribute("hlj_clearTrick", true);
+            
+            // ═══════════════════════════════════════════════════════════════
+            // REALTIME QUIPS: Check events after every card play!?????
+            // ═══════════════════════════════════════════════════════════════
+            try {
+                List<String> eventQuips = realtimeQuipDetector.checkRealtimeEvents(game);
+                if (!eventQuips.isEmpty()) {
+                    model.addAttribute("eventQuips", eventQuips);
+                    System.out.println("⚡ REALTIME EVENT QUIPS: " + eventQuips);
+                }
+                
+                // Clear events after displaying
+                game.clearRecentEvents();
+            } catch (Exception e) {
+                System.err.println("❌ Error checking realtime quips: " + e.getMessage());
+            }
         } 
+        
+        
+        
         else if (game.getState() == Game.GameState.IN_PROGRESS &&
                  !isCurrentPlayerHuman(game, setup)) {
             playAITurn(game);
@@ -551,11 +585,13 @@ public class HighLowJackController {
                     System.err.println("❌ Error checking quips: " + e.getMessage());
                 }
                 
+
+                
                 // ═══════════════════════════════════════════════════════════════
                 // PERSONALITY: Check for real-time event quips
                 // ═══════════════════════════════════════════════════════════════
                 try {
-                    List<String> eventQuips = quipDetector.checkGameEvents(game);
+                	List<String> eventQuips = realtimeQuipDetector.checkRealtimeEvents(game);
                     if (!eventQuips.isEmpty()) {
                         model.addAttribute("eventQuips", eventQuips);
                         System.out.println("🎭 EVENT QUIPS: " + eventQuips);
@@ -650,13 +686,13 @@ public class HighLowJackController {
                     model.addAttribute("game", game);
                     
                     // ═══════════════════════════════════════════════════════════════
-                    // PERSONALITY: Set completion quips
+                    // PERSONALITY: Set(match???) completion quips????
                     // ═══════════════════════════════════════════════════════════════
                     try {
-                        List<String> setQuips = quipDetector.checkSetQuips(game, setResult);
-                        if (!setQuips.isEmpty()) {
-                            model.addAttribute("setQuips", setQuips);
-                            System.out.println("🎭 SET QUIPS: " + setQuips);
+                    	List<String> matchQuips = quipDetector.checkMatchQuips(game, matchResult);
+                        if (!matchQuips.isEmpty()) {
+                        	model.addAttribute("matchQuips", matchQuips);
+                        	System.out.println("🎭 MATCH QUIPS: " + matchQuips);
                         }
                     } catch (Exception e) {
                         System.err.println("❌ Error checking set quips: " + e.getMessage());

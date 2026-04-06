@@ -2,6 +2,7 @@ package com.dalegames.highlowjack.web;
 
 import com.dalegames.highlowjack.model.Game;
 import com.dalegames.highlowjack.model.GameSetup;
+import com.dalegames.highlowjack.model.Match;
 import com.dalegames.highlowjack.model.PlayerInfo;
 import com.dalegames.highlowjack.multiplayer.GameRegistry;
 import com.dalegames.highlowjack.multiplayer.MultiplayerGame;
@@ -363,17 +364,18 @@ public class MultiplayerController {
         // Transfer multiplayer game to regular session
         session.setAttribute("hlj_game", mpGame.getGame());
         session.setAttribute("hlj_setup", mpGame.getSetup());
-        
+        session.setAttribute("hlj_match", new Match(mpGame.getSetup().getMatchType()));
+
      // CRITICAL: Store which player THIS session is!
         String playerName = mpGame.getPlayers().get(position).getPlayerName();
         session.setAttribute("hlj_playerName", playerName);  // ADD THIS LINE
-        
+
         // Clean up multiplayer session
         session.removeAttribute("mp_token");
         session.removeAttribute("mp_code");
         session.removeAttribute("mp_position");
         session.removeAttribute("mp_playerName");
-        
+
         System.out.println("🚀 Host starting multiplayer game: " + code);
         
         return "redirect:/highlowjack";
@@ -407,6 +409,7 @@ public class MultiplayerController {
         // Transfer game to this player's session
         session.setAttribute("hlj_game", mpGame.getGame());
         session.setAttribute("hlj_setup", mpGame.getSetup());
+        session.setAttribute("hlj_match", new Match(mpGame.getSetup().getMatchType()));
 
         // Use the name from the GameSetup (which matches the Game object's player names),
         // not the name the joining player typed in the join form.

@@ -95,11 +95,11 @@ public class HighLowJackController {
                 // ═══════════════════════════════════════════════════════════════
                 // TEST: FORCE QUIPS TO DISPLAY ON GAME PAGE
                 // ═══════════════════════════════════════════════════════════════
-                List<String> testQuips = new ArrayList<>();
-                testQuips.add("🔥 TEST QUIP - If you see this, the display works!");
-                testQuips.add("⚡ THE ACE OF AFRICA STRIKES!");
-                model.addAttribute("eventQuips", testQuips);
-                System.out.println("🧪 FORCED TEST QUIPS IN showGame(): " + testQuips);
+//                List<String> testQuips = new ArrayList<>();
+//                testQuips.add("🔥 TEST QUIP - If you see this, the display works!");
+//                testQuips.add("⚡ THE ACE OF AFRICA STRIKES!");
+//                model.addAttribute("eventQuips", testQuips);
+//                System.out.println("🧪 FORCED TEST QUIPS IN showGame(): " + testQuips);
                 
             } else {
                 // First time seeing ROUND_COMPLETE - set flag and show final trick

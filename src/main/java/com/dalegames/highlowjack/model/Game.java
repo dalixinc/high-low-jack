@@ -53,6 +53,8 @@ public class Game implements Serializable{
     private int currentSetNumber;
     private int pitcherIndex;  // BUG #3 FIX: Tracks who pitched this round
     private  List<GameEvent> recentEvents;  // Events from current round
+    private boolean roundScoresApplied;     // Guard against double-scoring in multiplayer
+    private Map<String, String> lastRoundScores;  // Stored after first scoring call
 
     /**
      * Constructs a new game with the specified game setup.
@@ -99,10 +101,12 @@ public class Game implements Serializable{
         }
         
         this.recentEvents = new ArrayList<>();
+        this.roundScoresApplied = false;
+        this.lastRoundScores = new HashMap<>();
         this.currentPlayerIndex = 0;
         this.state = GameState.NOT_STARTED;
     }
-    
+
     /**
      * Legacy constructor for backwards compatibility.
      * Creates a simple single-set game with all human players in individual mode.
@@ -150,10 +154,12 @@ public class Game implements Serializable{
             setsWon.put(name, 0);
         }
         
+        this.roundScoresApplied = false;
+        this.lastRoundScores = new HashMap<>();
         this.currentPlayerIndex = 0;
         this.state = GameState.NOT_STARTED;
     }
-    
+
     /**
      * Legacy convenience constructor for 4 individual player names.
      * 
@@ -201,6 +207,8 @@ public class Game implements Serializable{
         currentTrick = null;
         completedTrick = null;
         tricks.clear();
+        roundScoresApplied = false;
+        lastRoundScores = new HashMap<>();
         state = GameState.IN_PROGRESS;
     }
     
@@ -378,6 +386,30 @@ public class Game implements Serializable{
     public Hand getHand(String playerName) {
         return hands.get(playerName);
     }
+
+    /**
+     * Renames a player at the given position. Updates playerNames, hands, and
+     * (in individual mode) scores and setsWon. Also updates GameSetup so that
+     * isHumanPlayer() and AI detection remain consistent.
+     */
+    public void renamePlayer(int position, String newName) {
+        String oldName = playerNames.get(position);
+        if (oldName.equals(newName)) return;
+
+        playerNames.set(position, newName);
+
+        Hand hand = hands.remove(oldName);
+        if (hand != null) hands.put(newName, hand);
+
+        if (!isTeamMode()) {
+            Integer score = scores.remove(oldName);
+            if (score != null) scores.put(newName, score);
+            Integer sw = setsWon.remove(oldName);
+            if (sw != null) setsWon.put(newName, sw);
+        }
+
+        gameSetup.getPlayers().get(position).setName(newName);
+    }
     
     public Card.Suit getTrumpSuit() {
         return trumpSuit;
@@ -398,6 +430,22 @@ public class Game implements Serializable{
     // Dale added to allow other classes to set game state
     public void setState(GameState gs) {
         this.state = gs;
+    }
+
+    public boolean isRoundScoresApplied() {
+        return roundScoresApplied;
+    }
+
+    public void setRoundScoresApplied(boolean applied) {
+        this.roundScoresApplied = applied;
+    }
+
+    public Map<String, String> getLastRoundScores() {
+        return lastRoundScores;
+    }
+
+    public void setLastRoundScores(Map<String, String> scores) {
+        this.lastRoundScores = scores;
     }
     
     public List<String> getPlayerNames() {

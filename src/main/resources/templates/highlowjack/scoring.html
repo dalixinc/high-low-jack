@@ -498,7 +498,30 @@
                     <span th:unless="${setResult != null}">▶️ Continue to Next Round</span>
                 </button>
             </form>
+
+            <!-- NON-CONTROLLER WAIT MESSAGE (multiplayer only) -->
+            <div th:if="${!isController}" id="waiting-msg" style="text-align:center; padding: 20px; opacity: 0.8;">
+                ⏳ Waiting for host to continue...
+            </div>
         </div>
     </div>
+
+    <script th:inline="javascript">
+        // Non-controller players poll until the game moves to the next round
+        const isController = /*[[${isController}]]*/ true;
+        if (!isController) {
+            const scorePollInterval = setInterval(() => {
+                fetch('/highlowjack/poll')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.gameState === 'IN_PROGRESS' || data.gameState === 'SET_COMPLETE' || data.gameState === 'MATCH_OVER') {
+                            clearInterval(scorePollInterval);
+                            location.reload();
+                        }
+                    })
+                    .catch(() => {});
+            }, 2000);
+        }
+    </script>
 </body>
 </html>

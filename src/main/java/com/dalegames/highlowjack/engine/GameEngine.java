@@ -30,7 +30,12 @@ public class GameEngine {
         if (game.getState() != Game.GameState.ROUND_COMPLETE) {
             throw new IllegalStateException("Round must be complete to calculate scores");
         }
-        
+
+        // Guard against double-scoring in multiplayer (both browsers visit /scoring)
+        if (game.isRoundScoresApplied()) {
+            return new HashMap<>(game.getLastRoundScores());
+        }
+
         Map<String, String> results = new HashMap<>();
         List<Trick> tricks = game.getTricks();
         Card.Suit trump = game.getTrumpSuit();
@@ -67,7 +72,11 @@ public class GameEngine {
             game.addScore(gameWinner, 1);
             results.put("Game", gameWinner);
         }
-        
+
+        // Mark scores as applied so a second /scoring visit (multiplayer) won't double-count
+        game.setRoundScoresApplied(true);
+        game.setLastRoundScores(new HashMap<>(results));
+
         return results;
     }
     

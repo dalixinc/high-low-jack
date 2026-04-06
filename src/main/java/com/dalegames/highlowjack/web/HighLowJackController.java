@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.dalegames.highlowjack.SimpleAI;
 import com.dalegames.highlowjack.engine.GameEngine;
@@ -169,6 +170,8 @@ public class HighLowJackController {
         }
         List<Card> validCards = calculateValidCards(game, humanPlayer);
         boolean isAITurn = !isCurrentPlayerHuman(game, setup);
+        boolean isMultiplayer = session.getAttribute("hlj_playerName") != null;
+        boolean isMyTurn = game.getCurrentPlayer() != null && game.getCurrentPlayer().equals(humanPlayer);
         
         Card.Suit leadSuit = null;
         if (game.getCurrentTrick() != null && game.getCurrentTrick().size() > 0) {
@@ -182,6 +185,8 @@ public class HighLowJackController {
         model.addAttribute("humanPlayer", humanPlayer);
         model.addAttribute("isController", true); // For now, always player 1
         model.addAttribute("isAITurn", isAITurn);
+        model.addAttribute("isMultiplayer", isMultiplayer);
+        model.addAttribute("isMyTurn", isMyTurn);
         model.addAttribute("completedTrick", completedTrick);
         model.addAttribute("validCards", validCards);
         model.addAttribute("leadSuit", leadSuit);
@@ -358,7 +363,8 @@ public class HighLowJackController {
         GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
         
         if (game != null && setup != null) {
-            String humanPlayer = getHumanPlayerName(setup);
+            String humanPlayer = (String) session.getAttribute("hlj_playerName");
+            if (humanPlayer == null) humanPlayer = getHumanPlayerName(setup);
             Hand hand = game.getHand(humanPlayer);
             hand.sort();
             session.setAttribute("hlj_game", game);
@@ -468,7 +474,14 @@ public class HighLowJackController {
         }
 
         
-        boolean isController = true;
+        String scoringHumanPlayer = (String) session.getAttribute("hlj_playerName");
+        boolean isController;
+        if (scoringHumanPlayer == null) {
+            isController = true; // local game — always controller
+        } else {
+            isController = setup.getPlayers().stream()
+                .anyMatch(p -> p.getName().equals(scoringHumanPlayer) && p.isController());
+        }
 
         // PHASE 5: Add pitcher name
         model.addAttribute("pitcherName", game.getPitcherName());
@@ -538,6 +551,24 @@ public class HighLowJackController {
         }
     }
     
+    /**
+     * Polling endpoint for multiplayer turn detection.
+     * Returns the current player and game state so clients can detect when it's their turn.
+     */
+    @GetMapping("/poll")
+    @ResponseBody
+    public Map<String, Object> pollGameState(HttpSession session) {
+        Game game = (Game) session.getAttribute("hlj_game");
+        String humanPlayer = (String) session.getAttribute("hlj_playerName");
+        Map<String, Object> response = new HashMap<>();
+        if (game != null) {
+            response.put("currentPlayer", game.getCurrentPlayer());
+            response.put("gameState", game.getState().name());
+        }
+        response.put("humanPlayer", humanPlayer);
+        return response;
+    }
+
     @PostMapping("/continue")
     public String continueGame(HttpSession session, Model model) {
         Game game = (Game) session.getAttribute("hlj_game");

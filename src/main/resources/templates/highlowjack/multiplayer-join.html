@@ -354,7 +354,7 @@
         <a th:href="@{/highlowjack/setup}" class="back-link">← Back to Setup</a>
     </div>
 
-    <script>
+    <script th:inline="javascript">
         // Auto-uppercase the join code
         const codeInput = document.getElementById('code');
         if (codeInput) {
@@ -363,15 +363,38 @@
             });
         }
 
-        // Auto-select first available position
+        // Setup player names by position (from server-side setup data)
+        const setupNames = /*[[${setup != null ? {
+            '0': setup.players[0].name,
+            '1': setup.players[1].name,
+            '2': setup.players[2].name,
+            '3': setup.players[3].name
+        } : {}}]]*/ {};
+
+        function updateNameFromPosition(radio) {
+            const nameInput = document.getElementById('playerName');
+            if (nameInput && setupNames[radio.value]) {
+                nameInput.value = setupNames[radio.value];
+            }
+        }
+
+        // Auto-select first available position and pre-populate name
         window.addEventListener('load', function() {
             const radios = document.querySelectorAll('input[type="radio"][name="position"]');
             for (let radio of radios) {
                 if (!radio.disabled) {
                     radio.checked = true;
+                    updateNameFromPosition(radio);
                     break;
                 }
             }
+
+            // Update name when position changes
+            radios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    updateNameFromPosition(this);
+                });
+            });
         });
     </script>
 </body>

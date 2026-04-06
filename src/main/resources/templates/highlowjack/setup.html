@@ -592,16 +592,16 @@
                                     North <span class="controller-badge">👑</span>
                                 </div>
                                 <div class="team-player-name">
-                                    <input type="text" name="player1Name" value="Dale" 
+                                    <input type="text" name="player1NameTeam" value="Dale"
                                            placeholder="North player" maxlength="20">
                                 </div>
                                 <div class="player-type-select">
                                     <label class="type-button active">
-                                        <input type="radio" name="player1Type" value="HUMAN" checked>
+                                        <input type="radio" name="player1TypeTeam" value="HUMAN" checked>
                                         👤 Human
                                     </label>
                                     <label class="type-button computer">
-                                        <input type="radio" name="player1Type" value="COMPUTER">
+                                        <input type="radio" name="player1TypeTeam" value="COMPUTER">
                                         🤖 Computer
                                     </label>
                                 </div>
@@ -610,16 +610,16 @@
                             <div class="team-player">
                                 <div class="team-player-position">South</div>
                                 <div class="team-player-name">
-                                    <input type="text" name="player3Name" value="Primus" 
+                                    <input type="text" name="player3NameTeam" value="Primus"
                                            placeholder="South player" maxlength="20">
                                 </div>
                                 <div class="player-type-select">
                                     <label class="type-button">
-                                        <input type="radio" name="player3Type" value="HUMAN">
+                                        <input type="radio" name="player3TypeTeam" value="HUMAN">
                                         👤 Human
                                     </label>
                                     <label class="type-button computer active">
-                                        <input type="radio" name="player3Type" value="COMPUTER" checked>
+                                        <input type="radio" name="player3TypeTeam" value="COMPUTER" checked>
                                         🤖 Computer
                                     </label>
                                 </div>
@@ -633,16 +633,16 @@
                             <div class="team-player">
                                 <div class="team-player-position">East</div>
                                 <div class="team-player-name">
-                                    <input type="text" name="player2Name" value="Kreep" 
+                                    <input type="text" name="player2NameTeam" value="Kreep"
                                            placeholder="East player" maxlength="20">
                                 </div>
                                 <div class="player-type-select">
                                     <label class="type-button">
-                                        <input type="radio" name="player2Type" value="HUMAN">
+                                        <input type="radio" name="player2TypeTeam" value="HUMAN">
                                         👤 Human
                                     </label>
                                     <label class="type-button computer active">
-                                        <input type="radio" name="player2Type" value="COMPUTER" checked>
+                                        <input type="radio" name="player2TypeTeam" value="COMPUTER" checked>
                                         🤖 Computer
                                     </label>
                                 </div>
@@ -651,16 +651,16 @@
                             <div class="team-player">
                                 <div class="team-player-position">West</div>
                                 <div class="team-player-name">
-                                    <input type="text" name="player4Name" value="Preezbob" 
+                                    <input type="text" name="player4NameTeam" value="Preezbob"
                                            placeholder="West player" maxlength="20">
                                 </div>
                                 <div class="player-type-select">
                                     <label class="type-button">
-                                        <input type="radio" name="player4Type" value="HUMAN">
+                                        <input type="radio" name="player4TypeTeam" value="HUMAN">
                                         👤 Human
                                     </label>
                                     <label class="type-button computer active">
-                                        <input type="radio" name="player4Type" value="COMPUTER" checked>
+                                        <input type="radio" name="player4TypeTeam" value="COMPUTER" checked>
                                         🤖 Computer
                                     </label>
                                 </div>
@@ -779,10 +779,10 @@
             
             if (isTeamMode) {
                 names = [
-                    document.querySelector('input[name="player1Name"]').value.trim(),
-                    document.querySelector('input[name="player2Name"]').value.trim(),
-                    document.querySelector('input[name="player3Name"]').value.trim(),
-                    document.querySelector('input[name="player4Name"]').value.trim()
+                    document.querySelector('input[name="player1NameTeam"]').value.trim(),
+                    document.querySelector('input[name="player2NameTeam"]').value.trim(),
+                    document.querySelector('input[name="player3NameTeam"]').value.trim(),
+                    document.querySelector('input[name="player4NameTeam"]').value.trim()
                 ];
             } else {
                 names = [

@@ -779,7 +779,9 @@
         const currentPlayer = /*[[${game.currentPlayer}]]*/ 'Dale';
         const humanPlayer = /*[[${humanPlayer}]]*/ 'Dale';
         const isRoundComplete = /*[[${game.state.name() == 'ROUND_COMPLETE'}]]*/ false;
-        
+        const isMultiplayer = /*[[${isMultiplayer}]]*/ false;
+        const isMyTurn = /*[[${isMyTurn}]]*/ true;
+
         // BUG #1 FIX: Longer pause for completed tricks, especially the last one
         if (hasCompletedTrick && !isRoundComplete) {
             if (currentPlayer === humanPlayer) {
@@ -791,12 +793,28 @@
                     location.reload();
                 }, 4500);  // CHANGED: 4.5 seconds instead of 2
             }
-        } 
+        }
         else if (isAITurn) {
             const delay = 1000 + Math.random() * 2000;
             setTimeout(() => {
                 location.reload();
             }, delay);
+        }
+        else if (isMultiplayer && !isMyTurn && !isRoundComplete) {
+            // Multiplayer: poll until it's this player's turn or the round ends
+            const mpPollInterval = setInterval(() => {
+                fetch('/highlowjack/poll')
+                    .then(r => r.json())
+                    .then(data => {
+                        const myTurnNow = data.humanPlayer && data.currentPlayer === data.humanPlayer;
+                        const roundOver = data.gameState && data.gameState !== 'IN_PROGRESS';
+                        if (myTurnNow || roundOver) {
+                            clearInterval(mpPollInterval);
+                            location.reload();
+                        }
+                    })
+                    .catch(() => {}); // ignore transient network errors
+            }, 2000);
         }
         
         // SURGICAL ADDITION #3: Modal Functions

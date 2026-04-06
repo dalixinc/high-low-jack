@@ -39,6 +39,7 @@ public class MultiplayerController {
     public String hostGame(
             @RequestParam String gameMode,
             @RequestParam String matchType,
+            // Individual mode params
             @RequestParam(required = false) String player1Name,
             @RequestParam(required = false) String player1Type,
             @RequestParam(required = false) String player2Name,
@@ -47,23 +48,34 @@ public class MultiplayerController {
             @RequestParam(required = false) String player3Type,
             @RequestParam(required = false) String player4Name,
             @RequestParam(required = false) String player4Type,
+            // Team mode params
+            @RequestParam(required = false) String player1NameTeam,
+            @RequestParam(required = false) String player1TypeTeam,
+            @RequestParam(required = false) String player2NameTeam,
+            @RequestParam(required = false) String player2TypeTeam,
+            @RequestParam(required = false) String player3NameTeam,
+            @RequestParam(required = false) String player3TypeTeam,
+            @RequestParam(required = false) String player4NameTeam,
+            @RequestParam(required = false) String player4TypeTeam,
             @RequestParam(required = false) String team1Name,
             @RequestParam(required = false) String team2Name,
             HttpSession session,
             Model model) {
-        
+
         System.out.println("🎮 HOST ENDPOINT HIT!");
         System.out.println("🎮 Game Mode: " + gameMode);
         System.out.println("🎮 Match Type: " + matchType);
-        
+
+        boolean isTeamMode = "TEAM".equals(gameMode);
+
         try {
-            // Build setup from form data
+            // Build setup from form data — use team params when in team mode
             GameSetup setup = buildSetupFromForm(
                 gameMode, matchType,
-                player1Name, player1Type,
-                player2Name, player2Type,
-                player3Name, player3Type,
-                player4Name, player4Type,
+                isTeamMode ? player1NameTeam : player1Name, isTeamMode ? player1TypeTeam : player1Type,
+                isTeamMode ? player2NameTeam : player2Name, isTeamMode ? player2TypeTeam : player2Type,
+                isTeamMode ? player3NameTeam : player3Name, isTeamMode ? player3TypeTeam : player3Type,
+                isTeamMode ? player4NameTeam : player4Name, isTeamMode ? player4TypeTeam : player4Type,
                 team1Name, team2Name
             );
             
@@ -246,13 +258,20 @@ public class MultiplayerController {
         
         try {
             String token = mpGame.joinPlayer(position, playerName);
-            
+
+            // If a human player joined with a different name than the slot's setup name,
+            // rename them in the Game object so hand/score lookups use the new name.
+            PlayerInfo playerInfo = mpGame.getSetup().getPlayers().get(position);
+            if (playerInfo.isHuman() && !playerInfo.getName().equals(playerName)) {
+                mpGame.getGame().renamePlayer(position, playerName);
+            }
+
             // Store multiplayer session info
             session.setAttribute("mp_token", token);
             session.setAttribute("mp_code", joinCode);
             session.setAttribute("mp_position", position);
             session.setAttribute("mp_playerName", playerName);
-            
+
             return "redirect:/highlowjack/multiplayer/lobby";
             
         } catch (Exception e) {

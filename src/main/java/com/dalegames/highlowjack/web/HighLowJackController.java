@@ -214,13 +214,9 @@ public class HighLowJackController {
         }
         model.addAttribute("tricksWon", tricksWon);
 
-        // Round counter: Initialize if needed
-        Integer roundNumber = (Integer) session.getAttribute("hlj_roundNumber");
-        if (roundNumber == null) {
-            roundNumber = 1;
-            session.setAttribute("hlj_roundNumber", roundNumber);
-        }
-        model.addAttribute("roundNumber", roundNumber);
+        // Round number comes from the shared Game object — accurate for all players in multiplayer
+        model.addAttribute("roundNumber", game.getRoundNumber());
+        model.addAttribute("setsWon", game.getSetsWon());
         
         return "highlowjack/game";
     }
@@ -781,8 +777,9 @@ public class HighLowJackController {
                         e.printStackTrace();
                     }
 
-                    // Store match result in session so all players (controller + non-controller) can see it
+                    // Store match result in session AND in the shared game object so all players can see it
                     session.setAttribute("hlj_matchResult", matchResult);
+                    game.setMatchResult(matchResult);
                     game.setState(Game.GameState.MATCH_COMPLETE);
                     session.setAttribute("hlj_game", game);
 
@@ -842,8 +839,14 @@ public class HighLowJackController {
      */
     @GetMapping("/match-winner")
     public String showMatchWinner(HttpSession session, Model model) {
-        MatchResult matchResult = (MatchResult) session.getAttribute("hlj_matchResult");
         Game game = (Game) session.getAttribute("hlj_game");
+        MatchResult matchResult = (MatchResult) session.getAttribute("hlj_matchResult");
+
+        // Non-controller players won't have matchResult in their session;
+        // fall back to the shared game object which the controller populated.
+        if (matchResult == null && game != null) {
+            matchResult = game.getMatchResult();
+        }
 
         if (matchResult == null) {
             return "redirect:/highlowjack/setup";

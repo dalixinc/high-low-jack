@@ -55,6 +55,8 @@ public class Game implements Serializable{
     private  List<GameEvent> recentEvents;  // Events from current round
     private boolean roundScoresApplied;     // Guard against double-scoring in multiplayer
     private Map<String, String> lastRoundScores;  // Stored after first scoring call
+    private int roundNumber;               // Round within the current set (1-based); shared across sessions
+    private MatchResult matchResult;       // Set when match is complete; shared across sessions
 
     /**
      * Constructs a new game with the specified game setup.
@@ -103,6 +105,8 @@ public class Game implements Serializable{
         this.recentEvents = new ArrayList<>();
         this.roundScoresApplied = false;
         this.lastRoundScores = new HashMap<>();
+        this.roundNumber = 0;
+        this.matchResult = null;
         this.currentPlayerIndex = 0;
         this.state = GameState.NOT_STARTED;
     }
@@ -156,6 +160,8 @@ public class Game implements Serializable{
         
         this.roundScoresApplied = false;
         this.lastRoundScores = new HashMap<>();
+        this.roundNumber = 0;
+        this.matchResult = null;
         this.currentPlayerIndex = 0;
         this.state = GameState.NOT_STARTED;
     }
@@ -209,6 +215,7 @@ public class Game implements Serializable{
         tricks.clear();
         roundScoresApplied = false;
         lastRoundScores = new HashMap<>();
+        roundNumber++;
         state = GameState.IN_PROGRESS;
     }
     
@@ -236,6 +243,7 @@ public class Game implements Serializable{
         }
         
         currentSetNumber++;
+        roundNumber = 0;  // dealCards() will increment to 1
         state = GameState.NOT_STARTED;
         dealCards();
     }
@@ -430,6 +438,18 @@ public class Game implements Serializable{
     // Dale added to allow other classes to set game state
     public void setState(GameState gs) {
         this.state = gs;
+    }
+
+    public int getRoundNumber() {
+        return roundNumber;
+    }
+
+    public MatchResult getMatchResult() {
+        return matchResult;
+    }
+
+    public void setMatchResult(MatchResult result) {
+        this.matchResult = result;
     }
 
     public boolean isRoundScoresApplied() {

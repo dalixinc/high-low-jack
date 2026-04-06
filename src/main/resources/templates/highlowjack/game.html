@@ -494,6 +494,9 @@
                                 <span th:text="${tricksWon.get(player)}">0</span>
                                 <span>🏆</span>
                             </div>
+                            <div th:if="${setsWon != null}" style="font-size: 0.8rem; opacity: 0.75; margin-top: 2px;">
+                                Sets: <span th:text="${setsWon.get(player) ?: 0}">0</span>
+                            </div>
                         </div>
                     </div>
                     
@@ -708,13 +711,16 @@
             </div>
             <div class="scoreboard-score" th:text="${game.getScore(team.name)}">0</div>
             <div class="scoreboard-progress">
-                <div class="scoreboard-progress-fill" 
+                <div class="scoreboard-progress-fill"
                      th:style="'width: ' + (${game.getScore(team.name)} * 100.0 / 11) + '%;'">
                 </div>
             </div>
             <div style="font-size: 0.75rem; opacity: 0.7; margin-top: 3px;">
-                <span th:text="${team.player1Name}">P1</span> & 
+                <span th:text="${team.player1Name}">P1</span> &
                 <span th:text="${team.player2Name}">P2</span>
+            </div>
+            <div th:if="${setsWon != null}" style="font-size: 0.75rem; opacity: 0.75; margin-top: 2px;">
+                Sets won: <span th:text="${setsWon.get(team.name) ?: 0}">0</span>
             </div>
         </div>
     </div>
@@ -726,9 +732,12 @@
             <div class="scoreboard-player-name" th:text="${player}">Player</div>
             <div class="scoreboard-score" th:text="${game.getScore(player)}">0</div>
             <div class="scoreboard-progress">
-                <div class="scoreboard-progress-fill" 
+                <div class="scoreboard-progress-fill"
                      th:style="'width: ' + (${game.getScore(player)} * 100.0 / 11) + '%;'">
                 </div>
+            </div>
+            <div th:if="${setsWon != null}" style="font-size: 0.75rem; opacity: 0.75; margin-top: 3px;">
+                Sets won: <span th:text="${setsWon.get(player) ?: 0}">0</span>
             </div>
         </div>
     </div>

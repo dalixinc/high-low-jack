@@ -163,7 +163,10 @@ public class HighLowJackController {
             session.setAttribute("hlj_game", game);
         }
         
-        String humanPlayer = getHumanPlayerName(setup);
+        String humanPlayer = (String) session.getAttribute("hlj_playerName");
+        if (humanPlayer == null) {
+            humanPlayer = getHumanPlayerName(setup);
+        }
         List<Card> validCards = calculateValidCards(game, humanPlayer);
         boolean isAITurn = !isCurrentPlayerHuman(game, setup);
         
@@ -311,17 +314,27 @@ public class HighLowJackController {
         Game game = (Game) session.getAttribute("hlj_game");
         GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
         
-        if (game != null && setup != null &&
-            game.getState() == Game.GameState.IN_PROGRESS &&
-            isCurrentPlayerHuman(game, setup)) {
+        if (game != null && setup != null && game.getState() == Game.GameState.IN_PROGRESS) {
             
-            String currentPlayer = game.getCurrentPlayer();
-            Hand hand = game.getHand(currentPlayer);
+            // Get THIS session's player name
+            String humanPlayer = (String) session.getAttribute("hlj_playerName");
+            if (humanPlayer == null) {
+                humanPlayer = getHumanPlayerName(setup);
+            }
             
-            if (cardIndex >= 0 && cardIndex < hand.getCards().size()) {
+            // Check if it's this player's turn
+            if (!game.getCurrentPlayer().equals(humanPlayer)) {
+                // Not this player's turn - just refresh
+                return "redirect:/highlowjack";
+            }
+            
+            // It's their turn - get their hand
+            Hand hand = game.getHand(humanPlayer);
+            
+            if (hand != null && cardIndex >= 0 && cardIndex < hand.getCards().size()) {
                 Card card = hand.getCards().get(cardIndex);
                 
-                if (GameEngine.isValidPlay(game, currentPlayer, card)) {
+                if (GameEngine.isValidPlay(game, humanPlayer, card)) {
                     game.playCard(card);
                     session.setAttribute("hlj_game", game);
                 }

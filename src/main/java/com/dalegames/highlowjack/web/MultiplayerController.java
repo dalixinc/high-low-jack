@@ -345,6 +345,10 @@ public class MultiplayerController {
         session.setAttribute("hlj_game", mpGame.getGame());
         session.setAttribute("hlj_setup", mpGame.getSetup());
         
+     // CRITICAL: Store which player THIS session is!
+        String playerName = mpGame.getPlayers().get(position).getPlayerName();
+        session.setAttribute("hlj_playerName", playerName);  // ADD THIS LINE
+        
         // Clean up multiplayer session
         session.removeAttribute("mp_token");
         session.removeAttribute("mp_code");
@@ -384,6 +388,11 @@ public class MultiplayerController {
         // Transfer game to this player's session
         session.setAttribute("hlj_game", mpGame.getGame());
         session.setAttribute("hlj_setup", mpGame.getSetup());
+
+        // Use the name from the GameSetup (which matches the Game object's player names),
+        // not the name the joining player typed in the join form.
+        String playerName = mpGame.getSetup().getPlayers().get(position).getName();
+        session.setAttribute("hlj_playerName", playerName);
         
         // Clean up multiplayer session
         session.removeAttribute("mp_token");
@@ -395,7 +404,7 @@ public class MultiplayerController {
         
         return "redirect:/highlowjack";
     }
-    
+}  
     /**
      * Non-host players enter the game after host starts.
      * Called by lobby polling when gameStarted is detected.
@@ -426,4 +435,4 @@ public class MultiplayerController {
 //        
 //        return "redirect:/highlowjack";
 //    }
-}
+///}

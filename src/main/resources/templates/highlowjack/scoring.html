@@ -517,7 +517,10 @@
                         if (data.gameState === 'MATCH_COMPLETE') {
                             clearInterval(scorePollInterval);
                             window.location.href = '/highlowjack/match-winner';
-                        } else if (data.gameState === 'IN_PROGRESS' || data.gameState === 'SET_COMPLETE') {
+                        } else if (data.gameState === 'SET_COMPLETE') {
+                            clearInterval(scorePollInterval);
+                            window.location.href = '/highlowjack/set-winner';
+                        } else if (data.gameState === 'IN_PROGRESS') {
                             clearInterval(scorePollInterval);
                             location.reload();
                         }

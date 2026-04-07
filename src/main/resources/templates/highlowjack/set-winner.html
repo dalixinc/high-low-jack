@@ -205,13 +205,38 @@
 			
         </div>
         
-        <!-- Continue button -->
-        <form th:action="@{/highlowjack/next-set}" method="post">
+        <!-- Continue button (controller only) -->
+        <form th:if="${isController}" th:action="@{/highlowjack/next-set}" method="post">
             <button type="submit" class="next-set-button">
                 <span th:if="${match.matchType.name() == 'JUST_ONE_SET'}">🎮 Play Again</span>
                 <span th:if="${match.matchType.name() != 'JUST_ONE_SET'}">▶️ Start Next Set</span>
             </button>
         </form>
+
+        <!-- Non-controller wait message + auto-redirect -->
+        <div th:unless="${isController}" style="text-align:center; padding: 20px; opacity: 0.8;">
+            ⏳ Waiting for host to start next set...
+        </div>
     </div>
+
+    <script th:inline="javascript">
+        const isController = /*[[${isController}]]*/ true;
+        if (!isController) {
+            const setWinnerPoll = setInterval(() => {
+                fetch('/highlowjack/poll')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.gameState === 'IN_PROGRESS') {
+                            clearInterval(setWinnerPoll);
+                            location.href = '/highlowjack';
+                        } else if (data.gameState === 'MATCH_COMPLETE') {
+                            clearInterval(setWinnerPoll);
+                            location.href = '/highlowjack/match-winner';
+                        }
+                    })
+                    .catch(() => {});
+            }, 2000);
+        }
+    </script>
 </body>
 </html>

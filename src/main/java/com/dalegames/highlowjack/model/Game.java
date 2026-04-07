@@ -57,6 +57,9 @@ public class Game implements Serializable{
     private Map<String, String> lastRoundScores;  // Stored after first scoring call
     private int roundNumber;               // Round within the current set (1-based); shared across sessions
     private MatchResult matchResult;       // Set when match is complete; shared across sessions
+    private SetResult lastSetResult;       // Set when a set is won; shared across sessions
+    private Match currentMatch;            // Authoritative match state from controller; shared across sessions
+    private List<String> pendingMatchQuips; // Quips for match-winner screen; shared across sessions
 
     /**
      * Constructs a new game with the specified game setup.
@@ -107,6 +110,9 @@ public class Game implements Serializable{
         this.lastRoundScores = new HashMap<>();
         this.roundNumber = 0;
         this.matchResult = null;
+        this.lastSetResult = null;
+        this.currentMatch = null;
+        this.pendingMatchQuips = null;
         this.currentPlayerIndex = 0;
         this.state = GameState.NOT_STARTED;
     }
@@ -162,6 +168,9 @@ public class Game implements Serializable{
         this.lastRoundScores = new HashMap<>();
         this.roundNumber = 0;
         this.matchResult = null;
+        this.lastSetResult = null;
+        this.currentMatch = null;
+        this.pendingMatchQuips = null;
         this.currentPlayerIndex = 0;
         this.state = GameState.NOT_STARTED;
     }
@@ -450,6 +459,30 @@ public class Game implements Serializable{
 
     public void setMatchResult(MatchResult result) {
         this.matchResult = result;
+    }
+
+    public SetResult getLastSetResult() {
+        return lastSetResult;
+    }
+
+    public void setLastSetResult(SetResult result) {
+        this.lastSetResult = result;
+    }
+
+    public Match getCurrentMatch() {
+        return currentMatch;
+    }
+
+    public void setCurrentMatch(Match match) {
+        this.currentMatch = match;
+    }
+
+    public List<String> getPendingMatchQuips() {
+        return pendingMatchQuips;
+    }
+
+    public void setPendingMatchQuips(List<String> quips) {
+        this.pendingMatchQuips = quips;
     }
 
     public boolean isRoundScoresApplied() {

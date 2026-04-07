@@ -83,6 +83,11 @@ public class HighLowJackController {
             return "redirect:/highlowjack/match-winner";
         }
 
+        // Set is over — send all players to the set winner page
+        if (game.getState() == Game.GameState.SET_COMPLETE) {
+            return "redirect:/highlowjack/set-winner";
+        }
+
         // Check if we should show final trick before scoring
         Boolean showFinalTrick = (Boolean) session.getAttribute("hlj_showFinalTrick");
         ////System.out.println("🔍 showGame() - showFinalTrick flag: " + showFinalTrick);
@@ -723,7 +728,10 @@ public class HighLowJackController {
                 
                 boolean matchWon = match.recordSetWin(setResult);
                 session.setAttribute("hlj_match", match);  // Update match in session
-                
+
+                // Update game's own setsWon so game.html scoreboard reflects the new count
+                game.recordSetWin(setResult.getWinner());
+
                 if (matchWon) {
                     // ═══════════════════════════════════════════════════════════
                     // MATCH WINNER! Show epic victory screen
@@ -739,6 +747,7 @@ public class HighLowJackController {
                     	List<String> matchQuips = quipDetector.checkMatchQuips(game, matchResult);
                         if (!matchQuips.isEmpty()) {
                         	session.setAttribute("hlj_matchQuips", matchQuips);
+                            game.setPendingMatchQuips(matchQuips);  // Share with non-controller sessions
                         	System.out.println("🎭 MATCH QUIPS: " + matchQuips);
                         }
                     } catch (Exception e) {
@@ -799,18 +808,21 @@ public class HighLowJackController {
                         game.isTeamMode() ? game.getTeams().get(1).getName() : game.getPlayerNames().get(1)
                     ));
                     
-                    model.addAttribute("setResult", setResult);
-                    model.addAttribute("game", game);
-                    model.addAttribute("match", match);
-                    
                     // CRITICAL: Set game state so startNewSet() can work later
                     game.setState(Game.GameState.SET_COMPLETE);
+
+                    // Store shared data in game object so non-controller sessions can read it
+                    game.setLastSetResult(setResult);
+                    game.setCurrentMatch(match);
                     session.setAttribute("hlj_game", game);
-                    
+
+                    // Also store in controller's session for the GET endpoint
+                    session.setAttribute("hlj_setResult", setResult);
+
                     // Clear round data (will be reset when next set starts)
                     session.removeAttribute("hlj_roundResult");
-                    
-                    return "highlowjack/set-winner";
+
+                    return "redirect:/highlowjack/set-winner";
                 }
                 
             } else {
@@ -857,12 +869,52 @@ public class HighLowJackController {
 
         @SuppressWarnings("unchecked")
         List<String> matchQuips = (List<String>) session.getAttribute("hlj_matchQuips");
+        if (matchQuips == null && game != null) {
+            matchQuips = game.getPendingMatchQuips();  // Fall back to shared game object for non-controller
+        }
         if (matchQuips != null) {
             model.addAttribute("matchQuips", matchQuips);
             session.removeAttribute("hlj_matchQuips");
         }
 
         return "highlowjack/match-winner";
+    }
+
+    /**
+     * Shows the set winner screen. Accessible via GET so non-controller multiplayer
+     * players can be redirected here after a set ends.
+     */
+    @GetMapping("/set-winner")
+    public String showSetWinner(HttpSession session, Model model) {
+        Game game = (Game) session.getAttribute("hlj_game");
+        GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
+
+        // Try session first (controller), then shared game object (non-controller)
+        SetResult setResult = (SetResult) session.getAttribute("hlj_setResult");
+        if (setResult == null && game != null) {
+            setResult = game.getLastSetResult();
+        }
+
+        Match match = (Match) session.getAttribute("hlj_match");
+        if (match == null && game != null) {
+            match = game.getCurrentMatch();
+        }
+
+        if (setResult == null || game == null) {
+            return "redirect:/highlowjack/setup";
+        }
+
+        String humanPlayer = (String) session.getAttribute("hlj_playerName");
+        boolean isController = humanPlayer == null ||
+            (setup != null && setup.getPlayers().stream()
+                .anyMatch(p -> p.getName().equals(humanPlayer) && p.isController()));
+
+        model.addAttribute("setResult", setResult);
+        model.addAttribute("game", game);
+        model.addAttribute("match", match);
+        model.addAttribute("isController", isController);
+
+        return "highlowjack/set-winner";
     }
 
     /**

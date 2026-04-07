@@ -566,6 +566,35 @@
                         <strong th:text="${game.currentPlayer}">Computer</strong> is thinking...
                     </div>
                     
+                    <!-- ═══════════════════════════════════════════════════════════════ -->
+                    <!-- REALTIME EVENT QUIPS - shown above hand so all players see them -->
+                    <!-- ═══════════════════════════════════════════════════════════════ -->
+                    <div th:if="${eventQuips != null and !eventQuips.empty}"
+                         style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+                                border-radius: 15px;
+                                padding: 25px 35px;
+                                margin: 0 0 20px 0;
+                                box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+                                animation: quipPop 6s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;">
+
+                        <div style="text-align: center; font-size: 2.8rem; margin-bottom: 15px;">⚡</div>
+
+                        <div th:each="quip : ${eventQuips}"
+                             style="background: white;
+                                    color: #2c3e50;
+                                    padding: 20px 30px;
+                                    border-radius: 12px;
+                                    margin: 12px 0;
+                                    box-shadow: 0 5px 20px rgba(0,0,0,0.25);
+                                    font-size: 1.4rem;
+                                    font-weight: bold;
+                                    text-align: center;
+                                    border-left: 5px solid #9b59b6;"
+                             th:text="${quip}">
+                            Realtime event quip here
+                        </div>
+                    </div>
+
                     <div class="your-hand">
                         <h3>Your Hand</h3>
                         
@@ -641,36 +670,6 @@
                         }
                     </style>
 					
-					<!-- ═══════════════════════════════════════════════════════════════ -->
-                    <!-- REALTIME EVENT QUIPS DISPLAY -->
-                    <!-- ═══════════════════════════════════════════════════════════════ -->
-                    <div th:if="${eventQuips != null and !eventQuips.empty}" 
-                         style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
-                                border-radius: 15px;
-                                padding: 25px 35px;
-                                margin: 25px auto;
-                                max-width: 900px;
-                                box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-								animation: quipPop 5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;">
-                                <!-- animation: quipPop 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);" -->
-                        
-                        <div style="text-align: center; font-size: 2.8rem; margin-bottom: 15px;">⚡</div>
-                        
-                        <div th:each="quip : ${eventQuips}" 
-                             style="background: white;
-                                    color: #2c3e50;
-                                    padding: 20px 30px;
-                                    border-radius: 12px;
-                                    margin: 12px 0;
-                                    box-shadow: 0 5px 20px rgba(0,0,0,0.25);
-                                    font-size: 1.4rem;
-                                    font-weight: bold;
-                                    text-align: center;
-                                    border-left: 5px solid #9b59b6;"
-                             th:text="${quip}">
-                            Realtime event quip here
-                        </div>
-                    </div>
                     
 					<style>
 					    @keyframes quipPop {
@@ -790,21 +789,20 @@
         const isRoundComplete = /*[[${game.state.name() == 'ROUND_COMPLETE'}]]*/ false;
         const isMultiplayer = /*[[${isMultiplayer}]]*/ false;
         const isMyTurn = /*[[${isMyTurn}]]*/ true;
+        const hasEventQuips = /*[[${eventQuips != null and !eventQuips.empty}]]*/ false;
 
         // BUG #1 FIX: Longer pause for completed tricks, especially the last one
         if (hasCompletedTrick && !isRoundComplete) {
+            const quipBuffer = hasEventQuips ? 1000 : 0;
             if (currentPlayer === humanPlayer) {
-                setTimeout(() => {
-                    location.reload();
-                }, 5000);  // CHANGED: 5 seconds instead of 3
+                setTimeout(() => { location.reload(); }, 5000 + quipBuffer);
             } else {
-                setTimeout(() => {
-                    location.reload();
-                }, 4500);  // CHANGED: 4.5 seconds instead of 2
+                setTimeout(() => { location.reload(); }, 4500 + quipBuffer);
             }
         }
         else if (isAITurn) {
-            const delay = 1000 + Math.random() * 2000;
+            const baseDelay = 1000 + Math.random() * 2000;
+            const delay = hasEventQuips ? Math.max(baseDelay, 3000) : baseDelay;
             setTimeout(() => {
                 location.reload();
             }, delay);

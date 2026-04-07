@@ -134,18 +134,16 @@ public class HighLowJackController {
         
         if (completedTrick != null) {
             session.setAttribute("hlj_clearTrick", true);
-            
+
             // ═══════════════════════════════════════════════════════════════
-            // REALTIME QUIPS: Check events after every card play!?????
+            // REALTIME QUIPS: Store in shared game so ALL humans see them
             // ═══════════════════════════════════════════════════════════════
             try {
                 List<String> eventQuips = realtimeQuipDetector.checkRealtimeEvents(game);
                 if (!eventQuips.isEmpty()) {
-                    model.addAttribute("eventQuips", eventQuips);
+                    game.setPendingRealtimeQuips(eventQuips);  // shared with all sessions
                     System.out.println("⚡ REALTIME EVENT QUIPS: " + eventQuips);
                 }
-                
-                // Clear events after displaying
                 game.clearRecentEvents();
             } catch (Exception e) {
                 System.err.println("❌ Error checking realtime quips: " + e.getMessage());
@@ -222,6 +220,12 @@ public class HighLowJackController {
         // Round number comes from the shared Game object — accurate for all players in multiplayer
         model.addAttribute("roundNumber", game.getRoundNumber());
         model.addAttribute("setsWon", game.getSetsWon());
+
+        // Realtime quips: read from shared game so all humans (not just the card-player) see them
+        List<String> pendingQuips = game.getAndMaybeExpireRealtimeQuips();
+        if (pendingQuips != null && !pendingQuips.isEmpty()) {
+            model.addAttribute("eventQuips", pendingQuips);
+        }
         
         return "highlowjack/game";
     }

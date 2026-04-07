@@ -59,7 +59,9 @@ public class Game implements Serializable{
     private MatchResult matchResult;       // Set when match is complete; shared across sessions
     private SetResult lastSetResult;       // Set when a set is won; shared across sessions
     private Match currentMatch;            // Authoritative match state from controller; shared across sessions
-    private List<String> pendingMatchQuips; // Quips for match-winner screen; shared across sessions
+    private List<String> pendingMatchQuips;        // Quips for match-winner screen; shared across sessions
+    private List<String> pendingRealtimeQuips;     // Realtime event quips; shown to all humans then cleared
+    private long realtimeQuipTimestamp;            // Epoch ms when quips were set; cleared after 6s
 
     /**
      * Constructs a new game with the specified game setup.
@@ -113,6 +115,8 @@ public class Game implements Serializable{
         this.lastSetResult = null;
         this.currentMatch = null;
         this.pendingMatchQuips = null;
+        this.pendingRealtimeQuips = null;
+        this.realtimeQuipTimestamp = 0;
         this.currentPlayerIndex = 0;
         this.state = GameState.NOT_STARTED;
     }
@@ -171,6 +175,8 @@ public class Game implements Serializable{
         this.lastSetResult = null;
         this.currentMatch = null;
         this.pendingMatchQuips = null;
+        this.pendingRealtimeQuips = null;
+        this.realtimeQuipTimestamp = 0;
         this.currentPlayerIndex = 0;
         this.state = GameState.NOT_STARTED;
     }
@@ -483,6 +489,31 @@ public class Game implements Serializable{
 
     public void setPendingMatchQuips(List<String> quips) {
         this.pendingMatchQuips = quips;
+    }
+
+    /**
+     * Returns pending realtime quips if they were set within the last 6 seconds,
+     * otherwise clears and returns null. This lets all human players see the quips
+     * during the polling window without double-applying them.
+     */
+    public List<String> getAndMaybeExpireRealtimeQuips() {
+        if (pendingRealtimeQuips == null || pendingRealtimeQuips.isEmpty()) return null;
+        if (System.currentTimeMillis() - realtimeQuipTimestamp > 6000) {
+            pendingRealtimeQuips = null;
+            realtimeQuipTimestamp = 0;
+            return null;
+        }
+        return pendingRealtimeQuips;
+    }
+
+    public void setPendingRealtimeQuips(List<String> quips) {
+        this.pendingRealtimeQuips = quips;
+        this.realtimeQuipTimestamp = System.currentTimeMillis();
+    }
+
+    public void clearRealtimeQuips() {
+        this.pendingRealtimeQuips = null;
+        this.realtimeQuipTimestamp = 0;
     }
 
     public boolean isRoundScoresApplied() {

@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Round Scoring - High Low Jack</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .scoring-container {
+            max-width: 900px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .scoring-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            text-align: center;
+        }
+
+        .scoring-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .trump-display {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .set-info {
+            font-size: 1rem;
+            opacity: 0.85;
+            margin-top: 10px;
+        }
+
+        /* SET WINNER CELEBRATION */
+        .set-winner-fanfare {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            padding: 40px;
+            text-align: center;
+            border-bottom: 5px solid #f0c000;
+            animation: fadeInScale 0.6s ease-out;
+        }
+        
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .winner-trophy {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            animation: bounce 1s ease-in-out infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+        
+        .winner-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #1e3c72;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .winner-name {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #764ba2;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.15);
+        }
+        
+        .winner-details {
+            font-size: 1.3rem;
+            color: #2c3e50;
+            line-height: 1.8;
+        }
+        
+        .winning-point-badge {
+            display: inline-block;
+            background: rgba(118, 75, 162, 0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            color: #764ba2;
+        }
+        
+        .tiebreaker-note {
+            margin-top: 15px;
+            font-size: 1rem;
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        
+        .sets-won-display {
+            margin-top: 25px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .set-score {
+            text-align: center;
+        }
+        
+        .set-score-name {
+            font-size: 1.1rem;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .set-score-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #1e3c72;
+        }
+
+        .scoring-content {
+            padding: 30px;
+            color: #333;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: #667eea;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: #667eea;
+            border-radius: 2px;
+        }
+
+        .player-row {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .player-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+
+        .player-points {
+            color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+
+        .captured-cards {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .captured-cards img {
+            height: 60px;
+            width: auto;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .round-points-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .round-point-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .round-point-category {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+        }
+
+        .round-point-winner {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .round-point-detail {
+            font-size: 0.85rem;
+            margin-top: 8px;
+            opacity: 0.9;
+        }
+
+        .score-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .score-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .score-player-name {
+            font-weight: bold;
+            min-width: 100px;
+            color: #2c3e50;
+        }
+
+        .score-value {
+            min-width: 30px;
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.2rem;
+        }
+
+        .progress-bar-container {
+            flex: 1;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 1s ease-out;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .continue-button {
+            display: block;
+            width: 100%;
+            max-width: 300px;
+            margin: 30px auto 0;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .continue-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+
+        .continue-button:active {
+            transform: translateY(0);
+        }
+
+        .no-cards {
+            color: #95a5a6;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="scoring-container">
+        <!-- SET WINNER FANFARE (only shown if setResult exists) -->
+        <div th:if="${setResult != null}" class="set-winner-fanfare">
+            <div class="winner-trophy">🏆</div>
+            <div class="winner-title">SET WINNER!</div>
+            <div class="winner-name" th:text="${setResult.winner}">Player Name</div>
+            <div class="winner-details">
+                Won Set <span th:text="${currentSetNumber}">1</span> by reaching 11 points!
+                <br>
+                Winning point: <span class="winning-point-badge" th:text="${setResult.winningPoint}">High</span>
+                <span th:if="${setResult.wasTiebreaker()}" class="tiebreaker-note">
+                    ⚡ Won by tiebreaker precedence!
+                </span>
+            </div>
+            
+            <!-- Sets Won Display -->
+            <div class="sets-won-display">
+                <div th:each="player : ${playerNames}" class="set-score">
+                    <div class="set-score-name" th:text="${player}">Player</div>
+                    <div class="set-score-value" th:text="${setsWon.get(player)}">0</div>
+                </div>
+            </div>
+        </div>
+    
+        <div class="scoring-header">
+            <h1>🏆 Round Complete! 🏆</h1>
+            <div class="trump-display">
+                Trump: <strong th:text="${results.trumpSuit.name()}">SUIT</strong>
+                <span th:text="${results.trumpSuit.symbol}" style="font-size: 1.5rem;">♠</span>
+                <span th:if="${pitcherName != null}" style="font-size: 0.9rem; opacity: 0.9;">
+                    <br>Pitched by <span th:text="${pitcherName}">Player</span> 🎺
+                </span>
+            </div>
+            <div class="set-info">
+                Set <span th:text="${currentSetNumber}">1</span> - 
+                <span th:text="${setup.matchType.displayName}">Match Type</span>
+            </div>
+        </div>
+
+        <div class="scoring-content">
+            <!-- GAME POINTS (Card Values Captured) -->
+            <div class="section">
+                <div class="section-title">📊 Game Points (Card Values)</div>
+                <div th:each="player : ${playerNames}" class="player-row">
+                    <div class="player-name" th:text="${player}">Player</div>
+                    <div class="player-points" 
+                         th:text="${results.getGamePoints(player)} + ' points'">0 points</div>
+                    <div class="captured-cards">
+                        <img th:each="card : ${results.getCapturedCards(player)}"
+                             th:src="@{|/images/cards/${#strings.substring(card.suit.name().toLowerCase(), 0, #strings.length(card.suit.name()) - 1)}_${#strings.toLowerCase(card.rank.name()) == 'ace' ? '1' : (#strings.toLowerCase(card.rank.name()) == 'two' ? '2' : (#strings.toLowerCase(card.rank.name()) == 'three' ? '3' : (#strings.toLowerCase(card.rank.name()) == 'four' ? '4' : (#strings.toLowerCase(card.rank.name()) == 'five' ? '5' : (#strings.toLowerCase(card.rank.name()) == 'six' ? '6' : (#strings.toLowerCase(card.rank.name()) == 'seven' ? '7' : (#strings.toLowerCase(card.rank.name()) == 'eight' ? '8' : (#strings.toLowerCase(card.rank.name()) == 'nine' ? '9' : (#strings.toLowerCase(card.rank.name()) == 'ten' ? '10' : (#strings.toLowerCase(card.rank.name()) == 'jack' ? 'jack' : (#strings.toLowerCase(card.rank.name()) == 'queen' ? 'queen' : 'king')))))))))))}.png|}"
+                             alt="Card">
+                        <span th:if="${#lists.isEmpty(results.getCapturedCards(player))}" class="no-cards">
+                            No cards captured
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TRICKS WON DISTRIBUTION -->
+            <div class="section">
+                <div class="section-title">🏆 Tricks Won This Round</div>
+                <div class="score-bars">
+                    <div th:each="player : ${playerNames}" class="score-bar-row">
+                        <div class="score-player-name" th:text="${player}">Player</div>
+                        <div class="score-value" th:text="${tricksWon.get(player)}">0</div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" 
+                                 th:style="'width: ' + (${tricksWon.get(player)} * 100.0 / 7) + '%'">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROUND POINTS AWARDED -->
+            <div class="section">
+                <div class="section-title">🎯 Round Points Awarded</div>
+                <div class="round-points-grid">
+                   <div class="round-point-card" th:if="${results.getRoundPointWinner('High') != null}">
+                        <div class="round-point-category">⬆️ HIGH</div>
+                        <div class="round-point-winner" th:text="${results.getRoundPointWinner('High')}">Player</div>
+                        <div th:if="${game.isTeamMode()}" style="font-size: 0.85rem; margin-top: 3px; opacity: 0.9;">
+                             <!--(<span th:text="${results.getRoundPointWinner('High')}">Team</span>) -->
+                             (<span th:text="${results.getRoundPointPlayer('High')}">Player</span>)
+                        </div>
+                        <div class="round-point-detail" th:if="${results.highCard != null}" 
+                            th:text="'(' + ${results.highCard.rank.name()} + ${results.highCard.suit.symbol} + ')'">
+                            (Card)
+                        </div>
+                        <div style="font-size: 0.9rem; margin-top: 5px;">+1 point</div>
+                    </div>
+                    <div class="round-point-card" th:if="${results.getRoundPointWinner('Low') != null}">
+                        <div class="round-point-category">⬇️ LOW</div>
+                        <div class="round-point-winner" th:text="${results.getRoundPointWinner('Low')}">Player</div>
+                        <div th:if="${game.isTeamMode()}" style="font-size: 0.85rem; margin-top: 3px; opacity: 0.9;">
+                           <!-- (<span th:text="${results.getRoundPointWinner('Low')}">Team</span>) -->
+                           (<span th:text="${results.getRoundPointPlayer('Low')}">Player</span>)
+                        </div>
+                        <div class="round-point-detail" th:if="${results.lowCard != null}" 
+                            th:text="'(' + ${results.lowCard.rank.name()} + ${results.lowCard.suit.symbol} + ')'">
+                            (Card)
+                        </div>
+                        <div style="font-size: 0.9rem; margin-top: 5px;">+1 point</div>
+                    </div>
+                    <div class="round-point-card" th:if="${results.getRoundPointWinner('Jack') != null}">
+                        <div class="round-point-category">💎 JACK</div>
+                        <div class="round-point-winner" th:text="${results.getRoundPointWinner('Jack')}">Player</div>
+                        <div th:if="${game.isTeamMode()}" style="font-size: 0.85rem; margin-top: 3px; opacity: 0.9;">
+                            <!-- (<span th:text="${results.getRoundPointWinner('Jack')}">Team</span>) -->
+                            (<span th:text="${results.getRoundPointPlayer('Jack')}">Player</span>)
+                        </div>
+                        <div style="font-size: 0.9rem; margin-top: 5px;">+1 point</div>
+                    </div>
+                    <div class="round-point-card" th:if="${results.getRoundPointWinner('Game') != null}">
+                        <div class="round-point-category">🎯 GAME</div>
+                        <div class="round-point-winner" th:text="${results.getRoundPointWinner('Game')}">Player</div>
+                        <div th:if="${game.isTeamMode()}" style="font-size: 0.85rem; margin-top: 3px; opacity: 0.9;">
+                             (<span th:text="${results.getRoundPointWinner('Game')}">Team</span>)
+                            <!-- (<span th:text="${results.getRoundPointPlayer('Game')}">Player</span>) -->
+                        </div>
+                    <div class="round-point-detail" th:if="${results.gameWinnerPoints != null}" 
+                        th:text="'(' + ${results.gameWinnerPoints} + ' points)'">
+                        (Points)
+                    </div>
+                    <div style="font-size: 0.9rem; margin-top: 5px;">+1 point</div>
+                </div>
+                </div>
+            </div>
+
+            <!-- SET SCORE -->
+            <div class="section">
+                <div class="section-title">📈 Set Score (First to <span th:text="${winningScore}">11</span> wins!)</div>
+                
+                <!-- TEAM MODE SCORING -->
+                <div th:if="${game.isTeamMode()}" class="score-bars">
+                    <div th:each="team : ${game.teams}" class="score-bar-row">
+                        <div class="score-player-name">
+                            <div>
+                                <span th:if="${team.name.contains('North-South')}">🟢</span>
+                                <span th:if="${team.name.contains('East-West')}">🔴</span>
+                                <span th:text="${team.name}">Team</span>
+                            </div>
+                            <div style="font-size: 0.75rem; opacity: 0.7; margin-top: 2px;">
+                                <span th:text="${team.player1Name}">P1</span> & 
+                                <span th:text="${team.player2Name}">P2</span>
+                            </div>
+                        </div>
+                        <div class="score-value" th:text="${game.getScore(team.name)}">0</div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" 
+                                th:style="'width: ' + (${game.getScore(team.name)} * 100 / ${winningScore}) + '%'">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- INDIVIDUAL MODE SCORING -->
+                <div th:unless="${game.isTeamMode()}" class="score-bars">
+                    <div th:each="player : ${playerNames}" class="score-bar-row">
+                        <div class="score-player-name" th:text="${player}">Player</div>
+                        <div class="score-value" th:text="${results.getScore(player)}">0</div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" 
+                                th:style="'width: ' + (${results.getScore(player)} * 100 / ${winningScore}) + '%'">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONTINUE BUTTON (only shown for controller) -->
+            <form th:if="${isController}" th:action="@{/highlowjack/continue}" method="post">
+                <button type="submit" class="continue-button">
+                    <span th:if="${setResult != null}">
+                        <span th:text="${setResult != null && setsWon.get(setResult.winner) >= setup.setsToWin} ? '🎊 Match Complete!' : '▶️ Start Next Set'">Continue</span>
+                    </span>
+                    <span th:unless="${setResult != null}">▶️ Continue to Next Round</span>
+                </button>
+            </form>
+
+            <!-- NON-CONTROLLER WAIT MESSAGE (multiplayer only) -->
+            <div th:if="${!isController}" id="waiting-msg" style="text-align:center; padding: 20px; opacity: 0.8;">
+                ⏳ Waiting for host to continue...
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        // Non-controller players poll until the game moves to the next round
+        const isController = /*[[${isController}]]*/ true;
+        if (!isController) {
+            const scorePollInterval = setInterval(() => {
+                fetch('/highlowjack/poll')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.gameState === 'MATCH_COMPLETE') {
+                            clearInterval(scorePollInterval);
+                            window.location.href = '/highlowjack/match-winner';
+                        } else if (data.gameState === 'SET_COMPLETE') {
+                            clearInterval(scorePollInterval);
+                            window.location.href = '/highlowjack/set-winner';
+                        } else if (data.gameState === 'IN_PROGRESS') {
+                            clearInterval(scorePollInterval);
+                            location.reload();
+                        }
+                    })
+                    .catch(() => {});
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

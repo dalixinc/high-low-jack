@@ -1,47 +1,27 @@
 package com.dalegames.highlowjack.engine;
 
-import com.dalegames.highlowjack.model.Card;
-import com.dalegames.highlowjack.model.Game;
-import com.dalegames.highlowjack.model.Trick;
-
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.dalegames.highlowjack.model.Card;
+import com.dalegames.highlowjack.model.Game;
+import com.dalegames.highlowjack.model.RoundResult;
+import com.dalegames.highlowjack.model.Team;
+import com.dalegames.highlowjack.model.Trick;
+
 /**
  * Game engine for High Low Jack scoring and validation.
  * 
- * <p>Provides static methods for calculating scores based on the four point categories:
- * <ul>
- *   <li><b>High</b>: Highest trump card in play (1 point)</li>
- *   <li><b>Low</b>: Lowest trump card in play (1 point)</li>
- *   <li><b>Jack</b>: Capturing the Jack of trumps, if in play (1 point)</li>
- *   <li><b>Game</b>: Most game points from captured cards (1 point)</li>
- * </ul>
- *
- * <p>Card point values for "Game" calculation:
- * <ul>
- *   <li>Ace = 4 points</li>
- *   <li>King = 3 points</li>
- *   <li>Queen = 2 points</li>
- *   <li>Jack = 1 point</li>
- *   <li>Ten = 10 points</li>
- *   <li>All other cards = 0 points</li>
- * </ul>
- *
  * @author Dale &amp; Primus
- * @version 1.0
+ * @version 2.5 - Track both players and teams for display purposes
  */
 public class GameEngine {
     
     /**
-     * Calculates and awards scores for a completed round.
-     * Awards points for High, Low, Jack, and Game to the appropriate players.
-     * 
-     * @param game the completed game (must be in ROUND_COMPLETE state)
-     * @return map of point categories to winning players
-     * @throws IllegalStateException if round is not complete
-     * @throws IllegalArgumentException if game is null
+     * Calculates scores and returns team/player names who won each point.
+     * Stores the results in game.playerPointWinners for later access.
      */
     public static Map<String, String> calculateScores(Game game) {
         if (game == null) {
@@ -50,7 +30,12 @@ public class GameEngine {
         if (game.getState() != Game.GameState.ROUND_COMPLETE) {
             throw new IllegalStateException("Round must be complete to calculate scores");
         }
-        
+
+        // Guard against double-scoring in multiplayer (both browsers visit /scoring)
+        if (game.isRoundScoresApplied()) {
+            return new HashMap<>(game.getLastRoundScores());
+        }
+
         Map<String, String> results = new HashMap<>();
         List<Trick> tricks = game.getTricks();
         Card.Suit trump = game.getTrumpSuit();
@@ -59,46 +44,246 @@ public class GameEngine {
             throw new IllegalStateException("Trump suit not set");
         }
         
-        // High: Player who was dealt highest trump
-        String highWinner = findHighTrump(tricks, trump);
-        if (highWinner != null) {
-            game.addScore(highWinner, 1);
-            results.put("High", highWinner);
+        // Get PLAYER names first, then score to teams
+        String highPlayer = findHighTrump(tricks, trump, null);  // null = return player name
+        if (highPlayer != null) {
+            String scoreTo = game.isTeamMode() ? game.getTeamForPlayer(highPlayer).getName() : highPlayer;
+            game.addScore(scoreTo, 1);
+            results.put("High", scoreTo);  // Store team/player for scoring
         }
         
-        // Low: Player who was dealt lowest trump
-        String lowWinner = findLowTrump(tricks, trump);
-        if (lowWinner != null) {
-            game.addScore(lowWinner, 1);
-            results.put("Low", lowWinner);
+        String lowPlayer = findLowTrump(tricks, trump, null);  // null = return player name
+        if (lowPlayer != null) {
+            String scoreTo = game.isTeamMode() ? game.getTeamForPlayer(lowPlayer).getName() : lowPlayer;
+            game.addScore(scoreTo, 1);
+            results.put("Low", scoreTo);  // Store team/player for scoring
         }
         
-        // Jack: Player who captured Jack of trumps (if in play)
-        String jackWinner = findJackWinner(tricks, trump);
-        if (jackWinner != null) {
-            game.addScore(jackWinner, 1);
-            results.put("Jack", jackWinner);
+        String jackPlayer = findJackWinner(tricks, trump, null);  // null = return player name
+        if (jackPlayer != null) {
+            String scoreTo = game.isTeamMode() ? game.getTeamForPlayer(jackPlayer).getName() : jackPlayer;
+            game.addScore(scoreTo, 1);
+            results.put("Jack", scoreTo);  // Store team/player for scoring
         }
         
-        // Game: Player with most game points from captured cards
-        String gameWinner = findGameWinner(tricks);
+        // TEAM MODE FIX: Pass game object to combine partners' game points
+        String gameWinner = findGameWinner(tricks, game);
         if (gameWinner != null) {
             game.addScore(gameWinner, 1);
             results.put("Game", gameWinner);
         }
-        
+
+        // Mark scores as applied so a second /scoring visit (multiplayer) won't double-count
+        game.setRoundScoresApplied(true);
+        game.setLastRoundScores(new HashMap<>(results));
+
         return results;
     }
     
     /**
-     * Finds the player who was dealt the highest trump card.
-     * Searches all tricks for trump cards and returns the player who played the highest.
-     * 
-     * @param tricks list of completed tricks
-     * @param trump the trump suit
-     * @return name of player with highest trump, or null if no trumps played
+     * Gets the player point winners (before team conversion).
+     * Used for display purposes in team mode.
      */
-    public static String findHighTrump(List<Trick> tricks, Card.Suit trump) {
+    public static Map<String, String> getPlayerPointWinners(Game game) {
+        Map<String, String> players = new HashMap<>();
+        List<Trick> tricks = game.getTricks();
+        Card.Suit trump = game.getTrumpSuit();
+        
+        if (trump == null) {
+            return players;
+        }
+        
+        String highPlayer = findHighTrump(tricks, trump, null);
+        if (highPlayer != null) {
+            players.put("High", highPlayer);
+        }
+        
+        String lowPlayer = findLowTrump(tricks, trump, null);
+        if (lowPlayer != null) {
+            players.put("Low", lowPlayer);
+        }
+        
+        String jackPlayer = findJackWinner(tricks, trump, null);
+        if (jackPlayer != null) {
+            players.put("Jack", jackPlayer);
+        }
+        
+        // For Game point in team mode, show team name; in individual mode, show player
+        String gameWinner = findGameWinner(tricks, game);
+        if (gameWinner != null) {
+            players.put("Game", gameWinner);
+        }
+        
+        return players;
+    }
+
+    public static RoundResult calculateRoundResults(Game game) {
+        if (game == null) {
+            throw new IllegalArgumentException("Game cannot be null");
+        }
+        if (game.getState() != Game.GameState.ROUND_COMPLETE) {
+            throw new IllegalStateException("Round must be complete to calculate results");
+        }
+        
+        List<Trick> tricks = game.getTricks();
+        Card.Suit trump = game.getTrumpSuit();
+        
+        Map<String, List<Card>> capturedCards = calculateCapturedCards(tricks);
+        Map<String, Integer> gamePointTotals = calculateGamePointTotals(capturedCards);
+        Map<String, String> roundPointWinners = calculateScores(game);
+        Map<String, String> roundPointPlayers = getPlayerPointWinners(game);  // NEW: Get player names
+        
+        // Extract card details for display
+        Card highCard = findHighTrumpCard(tricks, trump);
+        Card lowCard = findLowTrumpCard(tricks, trump);
+        Integer gameWinnerPoints = null;
+        String gameWinner = roundPointWinners.get("Game");
+        if (gameWinner != null) {
+            if (game.isTeamMode()) {
+                // Sum team's combined game points
+                Team winningTeam = null;
+                for (Team team : game.getTeams()) {
+                    if (team.getName().equals(gameWinner)) {
+                        winningTeam = team;
+                        break;
+                    }
+                }
+                if (winningTeam != null) {
+                    gameWinnerPoints = 0;
+                    for (String player : winningTeam.getPlayerNames()) {
+                        gameWinnerPoints += gamePointTotals.getOrDefault(player, 0);
+                    }
+                }
+            } else {
+                gameWinnerPoints = gamePointTotals.get(gameWinner);
+            }
+        }
+        
+        Map<String, Integer> scores = new HashMap<>();
+        for (String player : game.getPlayerNames()) {
+            scores.put(player, game.getScore(player));
+        }
+        
+        return new RoundResult(capturedCards, gamePointTotals, roundPointWinners, scores, trump, 
+                               highCard, lowCard, gameWinnerPoints, null, roundPointPlayers);
+    }
+
+    public static Map<String, List<Card>> calculateCapturedCards(List<Trick> tricks) {
+        Map<String, List<Card>> capturedCards = new HashMap<>();
+        
+        for (Trick trick : tricks) {
+            String winner = trick.getWinner();
+            capturedCards.putIfAbsent(winner, new ArrayList<>());
+            
+            for (Trick.CardPlay play : trick.getPlays()) {
+                capturedCards.get(winner).add(play.card);
+            }
+        }
+        
+        return capturedCards;
+    }
+
+    public static Map<String, Integer> calculateGamePointTotals(Map<String, List<Card>> capturedCards) {
+        Map<String, Integer> gamePoints = new HashMap<>();
+        
+        for (Map.Entry<String, List<Card>> entry : capturedCards.entrySet()) {
+            String player = entry.getKey();
+            int points = 0;
+            
+            for (Card card : entry.getValue()) {
+                points += card.getRank().getPoints();
+            }
+            
+            gamePoints.put(player, points);
+        }
+        
+        return gamePoints;
+    }
+
+    public static Map<String, String> getCurrentPointStatus(Game game) {
+        Map<String, String> status = new HashMap<>();
+        
+        if (game == null || game.getTrumpSuit() == null) {
+            return status;
+        }
+        
+        List<Trick> tricks = game.getTricks();
+        Card.Suit trump = game.getTrumpSuit();
+        
+        List<Trick> allTricks = new ArrayList<>(tricks);
+        if (game.getCurrentTrick() != null && game.getCurrentTrick().size() > 0) {
+            allTricks.add(game.getCurrentTrick());
+        }
+        
+        Card highestTrump = null;
+        String highPlayer = null;
+        
+        for (Trick trick : allTricks) {
+            for (Trick.CardPlay play : trick.getPlays()) {
+                if (play.card.getSuit() == trump) {
+                    if (highestTrump == null || play.card.getRank().getValue() > highestTrump.getRank().getValue()) {
+                        highestTrump = play.card;
+                        highPlayer = play.playerName;
+                    }
+                }
+            }
+        }
+        
+        if (highestTrump != null) {
+            status.put("High", highestTrump.toString() + " - " + highPlayer);
+        }
+        
+        Card lowestTrump = null;
+        String lowPlayer = null;
+        
+        for (Trick trick : allTricks) {
+            for (Trick.CardPlay play : trick.getPlays()) {
+                if (play.card.getSuit() == trump) {
+                    if (lowestTrump == null || play.card.getRank().getValue() < lowestTrump.getRank().getValue()) {
+                        lowestTrump = play.card;
+                        lowPlayer = play.playerName;
+                    }
+                }
+            }
+        }
+        
+        if (lowestTrump != null) {
+            status.put("Low", lowestTrump.toString() + " - " + lowPlayer);
+        }
+        
+        String jackWinner = null;
+        for (Trick trick : allTricks) {
+            for (Trick.CardPlay play : trick.getPlays()) {
+                if (play.card.getSuit() == trump && play.card.getRank() == Card.Rank.JACK) {
+                    // Only get winner if trick is complete (4 cards)
+                    if (trick.isComplete()) {
+                        jackWinner = trick.getWinner();
+                    } else {
+                        // For incomplete trick, show who played the Jack
+                        jackWinner = play.playerName;
+                    }
+                    break;
+                }
+            }
+            if (jackWinner != null) break;
+        }
+        
+        if (jackWinner != null) {
+            status.put("Jack", "J" + trump.getSymbol() + " - " + jackWinner);
+        }
+        
+        return status;
+    }
+    
+    /**
+     * Finds the player or team who won the High trump point.
+     * 
+     * @param tricks the completed tricks
+     * @param trump the trump suit
+     * @param game the game object (for team mode conversion)
+     * @return player name in individual mode, team name in team mode
+     */
+    public static String findHighTrump(List<Trick> tricks, Card.Suit trump, Game game) {
         if (tricks == null || trump == null) {
             return null;
         }
@@ -118,18 +303,48 @@ public class GameEngine {
             }
         }
         
+        // Convert to team name in team mode
+        if (winner != null && game != null && game.isTeamMode()) {
+            Team team = game.getTeamForPlayer(winner);
+            return team.getName();
+        }
+        
         return winner;
     }
     
     /**
-     * Finds the player who was dealt the lowest trump card.
-     * Searches all tricks for trump cards and returns the player who played the lowest.
-     * 
-     * @param tricks list of completed tricks
-     * @param trump the trump suit
-     * @return name of player with lowest trump, or null if no trumps played
+     * Finds and returns the actual highest trump card.
      */
-    public static String findLowTrump(List<Trick> tricks, Card.Suit trump) {
+    public static Card findHighTrumpCard(List<Trick> tricks, Card.Suit trump) {
+        if (tricks == null || trump == null) {
+            return null;
+        }
+        
+        Card highestTrump = null;
+        
+        for (Trick trick : tricks) {
+            for (Trick.CardPlay play : trick.getPlays()) {
+                Card card = play.card;
+                if (card.getSuit() == trump) {
+                    if (highestTrump == null || card.getRank().getValue() > highestTrump.getRank().getValue()) {
+                        highestTrump = card;
+                    }
+                }
+            }
+        }
+        
+        return highestTrump;
+    }
+    
+    /**
+     * Finds the player or team who won the Low trump point.
+     * 
+     * @param tricks the completed tricks
+     * @param trump the trump suit
+     * @param game the game object (for team mode conversion)
+     * @return player name in individual mode, team name in team mode
+     */
+    public static String findLowTrump(List<Trick> tricks, Card.Suit trump, Game game) {
         if (tricks == null || trump == null) {
             return null;
         }
@@ -149,18 +364,48 @@ public class GameEngine {
             }
         }
         
+        // Convert to team name in team mode
+        if (winner != null && game != null && game.isTeamMode()) {
+            Team team = game.getTeamForPlayer(winner);
+            return team.getName();
+        }
+        
         return winner;
     }
     
     /**
-     * Finds the player who captured the Jack of trumps.
-     * Returns the winner of the trick containing the Jack of the trump suit.
-     * 
-     * @param tricks list of completed tricks
-     * @param trump the trump suit
-     * @return name of player who won the trick with Jack of trumps, or null if not in play
+     * Finds and returns the actual lowest trump card.
      */
-    public static String findJackWinner(List<Trick> tricks, Card.Suit trump) {
+    public static Card findLowTrumpCard(List<Trick> tricks, Card.Suit trump) {
+        if (tricks == null || trump == null) {
+            return null;
+        }
+        
+        Card lowestTrump = null;
+        
+        for (Trick trick : tricks) {
+            for (Trick.CardPlay play : trick.getPlays()) {
+                Card card = play.card;
+                if (card.getSuit() == trump) {
+                    if (lowestTrump == null || card.getRank().getValue() < lowestTrump.getRank().getValue()) {
+                        lowestTrump = card;
+                    }
+                }
+            }
+        }
+        
+        return lowestTrump;
+    }
+    
+    /**
+     * Finds the player or team who won the Jack point.
+     * 
+     * @param tricks the completed tricks
+     * @param trump the trump suit
+     * @param game the game object (for team mode conversion)
+     * @return player name in individual mode, team name in team mode
+     */
+    public static String findJackWinner(List<Trick> tricks, Card.Suit trump, Game game) {
         if (tricks == null || trump == null) {
             return null;
         }
@@ -168,7 +413,15 @@ public class GameEngine {
         for (Trick trick : tricks) {
             for (Trick.CardPlay play : trick.getPlays()) {
                 if (play.card.getSuit() == trump && play.card.getRank() == Card.Rank.JACK) {
-                    return trick.getWinner();
+                    String winner = trick.getWinner();
+                    
+                    // Convert to team name in team mode
+                    if (winner != null && game != null && game.isTeamMode()) {
+                        Team team = game.getTeamForPlayer(winner);
+                        return team.getName();
+                    }
+                    
+                    return winner;
                 }
             }
         }
@@ -177,45 +430,73 @@ public class GameEngine {
     }
     
     /**
-     * Finds the player who won the most game points from captured cards.
+     * Finds the winner of the "Game" point.
      * 
-     * <p>Game points are awarded as follows:
-     * <ul>
-     *   <li>Ace = 4 points</li>
-     *   <li>King = 3 points</li>
-     *   <li>Queen = 2 points</li>
-     *   <li>Jack = 1 point</li>
-     *   <li>Ten = 10 points</li>
-     * </ul>
-     *
-     * @param tricks list of completed tricks
-     * @return name of player with most game points, or null on tie
+     * <p>In INDIVIDUAL mode: Player with the most game points wins.
+     * In TEAM mode: Team with the most combined game points wins.
+     * If there's a tie, no one wins the Game point.</p>
+     * 
+     * @param tricks the completed tricks
+     * @param game the game object (to check team mode and get teams)
+     * @return the winner's name (player or team name), or null if tie
      */
-    public static String findGameWinner(List<Trick> tricks) {
-        if (tricks == null || tricks.isEmpty()) {
+    public static String findGameWinner(List<Trick> tricks, Game game) {
+        if (tricks == null || tricks.isEmpty() || game == null) {
             return null;
         }
         
-        Map<String, Integer> gamePoints = new HashMap<>();
+        // Calculate individual player game points
+        Map<String, Integer> playerGamePoints = new HashMap<>();
         
-        // Calculate game points for each player
         for (Trick trick : tricks) {
             String winner = trick.getWinner();
             int points = 0;
             
             for (Trick.CardPlay play : trick.getPlays()) {
-                points += getGamePoints(play.card);
+                points += play.card.getRank().getPoints();
             }
             
-            gamePoints.put(winner, gamePoints.getOrDefault(winner, 0) + points);
+            playerGamePoints.put(winner, playerGamePoints.getOrDefault(winner, 0) + points);
         }
         
-        // Find player with most points
+        // TEAM MODE: Combine partners' game points
+        if (game.isTeamMode()) {
+            Map<String, Integer> teamGamePoints = new HashMap<>();
+            
+            // Sum each team's combined game points
+            for (Map.Entry<String, Integer> entry : playerGamePoints.entrySet()) {
+                String player = entry.getKey();
+                Team team = game.getTeamForPlayer(player);
+                String teamName = team.getName();
+                
+                teamGamePoints.put(teamName, 
+                    teamGamePoints.getOrDefault(teamName, 0) + entry.getValue());
+            }
+            
+            // Find winning team
+            String gameWinner = null;
+            int maxPoints = 0;
+            boolean tie = false;
+            
+            for (Map.Entry<String, Integer> entry : teamGamePoints.entrySet()) {
+                if (entry.getValue() > maxPoints) {
+                    maxPoints = entry.getValue();
+                    gameWinner = entry.getKey();
+                    tie = false;
+                } else if (entry.getValue() == maxPoints && maxPoints > 0) {
+                    tie = true;
+                }
+            }
+            
+            return tie ? null : gameWinner;
+        }
+        
+        // INDIVIDUAL MODE: Original logic (highest individual game points)
         String gameWinner = null;
         int maxPoints = 0;
         boolean tie = false;
         
-        for (Map.Entry<String, Integer> entry : gamePoints.entrySet()) {
+        for (Map.Entry<String, Integer> entry : playerGamePoints.entrySet()) {
             if (entry.getValue() > maxPoints) {
                 maxPoints = entry.getValue();
                 gameWinner = entry.getKey();
@@ -225,76 +506,35 @@ public class GameEngine {
             }
         }
         
-        // No winner on tie
         return tie ? null : gameWinner;
     }
     
-    /**
-     * Returns the game point value for a card.
-     * 
-     * @param card the card to evaluate
-     * @return game points (0-10)
-     */
     public static int getGamePoints(Card card) {
         if (card == null) {
             return 0;
         }
-        
-        switch (card.getRank()) {
-            case ACE:
-                return 4;
-            case KING:
-                return 3;
-            case QUEEN:
-                return 2;
-            case JACK:
-                return 1;
-            case TEN:
-                return 10;
-            default:
-                return 0;
-        }
+        return card.getRank().getPoints();
     }
     
-    /**
-     * Validates whether a card play is legal according to High Low Jack rules.
-     * 
-     * <p>Rules:
-     * <ul>
-     *   <li>Player must have the card in their hand</li>
-     *   <li>If not leading, must follow suit if possible</li>
-     *   <li>If cannot follow suit, any card may be played</li>
-     * </ul>
-     *
-     * @param game the current game
-     * @param playerName the player attempting to play
-     * @param card the card being played
-     * @return true if the play is legal
-     * @throws IllegalArgumentException if game, playerName, or card is null
-     */
     public static boolean isValidPlay(Game game, String playerName, Card card) {
         if (game == null || playerName == null || card == null) {
             throw new IllegalArgumentException("Game, player, and card cannot be null");
         }
         
-        // Check player has the card
         if (!game.getHand(playerName).hasCard(card)) {
             return false;
         }
         
-        // If leading, any card is valid
         Trick currentTrick = game.getCurrentTrick();
         if (currentTrick == null || currentTrick.size() == 0) {
             return true;
         }
         
-        // Must follow suit if possible
         Card.Suit leadSuit = currentTrick.getLeadSuit();
         if (game.getHand(playerName).hasSuit(leadSuit)) {
             return card.getSuit() == leadSuit;
         }
         
-        // If cannot follow suit, any card is valid
         return true;
     }
 }

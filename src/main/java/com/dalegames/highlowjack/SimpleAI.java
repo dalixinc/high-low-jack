@@ -1,26 +1,26 @@
 package com.dalegames.highlowjack;
 
+import com.dalegames.highlowjack.engine.GameEngine;
+import com.dalegames.highlowjack.model.*;
+
+import java.util.Comparator;
 import java.util.List;
 
-import com.dalegames.highlowjack.engine.GameEngine;
-import com.dalegames.highlowjack.model.Card;
-import com.dalegames.highlowjack.model.Game;
-import com.dalegames.highlowjack.model.Hand;
-
 /**
- * Simple AI for playing High Low Jack.
+ * Simple AI for playing High Low Jack with proper card value awareness.
  * 
- * <p>Strategy based on real High Low Jack gameplay:
+ * <p><strong>Core Strategy Principles:</strong></p>
  * <ul>
- *   <li><strong>Never lead with 10s</strong> - Too valuable (10 points) and risky</li>
- *   <li><strong>Lead high (Ace, King)</strong> - Win tricks to capture card points</li>
- *   <li><strong>Lead low (2-9)</strong> - Pass the lead away, protect valuable cards</li>
- *   <li><strong>Protect Jack of trumps</strong> - Save it for when you can win the trick</li>
+ *   <li><strong>NEVER waste point cards</strong> (10/J/Q/K/A) on unwinnable tricks</li>
+ *   <li><strong>Jack of trump is SACRED</strong> - only play for 15+ point tricks</li>
+ *   <li><strong>Lead high to win</strong> (Ace, King) - capture points early</li>
+ *   <li><strong>Lead low to pass</strong> (2-9) - protect valuable cards</li>
+ *   <li><strong>NEVER lead 10s</strong> - too risky (10 points at stake)</li>
+ *   <li><strong>Always play worthless cards first</strong> (2-9) when discarding</li>
  * </ul>
- * </p>
  * 
  * @author Dale &amp; Primus
- * @version 2.1
+ * @version 3.0
  */
 public class SimpleAI {
     
@@ -41,8 +41,7 @@ public class SimpleAI {
             .toList();
         
         if (validCards.isEmpty()) {
-            // Shouldn't happen, but fallback
-            return cards.get(0);
+            return cards.get(0);  // Shouldn't happen
         }
         
         // Check if we're leading (first card of trick)
@@ -58,13 +57,12 @@ public class SimpleAI {
     /**
      * Chooses a card to lead with.
      * 
-     * <p>Strategy:
+     * <p><strong>Lead Strategy:</strong></p>
      * <ol>
-     *   <li>NEVER lead with 10 (too risky - 10 points)</li>
-     *   <li>Prefer high cards (A, K) to win tricks and capture points</li>
-     *   <li>Lead low cards (2-9) to pass lead and protect valuable cards</li>
+     *   <li><strong>NEVER lead with 10</strong> - too valuable (10 points)</li>
+     *   <li><strong>Lead high</strong> (Ace, King) to win tricks and capture points</li>
+     *   <li><strong>Lead low</strong> (2-9) to pass lead and protect valuable cards</li>
      * </ol>
-     * </p>
      * 
      * @param validCards cards we can legally play
      * @param game the game instance
@@ -72,61 +70,48 @@ public class SimpleAI {
      */
     private static Card chooseLeadCard(List<Card> validCards, Game game) {
         
-        // NEVER lead with a 10 - too valuable!
-        // First, try to find any non-10 card
-        Card avoid10 = validCards.stream()
+        // RULE 1: NEVER lead with a 10
+        List<Card> nonTens = validCards.stream()
             .filter(card -> card.getRank() != Card.Rank.TEN)
-            .findFirst()
-            .orElse(null);
+            .toList();
         
-        if (avoid10 == null) {
-            // Only have 10s - must play one (unlucky!)
-            return validCards.get(0);
-        }
+        List<Card> candidates = nonTens.isEmpty() ? validCards : nonTens;
         
-        // Now we have non-10 options. Choose strategically:
-        
-        // STRATEGY 1: Lead HIGH (Ace or King) to win tricks and capture points
-        // Aces and Kings are strong leads - likely to win the trick
-        Card highCard = validCards.stream()
+        // RULE 2: Lead HIGH (Ace or King) to win tricks and capture points
+        Card highCard = candidates.stream()
             .filter(card -> card.getRank() == Card.Rank.ACE || card.getRank() == Card.Rank.KING)
             .findFirst()
             .orElse(null);
         
         if (highCard != null) {
-            // Lead high to win points!
-            return highCard;
+            return highCard;  // Lead high to win!
         }
         
-        // STRATEGY 2: Lead LOW (2-9, not 10) to pass the lead
-        // This protects your valuable cards (like Jack of trumps!)
-        Card lowCard = validCards.stream()
-            .filter(card -> card.getRank() != Card.Rank.TEN &&
-                           card.getRank() != Card.Rank.QUEEN &&
-                           card.getRank() != Card.Rank.JACK)
+        // RULE 3: Lead LOW (2-9) to pass the lead and protect valuable cards
+        Card lowCard = candidates.stream()
+            .filter(card -> isWorthlessCard(card))
             .findFirst()
             .orElse(null);
         
         if (lowCard != null) {
-            // Lead low to pass the lead away
-            return lowCard;
+            return lowCard;  // Lead low to pass
         }
         
-        // STRATEGY 3: If only Queens or Jacks left (besides 10s), play them
-        // Avoid the 10 at all costs!
-        return avoid10;
+        // RULE 4: If only court cards left (Q, J), play them
+        // Better than holding them and risking losing them later
+        return candidates.get(0);
     }
     
     /**
      * Chooses a card to play when following (not leading).
      * 
-     * <p>Strategy:
-     * <ul>
-     *   <li>If following suit: Try to win with high cards, duck with low cards</li>
-     *   <li>If can't follow (discarding): Throw worthless cards first, save valuable cards</li>
-     *   <li>Trump strategically to win important tricks</li>
-     * </ul>
-     * </p>
+     * <p><strong>Follow Strategy:</strong></p>
+     * <ol>
+     *   <li>If can't follow suit: <strong>Discard worthless cards first</strong></li>
+     *   <li>If trick is valuable (10+ points): <strong>Try to win with lowest winning card</strong></li>
+     *   <li>If trick not valuable: <strong>Duck with worthless card</strong></li>
+     *   <li><strong>NEVER play Jack of trump</strong> unless trick worth 15+ points</li>
+     * </ol>
      * 
      * @param validCards cards we can legally play
      * @param game the game instance
@@ -141,30 +126,70 @@ public class SimpleAI {
             .anyMatch(card -> card.getSuit() == leadSuit);
         
         if (!canFollowSuit) {
-            // DISCARDING - we can't follow suit, so we're guaranteed to lose
-            // Throw away worthless cards first, save valuable cards for later!
+            // DISCARDING - we can't follow suit, guaranteed to lose
+            // Throw away worthless cards first!
             return chooseBestDiscard(validCards, trump);
         }
         
-        // We CAN follow suit - try to play smart
-        // For now: simple - just play first valid card
-        // TODO: Could be smarter - try to win with high cards, duck with low cards
-        return validCards.get(0);
+        // We CAN follow suit - play smartly
+        List<Card> followCards = validCards.stream()
+            .filter(card -> card.getSuit() == leadSuit)
+            .toList();
+        
+        // Calculate trick value
+        int trickValue = calculateTrickValue(game.getCurrentTrick());
+        
+        // Get current winning card
+        Card currentWinner = getCurrentWinningCard(game.getCurrentTrick(), trump);
+        
+        // CARDINAL RULE: Protect Jack of trump
+        Card jackOfTrump = followCards.stream()
+            .filter(card -> card.getSuit() == trump && card.getRank() == Card.Rank.JACK)
+            .findFirst()
+            .orElse(null);
+        
+        if (jackOfTrump != null) {
+            // Only play Jack if trick is worth 15+ points
+            if (trickValue < 15) {
+                List<Card> nonJackCards = followCards.stream()
+                    .filter(card -> !(card.getSuit() == trump && card.getRank() == Card.Rank.JACK))
+                    .toList();
+                
+                if (!nonJackCards.isEmpty()) {
+                    followCards = nonJackCards;  // Remove Jack from consideration
+                }
+            }
+        }
+        
+        // STRATEGY: Should we try to win this trick?
+        if (trickValue >= 10) {
+            // Trick is valuable - try to win it
+            Card lowestWinner = followCards.stream()
+                .filter(card -> canBeat(card, currentWinner, trump))
+                .min(Comparator.comparingInt(card -> card.getRank().getValue()))
+                .orElse(null);
+            
+            if (lowestWinner != null) {
+                return lowestWinner;  // Win with lowest winning card
+            }
+        }
+        
+        // Can't/won't win - DUCK with lowest VALUE card
+        return duckWithLowestValueCard(followCards);
     }
     
     /**
      * Chooses best card to discard when we can't follow suit.
      * 
-     * <p>Discard priority (best to worst):
+     * <p><strong>Discard Priority (best to worst):</strong></p>
      * <ol>
-     *   <li>Low non-point cards (2-9 of non-trump)</li>
-     *   <li>Queen (2 points, weak for leading)</li>
-     *   <li>10 (10 points, but less useful than court cards for leading)</li>
-     *   <li>King (3 points, GOOD for leading - try to save!)</li>
-     *   <li>Ace (4 points, GREAT for leading - definitely save!)</li>
-     *   <li>Jack of trump (NEVER discard if possible!)</li>
+     *   <li><strong>Worthless cards first</strong> (2-9 of non-trump) - NO POINTS</li>
+     *   <li><strong>Queen</strong> (2 points, weak lead)</li>
+     *   <li><strong>10</strong> (10 points hurts, but less useful than court cards)</li>
+     *   <li><strong>King</strong> (3 points, strong lead - try to save!)</li>
+     *   <li><strong>Ace</strong> (4 points, BEST lead - really want to save!)</li>
+     *   <li><strong>Jack of trump</strong> (LAST RESORT - never if possible!)</li>
      * </ol>
-     * </p>
      * 
      * @param validCards cards we can play
      * @param trump the trump suit
@@ -172,25 +197,18 @@ public class SimpleAI {
      */
     private static Card chooseBestDiscard(List<Card> validCards, Card.Suit trump) {
         
-        // PRIORITY 1: Low non-point cards (2-9) - completely worthless!
-        Card lowCard = validCards.stream()
-            .filter(card -> card.getSuit() != trump)  // Not trump
-            .filter(card -> {
-                Card.Rank rank = card.getRank();
-                return rank != Card.Rank.TEN && 
-                       rank != Card.Rank.JACK && 
-                       rank != Card.Rank.QUEEN && 
-                       rank != Card.Rank.KING && 
-                       rank != Card.Rank.ACE;
-            })
+        // PRIORITY 1: Worthless cards (2-9) of non-trump - ZERO POINTS
+        Card worthless = validCards.stream()
+            .filter(card -> card.getSuit() != trump)
+            .filter(SimpleAI::isWorthlessCard)
             .findFirst()
             .orElse(null);
         
-        if (lowCard != null) {
-            return lowCard;  // Throw away garbage!
+        if (worthless != null) {
+            return worthless;  // Perfect discard!
         }
         
-        // PRIORITY 2: Queen (only 2 points, weak lead)
+        // PRIORITY 2: Queen (only 2 points, weak for leading)
         Card queen = validCards.stream()
             .filter(card -> card.getRank() == Card.Rank.QUEEN)
             .filter(card -> card.getSuit() != trump)
@@ -201,7 +219,7 @@ public class SimpleAI {
             return queen;
         }
         
-        // PRIORITY 3: 10 (10 points hurts, but less useful for leading than King/Ace)
+        // PRIORITY 3: 10 (10 points hurts, but better than losing K or A)
         Card ten = validCards.stream()
             .filter(card -> card.getRank() == Card.Rank.TEN)
             .filter(card -> card.getSuit() != trump)
@@ -235,7 +253,136 @@ public class SimpleAI {
         }
         
         // LAST RESORT: Must throw trump or Jack of trump (ouch!)
-        // Just play first available - we're in trouble!
         return validCards.get(0);
+    }
+    
+    /**
+     * Ducks (plays low) with the lowest VALUE card.
+     * 
+     * <p>Prefers worthless cards (2-9) over point cards (10/J/Q/K/A).</p>
+     * 
+     * @param cards cards to choose from
+     * @return lowest value card
+     */
+    private static Card duckWithLowestValueCard(List<Card> cards) {
+        // FIRST: Try to find worthless card (2-9)
+        Card worthless = cards.stream()
+            .filter(SimpleAI::isWorthlessCard)
+            .min(Comparator.comparingInt(card -> card.getRank().getValue()))
+            .orElse(null);
+        
+        if (worthless != null) {
+            return worthless;  // Duck with garbage!
+        }
+        
+        // NO worthless cards - must sacrifice a point card
+        // Choose lowest POINT value (Q=2, K=3, A=4, 10=10, J=1)
+        return cards.stream()
+            .min(Comparator.comparingInt(card -> card.getRank().getPoints()))
+            .orElse(cards.get(0));
+    }
+    
+    /**
+     * Checks if a card is worthless (has no point value).
+     * 
+     * @param card the card to check
+     * @return true if card is 2-9 (worthless)
+     */
+    private static boolean isWorthlessCard(Card card) {
+        int value = card.getRank().getValue();
+        return value >= 2 && value <= 9;  // 2, 3, 4, 5, 6, 7, 8, 9
+    }
+    
+    /**
+     * Calculates total point value of cards in a trick.
+     * 
+     * @param trick the trick
+     * @return total points (Ace=4, King=3, Queen=2, Jack=1, Ten=10)
+     */
+    private static int calculateTrickValue(Trick trick) {
+        int value = 0;
+        for (Trick.CardPlay play : trick.getPlays()) {
+            value += play.card.getRank().getPoints();
+        }
+        return value;
+    }
+    
+    /**
+     * Determines the current winning card in a trick.
+     * 
+     * @param trick the trick
+     * @param trump the trump suit
+     * @return the currently winning card
+     */
+    private static Card getCurrentWinningCard(Trick trick, Card.Suit trump) {
+        if (trick.getPlays().isEmpty()) {
+            return null;
+        }
+        
+        Trick.CardPlay winner = trick.getPlays().get(0);
+        for (Trick.CardPlay play : trick.getPlays()) {
+            if (beats(play.card, winner.card, trick.getLeadSuit(), trump)) {
+                winner = play;
+            }
+        }
+        
+        return winner.card;
+    }
+    
+    /**
+     * Determines whether card1 beats card2.
+     * 
+     * @param card1 the first card
+     * @param card2 the second card
+     * @param leadSuit the lead suit
+     * @param trump the trump suit
+     * @return true if card1 beats card2
+     */
+    private static boolean beats(Card card1, Card card2, Card.Suit leadSuit, Card.Suit trump) {
+        // Trump beats non-trump
+        if (card1.getSuit() == trump && card2.getSuit() != trump) {
+            return true;
+        }
+        if (card2.getSuit() == trump && card1.getSuit() != trump) {
+            return false;
+        }
+        
+        // Both same suit (trump or lead) - higher rank wins
+        if (card1.getSuit() == card2.getSuit()) {
+            return card1.getRank().getValue() > card2.getRank().getValue();
+        }
+        
+        // Different suits, neither trump - can't beat
+        return false;
+    }
+    
+    /**
+     * Checks if our card can beat the current winner.
+     * 
+     * @param ourCard our card
+     * @param currentWinner the current winning card
+     * @param trump the trump suit
+     * @return true if our card can win
+     */
+    private static boolean canBeat(Card ourCard, Card currentWinner, Card.Suit trump) {
+        if (currentWinner == null) {
+            return true;  // We're first, we win by default
+        }
+        
+        // Trump beats non-trump
+        if (ourCard.getSuit() == trump && currentWinner.getSuit() != trump) {
+            return true;
+        }
+        if (currentWinner.getSuit() == trump && ourCard.getSuit() != trump) {
+            return false;
+        }
+        
+        // Same suit - higher rank wins
+        if (ourCard.getSuit() == currentWinner.getSuit()) {
+            return ourCard.getRank().getValue() > currentWinner.getRank().getValue();
+        }
+        
+        // Different suits - can't beat
+        return false;
     }
 }

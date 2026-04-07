@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Project Lombok - The Complete Guide</title>
+    <style>
+        @media print {
+            body { margin: 0.5in; }
+            pre, table { page-break-inside: avoid; }
+            h1, h2, h3 { page-break-after: avoid; }
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.7;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            color: #2c3e50;
+            background: #ffffff;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            border-bottom: 4px solid #3498db;
+            padding-bottom: 15px;
+            margin-top: 0;
+            font-size: 2.5em;
+        }
+        
+        h2 {
+            color: #34495e;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #95a5a6;
+            padding-bottom: 10px;
+            font-size: 2em;
+        }
+        
+        h3 {
+            color: #7f8c8d;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        p {
+            margin: 15px 0;
+        }
+        
+        code {
+            background: #ecf0f1;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', Consolas, monospace;
+            font-size: 0.9em;
+            color: #e74c3c;
+        }
+        
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        pre code {
+            background: none;
+            color: #ecf0f1;
+            padding: 0;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+        
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 25px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        th {
+            background: #3498db;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        td {
+            border: 1px solid #ddd;
+            padding: 12px 15px;
+        }
+        
+        tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        tr:hover {
+            background: #e8f4f8;
+        }
+        
+        ul, ol {
+            margin: 15px 0;
+            padding-left: 30px;
+        }
+        
+        li {
+            margin: 8px 0;
+        }
+        
+        blockquote {
+            border-left: 5px solid #3498db;
+            margin: 25px 0;
+            padding: 15px 25px;
+            background: #ecf0f1;
+            color: #555;
+            font-style: italic;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        
+        .toc {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px 30px;
+            margin: 30px 0;
+        }
+        
+        .toc h2 {
+            margin-top: 0;
+            border: none;
+        }
+        
+        .toc ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        
+        .toc li {
+            margin: 10px 0;
+        }
+        
+        .toc a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        
+        hr {
+            border: none;
+            border-top: 2px solid #dee2e6;
+            margin: 40px 0;
+        }
+        
+        .footer {
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 2px solid #dee2e6;
+            text-align: center;
+            color: #7f8c8d;
+        }
+        
+        @media screen {
+            .print-button {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #3498db;
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 16px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                z-index: 1000;
+            }
+            
+            .print-button:hover {
+                background: #2980b9;
+                box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+            }
+        }
+        
+        @media print {
+            .print-button { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-button" onclick="window.print()">🖨️ Print to PDF</button>
+    
+    <h1>📚 Project Lombok - The Complete Guide</h1>
+    
+    <div class="toc">
+        <h2>📖 Table of Contents</h2>
+        <ul>
+            <li><a href="#what-is">What is Lombok?</a></li>
+            <li><a href="#the-problem">The Problem Lombok Solves</a></li>
+            <li><a href="#annotations">Essential Lombok Annotations</a></li>
+            <li><a href="#setup">Adding Lombok to Your Project</a></li>
+            <li><a href="#examples">Real-World Examples</a></li>
+            <li><a href="#pros-cons">Pros and Cons</a></li>
+            <li><a href="#best-practices">Best Practices</a></li>
+            <li><a href="#pitfalls">Common Pitfalls</a></li>
+        </ul>
+    </div>
+    
+    <h2 id="what-is">🎯 What is Lombok?</h2>
+    
+    <p><strong>Project Lombok</strong> is a Java library that uses annotations to automatically generate common boilerplate code at compile time. Instead of writing repetitive getters, setters, constructors, and utility methods, you simply add annotations and Lombok generates the code for you.</p>
+    
+    <p><strong>Official Website:</strong> <a href="https://projectlombok.org/" target="_blank">https://projectlombok.org/</a></p>
+    
+    <hr>
+    
+    <h2 id="the-problem">🔧 The Problem Lombok Solves</h2>
+    
+    <h3>❌ Without Lombok (70+ lines):</h3>
+    
+    <pre><code>public class Member {
+    private Long id;
+    private String fullName;
+    private String email;
+    
+    // Constructor
+    public Member() {}
+    
+    public Member(Long id, String fullName, String email) {
+        this.id = id;
+        this.fullName = fullName;
+        this.email = email;
+    }
+    
+    // Getters
+    public Long getId() { return id; }
+    public String getFullName() { return fullName; }
+    public String getEmail() { return email; }
+    
+    // Setters
+    public void setId(Long id) { this.id = id; }
+    public void setFullName(String fullName) { this.fullName = fullName; }
+    public void setEmail(String email) { this.email = email; }
+    
+    // equals(), hashCode(), toString()
+    // ... another 30+ lines of boilerplate!
+}</code></pre>
+    
+    <h3>✅ With Lombok (10 lines):</h3>
+    
+    <pre><code>import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Member {
+    private Long id;
+    private String fullName;
+    private String email;
+}</code></pre>
+    
+    <p><strong>Result:</strong> Same functionality, 85% less code!</p>
+    
+    <hr>
+    
+    <h2 id="annotations">📝 Essential Lombok Annotations</h2>
+    
+    <h3>1. @Data - The Swiss Army Knife</h3>
+    
+    <p>Generates: getters, setters, toString(), equals(), hashCode(), and required args constructor</p>
+    
+    <pre><code>@Data
+public class Product {
+    private Long id;
+    private String name;
+    private Double price;
+}
+
+// Usage:
+Product p = new Product();
+p.setName("Laptop");
+p.setPrice(999.99);
+System.out.println(p.getName()); // Laptop
+System.out.println(p); // Product(id=null, name=Laptop, price=999.99)</code></pre>
+    
+    <h3>2. @Getter / @Setter - Fine-Grained Control</h3>
+    
+    <pre><code>public class User {
+    @Getter @Setter
+    private String username;
+    
+    @Getter              // Read-only
+    private String password;
+    
+    @Setter              // Write-only
+    private String token;
+}</code></pre>
+    
+    <h3>3. @NoArgsConstructor - Empty Constructor</h3>
+    
+    <pre><code>@NoArgsConstructor
+public class Member {
+    private String name;
+}
+
+// Generates: public Member() {}</code></pre>
+    
+    <h3>4. @AllArgsConstructor - Full Constructor</h3>
+    
+    <pre><code>@AllArgsConstructor
+public class Point {
+    private int x;
+    private int y;
+}
+
+// Usage: Point p = new Point(10, 20);</code></pre>
+    
+    <h3>5. @RequiredArgsConstructor - Smart Constructor</h3>
+    
+    <p>Perfect for dependency injection in Spring!</p>
+    
+    <pre><code>@Service
+@RequiredArgsConstructor  // Spring will inject via constructor
+public class MemberService {
+    private final MemberRepository memberRepository;
+    private final EmailService emailService;
+}</code></pre>
+    
+    <h3>6. @Builder - Fluent Object Creation</h3>
+    
+    <pre><code>@Builder
+public class Member {
+    private Long id;
+    private String fullName;
+    private String email;
+    private String phoneNumber;
+}
+
+// Usage:
+Member member = Member.builder()
+    .id(1L)
+    .fullName("Dale Smith")
+    .email("dale@willows.top")
+    .phoneNumber("555-1234")
+    .build();</code></pre>
+    
+    <h3>7. @Slf4j - Instant Logging</h3>
+    
+    <pre><code>@Slf4j
+public class MemberService {
+    
+    public void registerMember(Member member) {
+        log.info("Registering new member: {}", member.getEmail());
+        
+        try {
+            // ... business logic
+            log.debug("Member saved successfully");
+        } catch (Exception e) {
+            log.error("Failed to register member", e);
+        }
+    }
+}</code></pre>
+    
+    <h3>8. @Value - Immutable Objects</h3>
+    
+    <pre><code>@Value
+public class Point {
+    int x;
+    int y;
+}
+
+Point p = new Point(10, 20);
+// p.setX(5); // Compile error - no setters!</code></pre>
+    
+    <h3>9. @ToString - Debug-Friendly Output</h3>
+    
+    <pre><code>@ToString(exclude = {"password", "secretKey"})
+public class User {
+    private String username;
+    private String password;
+    private String secretKey;
+}
+
+System.out.println(user);
+// User(username=dale)</code></pre>
+    
+    <h3>10. @EqualsAndHashCode - Proper Object Comparison</h3>
+    
+    <pre><code>@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+public class User {
+    @EqualsAndHashCode.Include
+    private String email;  // Only email used for equals/hashCode
+    
+    private String name;
+    private int age;
+}</code></pre>
+    
+    <hr>
+    
+    <h2 id="setup">📦 Adding Lombok to Your Project</h2>
+    
+    <h3>Maven (pom.xml):</h3>
+    
+    <pre><code>&lt;dependencies&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;org.projectlombok&lt;/groupId&gt;
+        &lt;artifactId&gt;lombok&lt;/artifactId&gt;
+        &lt;version&gt;1.18.30&lt;/version&gt;
+        &lt;scope&gt;provided&lt;/scope&gt;
+    &lt;/dependency&gt;
+&lt;/dependencies&gt;</code></pre>
+    
+    <h3>Gradle (build.gradle):</h3>
+    
+    <pre><code>dependencies {
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+}</code></pre>
+    
+    <h3>IDE Setup:</h3>
+    
+    <p><strong>IntelliJ IDEA:</strong></p>
+    <ol>
+        <li>Install "Lombok Plugin" from marketplace</li>
+        <li>Enable annotation processing in Settings → Build → Compiler → Annotation Processors</li>
+    </ol>
+    
+    <p><strong>Eclipse:</strong></p>
+    <ol>
+        <li>Download <code>lombok.jar</code> from https://projectlombok.org/download</li>
+        <li>Run: <code>java -jar lombok.jar</code></li>
+        <li>Select Eclipse installation and click "Install/Update"</li>
+    </ol>
+    
+    <p><strong>VS Code:</strong></p>
+    <ol>
+        <li>Install "Language Support for Java" extension</li>
+        <li>Lombok support is built-in</li>
+    </ol>
+    
+    <hr>
+    
+    <h2 id="examples">💡 Real-World Examples</h2>
+    
+    <h3>Spring Boot Entity:</h3>
+    
+    <pre><code>@Entity
+@Table(name = "members")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Member {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(nullable = false)
+    private String fullName;
+    
+    @Column(nullable = false, unique = true)
+    private String email;
+    
+    @Builder.Default
+    private LocalDateTime registrationDate = LocalDateTime.now();
+    
+    @Builder.Default
+    private String status = "ACTIVE";
+}</code></pre>
+    
+    <h3>Spring Service:</h3>
+    
+    <pre><code>@Service
+@Slf4j
+@RequiredArgsConstructor
+public class MemberService {
+    
+    private final MemberRepository memberRepository;
+    private final EmailService emailService;
+    
+    public Member createMember(MemberDTO dto) {
+        log.info("Creating new member: {}", dto.getEmail());
+        
+        Member member = Member.builder()
+            .fullName(dto.getFullName())
+            .email(dto.getEmail())
+            .phoneNumber(dto.getPhoneNumber())
+            .build();
+        
+        return memberRepository.save(member);
+    }
+}</code></pre>
+    
+    <hr>
+    
+    <h2 id="pros-cons">⚖️ Pros and Cons</h2>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>✅ Advantages</th>
+                <th>❌ Disadvantages</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Reduces boilerplate by 50-80%</td>
+                <td>"Magic" code not visible in source</td>
+            </tr>
+            <tr>
+                <td>Fewer bugs (no typos in getters/setters)</td>
+                <td>IDE setup required</td>
+            </tr>
+            <tr>
+                <td>Easy refactoring</td>
+                <td>Learning curve for team</td>
+            </tr>
+            <tr>
+                <td>Consistent code patterns</td>
+                <td>Debugging challenges</td>
+            </tr>
+            <tr>
+                <td>Focus on business logic</td>
+                <td>Compile-time dependency</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <hr>
+    
+    <h2 id="best-practices">🎯 Best Practices</h2>
+    
+    <h3>1. Exclude Lazy Fields from toString/equals</h3>
+    
+    <pre><code>@ToString(exclude = {"lazyField"})
+@EqualsAndHashCode(exclude = {"lazyField"})
+@Entity
+public class MyEntity {
+    @OneToMany(fetch = FetchType.LAZY)
+    private List&lt;Child&gt; lazyField;
+}</code></pre>
+    
+    <h3>2. Use @Builder for Complex Objects</h3>
+    
+    <pre><code>// Much cleaner than constructor with 10 parameters!
+Member member = Member.builder()
+    .fullName("Dale Smith")
+    .email("dale@example.com")
+    .phoneNumber("555-1234")
+    .address("123 Main St")
+    .city("London")
+    .postcode("SW1A 1AA")
+    .isLeaseholder(true)
+    .preferredCommunication("EMAIL")
+    .build();</code></pre>
+    
+    <h3>3. Combine Annotations Wisely</h3>
+    
+    <pre><code>@Getter @Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@ToString
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+public class User {
+    @EqualsAndHashCode.Include
+    private String email;
+    private String name;
+    private String password;
+}</code></pre>
+    
+    <hr>
+    
+    <h2 id="pitfalls">🚫 Common Pitfalls</h2>
+    
+    <h3>1. Infinite Recursion with Bidirectional Relationships</h3>
+    
+    <pre><code>// PROBLEM: toString() causes infinite loop!
+@Data
+public class Parent {
+    private List&lt;Child&gt; children;
+}
+
+@Data
+public class Child {
+    private Parent parent;
+}
+
+// SOLUTION:
+@ToString(exclude = "children")
+public class Parent { ... }
+
+@ToString(exclude = "parent")
+public class Child { ... }</code></pre>
+    
+    <h3>2. @Builder with Inheritance</h3>
+    
+    <pre><code>// Use @SuperBuilder for inheritance
+@SuperBuilder
+public class Parent {
+    private String parentField;
+}
+
+@SuperBuilder
+public class Child extends Parent {
+    private String childField;
+}</code></pre>
+    
+    <hr>
+    
+    <h2>📊 When to Use Lombok</h2>
+    
+    <h3>✅ Great For:</h3>
+    <ul>
+        <li><strong>DTOs</strong> (Data Transfer Objects)</li>
+        <li><strong>Simple POJOs</strong> (Plain Old Java Objects)</li>
+        <li><strong>Value Objects</strong> (Immutable data holders)</li>
+        <li><strong>Spring Beans</strong> (Services with DI)</li>
+        <li><strong>JPA Entities</strong> (with caution)</li>
+    </ul>
+    
+    <h3>❌ Avoid For:</h3>
+    <ul>
+        <li><strong>Classes with complex logic</strong></li>
+        <li><strong>Public APIs/Libraries</strong> (consumers need Lombok too)</li>
+        <li><strong>Teams strongly opposed to "magic"</strong></li>
+        <li><strong>Legacy codebases</strong> (consistency matters)</li>
+    </ul>
+    
+    <hr>
+    
+    <h2>🎓 Configuration File</h2>
+    
+    <p>Create <code>lombok.config</code> in project root:</p>
+    
+    <pre><code># Make generated code cleaner
+lombok.addLombokGeneratedAnnotation = true
+
+# Configure builders
+lombok.builder.className = Builder
+lombok.singular.auto = true
+
+# Logging
+lombok.log.fieldName = logger
+lombok.log.fieldIsStatic = true
+
+# Stop bubbling
+config.stopBubbling = true
+
+# Add constructor properties
+lombok.anyConstructor.addConstructorProperties = true</code></pre>
+    
+    <hr>
+    
+    <h2>🎯 Summary</h2>
+    
+    <p><strong>Lombok is a powerful tool that:</strong></p>
+    <ul>
+        <li>✅ Reduces boilerplate by 50-80%</li>
+        <li>✅ Makes code cleaner and more maintainable</li>
+        <li>✅ Enforces consistency across projects</li>
+        <li>✅ Speeds up development</li>
+    </ul>
+    
+    <p><strong>But requires:</strong></p>
+    <ul>
+        <li>⚠️ IDE plugin installation</li>
+        <li>⚠️ Team buy-in and training</li>
+        <li>⚠️ Careful use with JPA entities</li>
+        <li>⚠️ Understanding of what code is generated</li>
+    </ul>
+    
+    <blockquote>
+        <p><strong>The Decision:</strong> Use it for new projects where team is on board. Skip it if team prefers explicit code. Both approaches are valid - choose what works for YOUR team!</p>
+    </blockquote>
+    
+    <div class="footer">
+        <p><strong>Written by Dale & Primus</strong></p>
+        <p>March 2026</p>
+        <p>🌳 Willows RTA Portal Development Team</p>
+    </div>
+    
+</body>
+</html>

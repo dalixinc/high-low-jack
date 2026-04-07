@@ -1,0 +1,239 @@
+═══════════════════════════════════════════════════════════════════════════════
+HIGH LOW JACK - DATABASE SETUP GUIDE
+═══════════════════════════════════════════════════════════════════════════════
+
+PHASE 1: LOCAL POSTGRESQL SETUP (Same server as RTA)
+═══════════════════════════════════════════════════════════════════════════════
+
+Step 1: Create Database and User
+───────────────────────────────────────────────────────────────────────────────
+
+Connect to PostgreSQL as postgres user:
+
+    psql -U postgres
+
+Then run these commands:
+
+    -- Create database
+    CREATE DATABASE highlowjack;
+    
+    -- Create user
+    CREATE USER highlowjack_user WITH PASSWORD 'your_secure_password_here';
+    
+    -- Grant privileges
+    GRANT ALL PRIVILEGES ON DATABASE highlowjack TO highlowjack_user;
+    
+    -- Connect to the database
+    \c highlowjack
+    
+    -- Grant schema privileges
+    GRANT ALL ON SCHEMA public TO highlowjack_user;
+    GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO highlowjack_user;
+    GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO highlowjack_user;
+    
+    -- Exit
+    \q
+
+───────────────────────────────────────────────────────────────────────────────
+
+Step 2: Run Schema Creation
+───────────────────────────────────────────────────────────────────────────────
+
+Run the schema.sql file:
+
+    psql -U highlowjack_user -d highlowjack -f schema.sql
+
+This will:
+- Create all tables
+- Add seed data (initial players)
+- Add Preezbob's signature quips
+- Create useful views
+
+───────────────────────────────────────────────────────────────────────────────
+
+Step 3: Verify Database Setup
+───────────────────────────────────────────────────────────────────────────────
+
+Connect to database:
+
+    psql -U highlowjack_user -d highlowjack
+
+Check tables:
+
+    \dt
+
+You should see:
+- achievements
+- match_participants
+- matches
+- personality_quips
+- players
+- round_details
+- set_details
+
+Check initial players:
+
+    SELECT name, signature_move FROM players;
+
+You should see:
+- Dale (The Strategist)
+- Primus (The Learner)
+- Preezbob (The Deuce Cutter)
+- Kreep (The Shadow)
+- Ewok (The Teacher)
+- The Ballie (The Wisdom Keeper)
+
+Check quips:
+
+    SELECT player_name, trigger_context, quip_text FROM personality_quips;
+
+Exit:
+
+    \q
+
+═══════════════════════════════════════════════════════════════════════════════
+
+PHASE 2: SPRING BOOT INTEGRATION
+═══════════════════════════════════════════════════════════════════════════════
+
+Step 1: Add Maven Dependencies
+───────────────────────────────────────────────────────────────────────────────
+
+Add to pom.xml (see POM_DEPENDENCIES.txt):
+- PostgreSQL driver
+- Spring Data JPA
+- Validation API
+- Jackson for JSON
+
+───────────────────────────────────────────────────────────────────────────────
+
+Step 2: Update Application Properties
+───────────────────────────────────────────────────────────────────────────────
+
+Copy application.properties settings and update:
+- spring.datasource.password with your actual password
+
+───────────────────────────────────────────────────────────────────────────────
+
+Step 3: Add Entity Classes
+───────────────────────────────────────────────────────────────────────────────
+
+Create package: com.dalegames.highlowjack.persistence.entity
+
+Add files:
+- Player.java (provided)
+
+───────────────────────────────────────────────────────────────────────────────
+
+Step 4: Add Repository Interfaces
+───────────────────────────────────────────────────────────────────────────────
+
+Create package: com.dalegames.highlowjack.persistence.repository
+
+Add files:
+- PlayerRepository.java (provided)
+
+───────────────────────────────────────────────────────────────────────────────
+
+Step 5: Add Service Layer
+───────────────────────────────────────────────────────────────────────────────
+
+Create package: com.dalegames.highlowjack.persistence.service
+
+Add files:
+- PlayerService.java (provided)
+
+───────────────────────────────────────────────────────────────────────────────
+
+Step 6: Test Database Connection
+───────────────────────────────────────────────────────────────────────────────
+
+Run Spring Boot application and check logs for:
+
+    HikariPool-1 - Start completed.
+    
+If you see connection errors:
+- Check PostgreSQL is running
+- Verify username/password in application.properties
+- Ensure database 'highlowjack' exists
+
+═══════════════════════════════════════════════════════════════════════════════
+
+PHASE 3: INTEGRATE WITH GAME CONTROLLER
+═══════════════════════════════════════════════════════════════════════════════
+
+Step 1: Inject PlayerService into Controller
+───────────────────────────────────────────────────────────────────────────────
+
+In HighLowJackController.java:
+
+    @Autowired
+    private PlayerService playerService;
+
+───────────────────────────────────────────────────────────────────────────────
+
+Step 2: Update Stats After Match
+───────────────────────────────────────────────────────────────────────────────
+
+In continueGame() after match winner detected:
+
+    // Update all player stats
+    if (game.isTeamMode()) {
+        for (Team team : game.getTeams()) {
+            for (String playerName : team.getPlayerNames()) {
+                boolean won = team.getName().equals(matchResult.getWinner());
+                int setsWon = matchResult.getFinalSetWins().getOrDefault(team.getName(), 0);
+                playerService.updateMatchStats(playerName, won, setsWon);
+            }
+        }
+    } else {
+        for (String playerName : game.getPlayerNames()) {
+            boolean won = playerName.equals(matchResult.getWinner());
+            int setsWon = matchResult.getFinalSetWins().getOrDefault(playerName, 0);
+            playerService.updateMatchStats(playerName, won, setsWon);
+        }
+    }
+
+───────────────────────────────────────────────────────────────────────────────
+
+Step 3: Track Points During Rounds
+───────────────────────────────────────────────────────────────────────────────
+
+In continueGame() after round scoring:
+
+    // Record point wins
+    for (String category : new String[]{"High", "Low", "Jack", "Game"}) {
+        String winner = results.getRoundPointWinner(category);
+        if (winner != null) {
+            // In team mode, record for actual player, not team
+            String playerName = game.isTeamMode() ? 
+                results.getRoundPointPlayer(category) : winner;
+            playerService.recordPoint(playerName, category);
+        }
+    }
+
+═══════════════════════════════════════════════════════════════════════════════
+
+PHASE 4: CREATE STATS DASHBOARD (NEXT)
+═══════════════════════════════════════════════════════════════════════════════
+
+We'll create:
+- /stats endpoint - Overall leaderboard
+- /stats/{playerName} - Individual player stats
+- /recent-matches - Match history
+- Stats display on match-winner screen
+
+═══════════════════════════════════════════════════════════════════════════════
+
+TESTING CHECKLIST
+═══════════════════════════════════════════════════════════════════════════════
+
+☐ PostgreSQL database created
+☐ Schema loaded successfully
+☐ Seed data visible
+☐ Spring Boot connects to database
+☐ PlayerService can fetch players
+☐ Stats update after match completion
+☐ Points recorded during rounds
+
+═══════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Match Winner - High Low Jack</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" th:href="@{/css/game.css}">
+    <style>
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-100vh) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+        
+        @keyframes trophy-spin {
+            0% {
+                transform: scale(0) rotate(0deg);
+            }
+            50% {
+                transform: scale(1.2) rotate(180deg);
+            }
+            100% {
+                transform: scale(1) rotate(360deg);
+            }
+        }
+        
+        @keyframes glow-pulse {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+            }
+            50% {
+                box-shadow: 0 0 40px rgba(255, 215, 0, 0.8), 0 0 60px rgba(255, 215, 0, 0.6);
+            }
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            top: -10px;
+            animation: confetti-fall 3s linear infinite;
+            z-index: 1;
+        }
+        
+        .confetti-gold { background: #ffd700; }
+        .confetti-red { background: #ff6b6b; }
+        .confetti-teal { background: #4ecdc4; }
+        .confetti-blue { background: #45b7d1; }
+        .confetti-green { background: #96ceb4; }
+        
+        .victory-container {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+        
+        .champion-banner {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 50%, #ffd700 100%);
+            border: 5px solid #fff;
+            border-radius: 30px;
+            padding: 60px 40px;
+            text-align: center;
+            max-width: 900px;
+            width: 100%;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+            animation: glow-pulse 2s infinite;
+        }
+        
+        .trophy-massive {
+            font-size: 120px;
+            animation: trophy-spin 1.5s ease-out;
+            display: block;
+            margin-bottom: 20px;
+        }
+        
+        .fanfare-text {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 20px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .champion-name {
+            font-size: 4rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 30px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .team-members {
+            font-size: 1.8rem;
+            color: #2c3e50;
+            margin: 20px 0;
+            font-style: italic;
+        }
+        
+        .match-final-score {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 30px 0;
+        }
+        
+        .set-history {
+            background: rgba(255,255,255,0.3);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            max-width: 700px;
+        }
+        
+        .set-history-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        
+        .set-row {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 20px;
+            padding: 15px;
+            margin: 10px 0;
+            background: rgba(255,255,255,0.5);
+            border-radius: 10px;
+            align-items: center;
+        }
+        
+        .set-number {
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: #667eea;
+        }
+        
+        .set-winner {
+            font-weight: bold;
+            color: #27ae60;
+        }
+        
+        .set-score {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .set-detail {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .statistics {
+            background: rgba(255,255,255,0.3);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            max-width: 700px;
+        }
+        
+        .stat-row {
+            display: grid;
+            grid-template-columns: 1fr auto auto auto auto;
+            gap: 15px;
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(255,255,255,0.5);
+            border-radius: 8px;
+            align-items: center;
+        }
+        
+        .stat-label {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .stat-value {
+            font-weight: bold;
+            color: #667eea;
+            text-align: center;
+            min-width: 50px;
+        }
+        
+        .play-again-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 25px 60px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-radius: 60px;
+            cursor: pointer;
+            margin-top: 40px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .play-again-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+        }
+        
+        .celebration-emoji {
+            font-size: 3rem;
+            display: inline-block;
+            animation: bounce 1s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Confetti animation - SIMPLIFIED to avoid Thymeleaf parsing issues -->
+    <div th:each="i : ${#numbers.sequence(1, 50)}" class="confetti"
+         th:classappend="${i % 5 == 0} ? 'confetti-gold' : (${i % 5 == 1} ? 'confetti-red' : (${i % 5 == 2} ? 'confetti-teal' : (${i % 5 == 3} ? 'confetti-blue' : 'confetti-green')))"
+         th:style="|left: ${i * 2}%; animation-delay: ${i * 0.1}s;|">
+    </div>
+    
+    <!-- Victory content -->
+    <div class="victory-container">
+        <div class="champion-banner">
+            <div class="trophy-massive">🏆</div>
+            
+            <div class="fanfare-text">
+                🎺 MATCH WINNER! 🎺
+            </div>
+            
+            <div class="celebration-emoji">⭐</div>
+            
+            <div class="champion-name" th:text="${matchResult.winner}">Champion</div>
+            
+            <!-- Team members if team mode -->
+            <div th:if="${game.isTeamMode()}" class="team-members">
+                <span th:each="team : ${game.teams}">
+                    <span th:if="${team.name == matchResult.winner}">
+                        <span th:text="${#strings.listJoin(team.playerNames, ' & ')}">Players</span>
+                    </span>
+                </span>
+            </div>
+            
+            <div class="celebration-emoji">⭐</div>
+            
+            <div class="match-final-score">
+                Won the Match 
+                <span th:text="${matchResult.getMatchScore(
+                    matchResult.winner,
+                    game.isTeamMode() ? 
+                        (game.teams[0].name == matchResult.winner ? game.teams[1].name : game.teams[0].name) :
+                        (game.playerNames[0] == matchResult.winner ? game.playerNames[1] : game.playerNames[0])
+                )}">2-0</span>!
+            </div>
+            
+            <div style="font-size: 1.2rem; color: #2c3e50; margin: 20px 0;">
+                <span th:text="${matchResult.matchType.displayName}">Match Type</span>
+            </div>
+        </div>
+		
+		<!-- ═══════════════════════════════════════════════════════════════ -->
+		<!-- MATCH QUIPS DISPLAY -->
+		<!-- ═══════════════════════════════════════════════════════════════ -->
+		<div th:if="${matchQuips != null and !matchQuips.empty}" 
+		     style="background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+		            border-radius: 20px;
+		            padding: 30px 40px;
+		            margin: 30px auto;
+		            max-width: 900px;
+		            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+		            animation: quipSlideIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);">
+		    
+		    <div style="text-align: center; font-size: 3rem; margin-bottom: 20px;">🏆</div>
+		    
+		    <div th:each="quip : ${matchQuips}" 
+		         style="background: white;
+		                color: #2c3e50;
+		                padding: 25px 35px;
+		                border-radius: 15px;
+		                margin: 15px 0;
+		                box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+		                font-size: 1.5rem;
+		                font-weight: bold;
+		                font-style: italic;
+		                text-align: center;
+		                border: 3px solid #ffd700;"
+		         th:text="${quip}">
+		        Match quip here
+		    </div>
+		</div>
+
+		<style>
+		    @keyframes quipSlideIn {
+		        from { 
+		            opacity: 0; 
+		            transform: translateY(-50px) scale(0.8); 
+		        }
+		        to { 
+		            opacity: 1; 
+		            transform: translateY(0) scale(1); 
+		        }
+		    }
+		</style>
+        
+        <!-- Set History -->
+        <div class="set-history">
+            <div class="set-history-title">📊 Set History</div>
+            
+            <div th:each="summary : ${matchResult.setSummaries}" class="set-row">
+                <div class="set-number">
+                    Set <span th:text="${summary.setNumber}">1</span>
+                </div>
+                
+                <div>
+                    <div class="set-winner" th:text="${summary.winner}">Winner</div>
+                    <div class="set-detail">
+                        Won with <span th:text="${summary.winningPoint}">High</span>
+                        <span th:if="${summary.wasTiebreaker()}">⚡ Tiebreaker!</span>
+                    </div>
+                </div>
+                
+                <div class="set-score" th:text="${summary.getScoreDisplay(
+                    game.isTeamMode() ? game.teams[0].name : game.playerNames[0],
+                    game.isTeamMode() ? game.teams[1].name : game.playerNames[1]
+                )}">11-8</div>
+            </div>
+        </div>
+        
+        <!-- Match Statistics -->
+        <div class="statistics">
+            <div class="set-history-title">🏅 Match Statistics</div>
+            
+            <div class="stat-row" style="background: rgba(102, 126, 234, 0.2); font-weight: bold;">
+                <div class="stat-label">Player/Team</div>
+                <div class="stat-value">⬆️ High</div>
+                <div class="stat-value">⬇️ Low</div>
+                <div class="stat-value">💎 Jack</div>
+                <div class="stat-value">🎯 Game</div>
+            </div>
+            
+            <div th:each="entry : ${matchResult.allStats}" class="stat-row">
+                <div class="stat-label" th:text="${entry.key}">Player</div>
+                <div class="stat-value" th:text="${entry.value.totalHighs}">0</div>
+                <div class="stat-value" th:text="${entry.value.totalLows}">0</div>
+                <div class="stat-value" th:text="${entry.value.totalJacks}">0</div>
+                <div class="stat-value" th:text="${entry.value.totalGames}">0</div>
+            </div>
+        </div>
+        
+        <!-- Play Again -->
+        <form th:action="@{/highlowjack/setup}" method="get">
+            <button type="submit" class="play-again-button">
+                🎮 Play Again
+            </button>
+        </form>
+        
+        <div style="margin-top: 30px; color: rgba(255,255,255,0.7); font-size: 1.2rem;">
+            🎉 CHAMPIONS! 🎉
+        </div>
+    </div>
+    
+    <!-- Victory fanfare sound 
+    <audio id="fanfare" autoplay>
+        <source th:src="@{/sounds/victory-fanfare.mp3}" type="audio/mpeg">
+    </audio>
+    
+    <script>
+        // Play fanfare on load
+        window.addEventListener('load', function() {
+            var audio = document.getElementById('fanfare');
+            if (audio) {
+                audio.play().catch(function(error) {
+                    console.log('Auto-play prevented:', error);
+                });
+            }
+        });
+    </script> -->
+
+        <!-- Victory fanfare synthesizer -->
+    <script th:src="@{/js/victory-fanfare.js}"></script>
+    
+    <script>
+        // Play epic synthesized fanfare on load!
+        window.addEventListener('load', function() {
+            // Small delay to ensure everything is loaded
+            setTimeout(function() {
+                const fanfare = new VictoryFanfare();
+                fanfare.play();
+            }, 300);
+        });
+    </script>
+</body>
+</html>

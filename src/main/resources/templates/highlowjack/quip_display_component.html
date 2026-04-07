@@ -1,0 +1,100 @@
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- QUIP DISPLAY COMPONENT - Add to game.html, set-winner.html, match-winner.html -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+
+<style>
+.quip-container {
+    background: linear-gradient(135deg, #f39c12 0%, #e74c3c 100%);
+    border-radius: 15px;
+    padding: 20px 30px;
+    margin: 20px 0;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    animation: quipSlideIn 0.5s ease-out;
+}
+
+.quip-icon {
+    font-size: 2rem;
+    margin-right: 15px;
+}
+
+.quip-text {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    display: inline-block;
+}
+
+.quip-bubble {
+    background: white;
+    color: #2c3e50;
+    padding: 15px 25px;
+    border-radius: 10px;
+    margin: 10px 0;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    font-size: 1.2rem;
+    font-style: italic;
+}
+
+@keyframes quipSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+</style>
+
+<!-- FOR GAME.HTML - Round Quips (after round results) -->
+<div th:if="${quips != null and !quips.empty}" class="quip-container">
+    <div class="quip-icon">🎭</div>
+    <div style="display: inline-block; vertical-align: top; width: calc(100% - 80px);">
+        <div th:each="quip : ${quips}" class="quip-bubble" th:text="${quip}">
+            Quip text here
+        </div>
+    </div>
+</div>
+
+<!-- FOR SET-WINNER.HTML - Set Quips -->
+<div th:if="${setQuips != null and !setQuips.empty}" class="quip-container">
+    <div class="quip-icon">💬</div>
+    <div style="display: inline-block; vertical-align: top; width: calc(100% - 80px);">
+        <div th:each="quip : ${setQuips}" class="quip-bubble" th:text="${quip}">
+            Set quip here
+        </div>
+    </div>
+</div>
+
+<!-- FOR MATCH-WINNER.HTML - Match Quips -->
+<div th:if="${matchQuips != null and !matchQuips.empty}" 
+     style="max-width: 900px; margin: 30px auto;">
+    <div class="quip-container">
+        <div class="quip-icon">🏆</div>
+        <div style="display: inline-block; vertical-align: top; width: calc(100% - 80px);">
+            <div th:each="quip : ${matchQuips}" class="quip-bubble" th:text="${quip}">
+                Match quip here
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- PLACEMENT INSTRUCTIONS -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+
+<!-- 
+game.html: 
+    Add after round results display (around line 400-500)
+    Place right before the "Continue" button
+    
+set-winner.html:
+    Add after the winner announcement (around line 100-150)
+    Place before the "Next Set" button
+    
+match-winner.html:
+    Add after the champion banner (around line 280-320)
+    Place before the set history section
+-->

@@ -150,6 +150,23 @@ public class PlayerService {
     }
     
     /**
+     * Records a cut ceremony result for a player (for human players only).
+     * @param playerName the player who cut
+     * @param rank the rank of the card they cut (e.g. "ACE", "TWO")
+     * @param won true if this player won the cut
+     */
+    public void recordCut(String playerName, String rank, boolean won) {
+        try {
+            Player player = getOrCreatePlayer(playerName);
+            boolean cutAnAce = "ACE".equals(rank);
+            player.recordCutResult(cutAnAce, won);
+            playerRepository.save(player);
+        } catch (Exception e) {
+            System.err.println("⚠️ Could not record cut stat for " + playerName + ": " + e.getMessage());
+        }
+    }
+
+    /**
      * Records Ace of Spades being played.
      */
     public void recordAceSpadesPlayed(String playerName) {
@@ -179,7 +196,9 @@ public class PlayerService {
             player.setLongestWinStreak(0);
             player.setTotalTwosCut(0);
             player.setTotalAceSpadesPlayed(0);
-            
+            player.setTotalAcesCut(0);
+            player.setTotalCutsWon(0);
+
             playerRepository.save(player);
         }
     }

@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import com.dalegames.highlowjack.SimpleAI;
 import com.dalegames.highlowjack.engine.GameEngine;
 import com.dalegames.highlowjack.model.Card;
+import com.dalegames.highlowjack.model.Deck;
 import com.dalegames.highlowjack.model.Game;
 import com.dalegames.highlowjack.model.GameSetup;
 import com.dalegames.highlowjack.model.Hand;
@@ -70,14 +71,16 @@ public class HighLowJackController {
         }
         
         Game game = (Game) session.getAttribute("hlj_game");
-        
-        // Setup exists but no game - create new game
+
         if (game == null) {
-            game = new Game(setup);
-            game.dealCards();
-            session.setAttribute("hlj_game", game);
+            return "redirect:/highlowjack/setup";
         }
-        
+
+        // If game hasn't started yet, go through cut ceremony first
+        if (game.getState() == Game.GameState.NOT_STARTED) {
+            return "redirect:/highlowjack/cut";
+        }
+
         // Match is over — send all players to the winner page
         if (game.getState() == Game.GameState.MATCH_COMPLETE) {
             return "redirect:/highlowjack/match-winner";
@@ -316,12 +319,16 @@ public class HighLowJackController {
         session.setAttribute("hlj_setup", setup);
         session.removeAttribute("hlj_game");
         session.removeAttribute("hlj_clearTrick");
-        
-     // ADD THIS - Create match tracker
+
+        // Create match tracker
         Match match = new Match(matchType);
         session.setAttribute("hlj_match", match);
-        
-        return "redirect:/highlowjack";
+
+        // Create game (NOT_STARTED — cut ceremony will deal the cards)
+        Game game = new Game(setup);
+        session.setAttribute("hlj_game", game);
+
+        return "redirect:/highlowjack/cut";
     }
     
     @PostMapping("/play")
@@ -930,25 +937,220 @@ public class HighLowJackController {
     public String startNextSet(HttpSession session) {
         Game game = (Game) session.getAttribute("hlj_game");
         Match match = (Match) session.getAttribute("hlj_match");
-        
+
         if (game == null || match == null) {
             return "redirect:/highlowjack/setup";
         }
-        
-        // Reset game for new set (clears scores, tricks, rounds)
-        game.startNewSet();
+
+        // Prepare for new set (reset scores, increment set number) WITHOUT dealing cards.
+        // The cut ceremony (GET /cut) will deal when done.
+        game.prepareForNewSet();
         session.setAttribute("hlj_game", game);
-        
-        // Reset round counter
-        session.setAttribute("hlj_roundNumber", 1);
-        
-        System.out.println("🎮 Starting Set " + match.getCurrentSetNumber());
-        
+
+        System.out.println("🎮 Preparing Set " + game.getCurrentSetNumber() + " — going to cut ceremony");
+
+        return "redirect:/highlowjack/cut";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CUT CEREMONY
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Shows the cut ceremony page.
+     * Controller sees player selectors; non-controllers see a waiting screen.
+     */
+    @GetMapping("/cut")
+    public String showCut(Model model, HttpSession session) {
+        Game game = (Game) session.getAttribute("hlj_game");
+        GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
+
+        if (game == null || setup == null) {
+            return "redirect:/highlowjack/setup";
+        }
+
+        // Determine if this session is the controller
+        String sessionPlayerName = (String) session.getAttribute("hlj_playerName");
+        boolean isController;
+        if (sessionPlayerName != null) {
+            // Multiplayer: controller is whoever has isController flag in setup
+            isController = setup.getPlayers().stream()
+                .filter(p -> p.getName().equals(sessionPlayerName))
+                .anyMatch(PlayerInfo::isController);
+        } else {
+            isController = true;  // Single-player session
+        }
+
+        // Build cutter candidate lists for team vs individual mode
+        List<String> team1Options = new ArrayList<>();
+        List<String> team2Options = new ArrayList<>();
+
+        List<String> names = game.getPlayerNames();
+
+        if (setup.isTeamMode()) {
+            // Team 1: players 0 & 2 (North/South); Team 2: players 1 & 3 (East/West)
+            team1Options.add(names.get(0));
+            team1Options.add(names.get(2));
+            team2Options.add(names.get(1));
+            team2Options.add(names.get(3));
+        } else {
+            // Individual: any two players — put all in both lists; JS prevents same selection
+            team1Options.addAll(names);
+            team2Options.addAll(names);
+        }
+
+        // Suggest defaults based on cutter rotation from last set
+        String suggestedCutter1 = resolveSuggestedCutter(game, setup, 1, team1Options);
+        String suggestedCutter2 = resolveSuggestedCutter(game, setup, 2, team2Options);
+
+        // Pre-compute card image paths so template doesn't need complex Thymeleaf expressions
+        if (game.getCutCard1() != null) {
+            model.addAttribute("cutCard1Image", CardImageHelper.getCardImage(game.getCutCard1()));
+            model.addAttribute("cutCard2Image", CardImageHelper.getCardImage(game.getCutCard2()));
+            model.addAttribute("cutCard1Label", cardLabel(game.getCutCard1()));
+            model.addAttribute("cutCard2Label", cardLabel(game.getCutCard2()));
+        }
+
+        model.addAttribute("game", game);
+        model.addAttribute("setup", setup);
+        model.addAttribute("isController", isController);
+        model.addAttribute("team1Options", team1Options);
+        model.addAttribute("team2Options", team2Options);
+        model.addAttribute("suggestedCutter1", suggestedCutter1);
+        model.addAttribute("suggestedCutter2", suggestedCutter2);
+        model.addAttribute("isTeamMode", setup.isTeamMode());
+
+        return "highlowjack/cut-ceremony";
+    }
+
+    private String resolveSuggestedCutter(Game game, GameSetup setup, int slot, List<String> options) {
+        int lastIdx = (slot == 1) ? game.getLastCutter1Index() : game.getLastCutter2Index();
+        if (lastIdx < 0 || options.isEmpty()) return options.isEmpty() ? null : options.get(0);
+        // Rotate within the option list
+        String lastName = game.getPlayerNames().get(lastIdx);
+        int posInOptions = options.indexOf(lastName);
+        if (posInOptions < 0) return options.get(0);
+        return options.get((posInOptions + 1) % options.size());
+    }
+
+    /**
+     * Performs the cut: draws one card for each cutter and determines the winner.
+     * Controller-only POST. Supports "random" cutter selection.
+     */
+    @PostMapping("/cut")
+    public String performCut(
+            @RequestParam(required = false) String cutter1,
+            @RequestParam(required = false) String cutter2,
+            @RequestParam(required = false, defaultValue = "false") boolean random,
+            HttpSession session) {
+
+        Game game = (Game) session.getAttribute("hlj_game");
+        GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
+
+        if (game == null || setup == null) return "redirect:/highlowjack/setup";
+
+        List<String> names = game.getPlayerNames();
+
+        if (random || cutter1 == null || cutter2 == null) {
+            // Random selection
+            if (setup.isTeamMode()) {
+                // One from each team
+                boolean flip = Math.random() < 0.5;
+                cutter1 = flip ? names.get(0) : names.get(2);
+                cutter2 = (Math.random() < 0.5) ? names.get(1) : names.get(3);
+            } else {
+                // Any two different players
+                names = new ArrayList<>(names);
+                java.util.Collections.shuffle(names);
+                cutter1 = names.get(0);
+                cutter2 = names.get(1);
+                names = game.getPlayerNames(); // restore
+            }
+        }
+
+        // Draw one card each from a fresh shuffled deck
+        Deck cutDeck = new Deck();
+        cutDeck.shuffle();
+        Card card1 = cutDeck.dealHand(1).get(0);
+        Card card2 = cutDeck.dealHand(1).get(0);
+
+        game.setCutPlayer1(cutter1);
+        game.setCutPlayer2(cutter2);
+        game.setCutCard1(card1);
+        game.setCutCard2(card2);
+
+        int rank1 = card1.getRank().getValue();
+        int rank2 = card2.getRank().getValue();
+
+        if (rank1 == rank2) {
+            // Tied — cut again
+            game.setCutTied(true);
+            game.setCutWinner(null);
+        } else {
+            game.setCutTied(false);
+            String winner = (rank1 > rank2) ? cutter1 : cutter2;
+            game.setCutWinner(winner);
+
+            // Set pitcher to the winner
+            int winnerIndex = game.getPlayerNames().indexOf(winner);
+            game.setPitcherIndex(winnerIndex);
+
+            // Track cutter indices for next-set rotation
+            game.setLastCutter1Index(game.getPlayerNames().indexOf(cutter1));
+            game.setLastCutter2Index(game.getPlayerNames().indexOf(cutter2));
+
+            // Record stats (human players only — AI don't have DB records)
+            recordCutStats(cutter1, card1, rank1 > rank2, setup);
+            recordCutStats(cutter2, card2, rank2 > rank1, setup);
+        }
+
+        session.setAttribute("hlj_game", game);
+        return "redirect:/highlowjack/cut";
+    }
+
+    private void recordCutStats(String playerName, Card card, boolean won, GameSetup setup) {
+        boolean isHuman = setup.isHumanPlayer(playerName);
+        if (isHuman) {
+            try {
+                playerService.recordCut(playerName, card.getRank().name(), won);
+                if (card.getRank() == Card.Rank.TWO) {
+                    playerService.recordTwoCut(playerName);
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ Error recording cut stat for " + playerName + ": " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Controller clicks "Start Game" after the cut winner is determined.
+     * Deals the cards and starts the game.
+     */
+    @PostMapping("/cut/complete")
+    public String completeCut(HttpSession session) {
+        Game game = (Game) session.getAttribute("hlj_game");
+
+        if (game == null) return "redirect:/highlowjack/setup";
+
+        game.dealCards();
+        game.clearCutState();
+        session.setAttribute("hlj_game", game);
+
         return "redirect:/highlowjack";
     }
 
     // Helper methods
     
+    private String cardLabel(Card card) {
+        if (card == null) return "";
+        String rank = card.getRank().name();
+        String suit = card.getSuit().name();
+        // Capitalise first letter only
+        rank = rank.charAt(0) + rank.substring(1).toLowerCase();
+        suit = suit.charAt(0) + suit.substring(1).toLowerCase();
+        return rank + " of " + suit;
+    }
+
     private boolean isCurrentPlayerHuman(Game game, GameSetup setup) {
         String currentPlayer = game.getCurrentPlayer();
         return setup.isHumanPlayer(currentPlayer);

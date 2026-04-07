@@ -85,10 +85,9 @@ public class MultiplayerController {
             // Save setup to session for later use
             session.setAttribute("hlj_setup", setup);
             
-            // Create new game
+            // Create new game (NOT_STARTED — cut ceremony will deal the cards)
             Game game = new Game(setup);
-            game.dealCards();
-            
+
             // Create and register multiplayer game
             MultiplayerGame mpGame = gameRegistry.createGame(game, setup);
             String joinCode = mpGame.getJoinCode();
@@ -376,9 +375,9 @@ public class MultiplayerController {
         session.removeAttribute("mp_position");
         session.removeAttribute("mp_playerName");
 
-        System.out.println("🚀 Host starting multiplayer game: " + code);
-        
-        return "redirect:/highlowjack";
+        System.out.println("🚀 Host starting multiplayer game: " + code + " — going to cut ceremony");
+
+        return "redirect:/highlowjack/cut";
     }
     
     /**
@@ -422,9 +421,9 @@ public class MultiplayerController {
         session.removeAttribute("mp_position");
         session.removeAttribute("mp_playerName");
         
-        System.out.println("🚀 Player joined game: position " + position);
-        
-        return "redirect:/highlowjack";
+        System.out.println("🚀 Player joined game: position " + position + " — going to cut ceremony");
+
+        return "redirect:/highlowjack/cut";
     }
 }  
     /**

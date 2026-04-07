@@ -309,24 +309,27 @@
             <div th:if="${!players.isEmpty()}">
                 <h2 style="font-size: 2rem; color: #2c3e50; margin-bottom: 20px;">📊 Player Leaderboard</h2>
                 
-                <table class="leaderboard-table">
+                <table class="leaderboard-table" id="playerTable">
                     <thead>
                         <tr>
-                            <th style="width: 60px;">#</th>
-                            <th>Player</th>
-                            <th style="text-align: center;">Matches</th>
-                            <th style="text-align: center;">Wins</th>
-                            <th style="text-align: center;">Win %</th>
-                            <th style="text-align: center;">⬆️ High</th>
-                            <th style="text-align: center;">⬇️ Low</th>
-                            <th style="text-align: center;">💎 Jack</th>
-                            <th style="text-align: center;">🎯 Game</th>
-                            <th style="text-align: center;">🔥 Streak</th>
+                            <th style="width: 60px;" data-col="0" data-type="num" class="sortable">#</th>
+                            <th data-col="1" data-type="str" class="sortable">Player</th>
+                            <th style="text-align: center;" data-col="2" data-type="num" class="sortable">Matches</th>
+                            <th style="text-align: center;" data-col="3" data-type="num" class="sortable">Wins</th>
+                            <th style="text-align: center;" data-col="4" data-type="num" class="sortable">Win %</th>
+                            <th style="text-align: center;" data-col="5" data-type="num" class="sortable">⬆️ High</th>
+                            <th style="text-align: center;" data-col="6" data-type="num" class="sortable">⬇️ Low</th>
+                            <th style="text-align: center;" data-col="7" data-type="num" class="sortable">💎 Jack</th>
+                            <th style="text-align: center;" data-col="8" data-type="num" class="sortable">🎯 Game</th>
+                            <th style="text-align: center;" data-col="9" data-type="num" class="sortable">🔥 Streak</th>
+                            <th style="text-align: center;" data-col="10" data-type="num" class="sortable">🂡 Aces Cut</th>
+                            <th style="text-align: center;" data-col="11" data-type="num" class="sortable">✂️ Cuts Won</th>
+                            <th style="text-align: center;" data-col="12" data-type="num" class="sortable">😬 2s Cut</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr th:each="player, iterStat : ${players}">
-                            <td class="rank" 
+                            <td class="rank"
                                 th:classappend="${iterStat.index == 0} ? 'rank-1' : (${iterStat.index == 1} ? 'rank-2' : (${iterStat.index == 2} ? 'rank-3' : ''))"
                                 th:text="${iterStat.index + 1}">1</td>
                             <td>
@@ -335,7 +338,7 @@
                             </td>
                             <td class="stat-value" th:text="${player.totalMatchesPlayed}">0</td>
                             <td class="stat-value" th:text="${player.totalMatchesWon}">0</td>
-                            <td class="stat-value">
+                            <td class="stat-value" th:attr="data-sort=${player.winPercentage}">
                                 <span class="win-percentage"
                                       th:classappend="${player.winPercentage >= 60} ? 'percentage-high' : (${player.winPercentage >= 40} ? 'percentage-mid' : 'percentage-low')"
                                       th:text="${#numbers.formatDecimal(player.winPercentage, 1, 1)} + '%'">0%</span>
@@ -344,12 +347,15 @@
                             <td class="stat-value" th:text="${player.lowsWon}">0</td>
                             <td class="stat-value" th:text="${player.jacksWon}">0</td>
                             <td class="stat-value" th:text="${player.gamesWon}">0</td>
-                            <td class="stat-value">
-                                <span th:if="${player.currentWinStreak > 0}" 
+                            <td class="stat-value" th:attr="data-sort=${player.currentWinStreak}">
+                                <span th:if="${player.currentWinStreak > 0}"
                                       class="streak-badge"
                                       th:text="${player.currentWinStreak}">0</span>
                                 <span th:if="${player.currentWinStreak == 0}">-</span>
                             </td>
+                            <td class="stat-value" th:text="${player.totalAcesCut > 0 ? player.totalAcesCut : '-'}" th:attr="data-sort=${player.totalAcesCut}">-</td>
+                            <td class="stat-value" th:text="${player.totalCutsWon > 0 ? player.totalCutsWon : '-'}" th:attr="data-sort=${player.totalCutsWon}">-</td>
+                            <td class="stat-value" th:text="${player.totalTwosCut > 0 ? player.totalTwosCut : '-'}" th:attr="data-sort=${player.totalTwosCut}">-</td>
                         </tr>
                     </tbody>
                 </table>
@@ -424,19 +430,23 @@
         </div>
     </div>
     
+    <style>
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+        th.sortable:hover {
+            background: rgba(102, 126, 234, 0.15);
+        }
+        th.sort-asc::after  { content: ' ▲'; font-size: 0.7em; opacity: 0.8; }
+        th.sort-desc::after { content: ' ▼'; font-size: 0.7em; opacity: 0.8; }
+    </style>
+
     <script>
         function switchTab(tab) {
-            // Hide all tabs
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            
-            // Deactivate all buttons
-            document.querySelectorAll('.tab-button').forEach(button => {
-                button.classList.remove('active');
-            });
-            
-            // Show selected tab
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
             if (tab === 'players') {
                 document.getElementById('playersTab').classList.add('active');
                 event.target.classList.add('active');
@@ -445,6 +455,70 @@
                 event.target.classList.add('active');
             }
         }
+
+        // ── Sortable table ──────────────────────────────────────────────────
+        (function () {
+            const table = document.getElementById('playerTable');
+            if (!table) return;
+
+            let lastCol = -1;
+            let ascending = false;
+
+            table.querySelectorAll('th.sortable').forEach(th => {
+                th.addEventListener('click', () => {
+                    const col = parseInt(th.dataset.col);
+                    const type = th.dataset.type;
+
+                    // Toggle direction if same column, otherwise default desc
+                    ascending = (col === lastCol) ? !ascending : false;
+                    lastCol = col;
+
+                    // Update header indicators
+                    table.querySelectorAll('th.sortable').forEach(h => {
+                        h.classList.remove('sort-asc', 'sort-desc');
+                    });
+                    th.classList.add(ascending ? 'sort-asc' : 'sort-desc');
+
+                    // Sort rows
+                    const tbody = table.tBodies[0];
+                    const rows = Array.from(tbody.rows);
+
+                    rows.sort((a, b) => {
+                        const cellA = a.cells[col];
+                        const cellB = b.cells[col];
+
+                        // Use data-sort attribute if present (for cells with badges/spans)
+                        let valA = cellA.dataset.sort !== undefined
+                            ? parseFloat(cellA.dataset.sort)
+                            : getCellValue(cellA, type);
+                        let valB = cellB.dataset.sort !== undefined
+                            ? parseFloat(cellB.dataset.sort)
+                            : getCellValue(cellB, type);
+
+                        if (type === 'str') {
+                            return ascending
+                                ? String(valA).localeCompare(String(valB))
+                                : String(valB).localeCompare(String(valA));
+                        }
+                        return ascending ? valA - valB : valB - valA;
+                    });
+
+                    rows.forEach(r => tbody.appendChild(r));
+
+                    // Re-number the rank column
+                    tbody.querySelectorAll('tr').forEach((r, i) => {
+                        const rankCell = r.cells[0];
+                        rankCell.textContent = i + 1;
+                        rankCell.className = 'rank' + (i === 0 ? ' rank-1' : i === 1 ? ' rank-2' : i === 2 ? ' rank-3' : '');
+                    });
+                });
+            });
+
+            function getCellValue(cell, type) {
+                const raw = cell.innerText.trim().replace('%', '').replace('-', '0');
+                return type === 'num' ? parseFloat(raw) || 0 : raw;
+            }
+        })();
     </script>
 </body>
 </html>

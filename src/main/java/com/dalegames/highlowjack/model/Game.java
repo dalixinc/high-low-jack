@@ -63,6 +63,16 @@ public class Game implements Serializable{
     private List<String> pendingRealtimeQuips;     // Realtime event quips; shown to all humans then cleared
     private long realtimeQuipTimestamp;            // Epoch ms when quips were set; cleared after 6s
 
+    // Cut ceremony state (shared across sessions; cleared once dealing begins)
+    private String cutPlayer1;
+    private String cutPlayer2;
+    private Card cutCard1;
+    private Card cutCard2;
+    private String cutWinner;
+    private boolean cutTied;
+    private int lastCutter1Index = -1;  // For suggesting next-set cutter rotation
+    private int lastCutter2Index = -1;
+
     /**
      * Constructs a new game with the specified game setup.
      * 
@@ -117,6 +127,14 @@ public class Game implements Serializable{
         this.pendingMatchQuips = null;
         this.pendingRealtimeQuips = null;
         this.realtimeQuipTimestamp = 0;
+        this.cutPlayer1 = null;
+        this.cutPlayer2 = null;
+        this.cutCard1 = null;
+        this.cutCard2 = null;
+        this.cutWinner = null;
+        this.cutTied = false;
+        this.lastCutter1Index = -1;
+        this.lastCutter2Index = -1;
         this.currentPlayerIndex = 0;
         this.state = GameState.NOT_STARTED;
     }
@@ -167,7 +185,8 @@ public class Game implements Serializable{
             scores.put(name, 0);
             setsWon.put(name, 0);
         }
-        
+
+        this.recentEvents = new ArrayList<>();
         this.roundScoresApplied = false;
         this.lastRoundScores = new HashMap<>();
         this.roundNumber = 0;
@@ -177,6 +196,14 @@ public class Game implements Serializable{
         this.pendingMatchQuips = null;
         this.pendingRealtimeQuips = null;
         this.realtimeQuipTimestamp = 0;
+        this.cutPlayer1 = null;
+        this.cutPlayer2 = null;
+        this.cutCard1 = null;
+        this.cutCard2 = null;
+        this.cutWinner = null;
+        this.cutTied = false;
+        this.lastCutter1Index = -1;
+        this.lastCutter2Index = -1;
         this.currentPlayerIndex = 0;
         this.state = GameState.NOT_STARTED;
     }
@@ -546,6 +573,77 @@ public class Game implements Serializable{
         return playerNames.get(pitcherIndex);
     }
     
+    /** Sets the pitcher (first to play) by player index. Used by cut ceremony. */
+    public void setPitcherIndex(int index) {
+        this.pitcherIndex = index;
+    }
+
+    /**
+     * Prepares for a new set (resets scores, increments set number) WITHOUT dealing cards.
+     * Call dealCards() separately (e.g. after cut ceremony completes).
+     */
+    public void prepareForNewSet() {
+        if (state != GameState.SET_COMPLETE) {
+            throw new IllegalStateException("Cannot prepare new set - current set not complete");
+        }
+        if (gameSetup.isTeamMode()) {
+            for (Team team : teams) {
+                team.resetScore();
+                scores.put(team.getName(), 0);
+            }
+        } else {
+            for (String player : playerNames) {
+                scores.put(player, 0);
+            }
+        }
+        currentSetNumber++;
+        roundNumber = 0;
+        state = GameState.NOT_STARTED;
+        // Clear cut state for new ceremony
+        cutPlayer1 = null;
+        cutPlayer2 = null;
+        cutCard1 = null;
+        cutCard2 = null;
+        cutWinner = null;
+        cutTied = false;
+    }
+
+    // ── Cut ceremony state ──────────────────────────────────────────────────
+
+    public String getCutPlayer1() { return cutPlayer1; }
+    public void setCutPlayer1(String cutPlayer1) { this.cutPlayer1 = cutPlayer1; }
+
+    public String getCutPlayer2() { return cutPlayer2; }
+    public void setCutPlayer2(String cutPlayer2) { this.cutPlayer2 = cutPlayer2; }
+
+    public Card getCutCard1() { return cutCard1; }
+    public void setCutCard1(Card cutCard1) { this.cutCard1 = cutCard1; }
+
+    public Card getCutCard2() { return cutCard2; }
+    public void setCutCard2(Card cutCard2) { this.cutCard2 = cutCard2; }
+
+    public String getCutWinner() { return cutWinner; }
+    public void setCutWinner(String cutWinner) { this.cutWinner = cutWinner; }
+
+    public boolean isCutTied() { return cutTied; }
+    public void setCutTied(boolean cutTied) { this.cutTied = cutTied; }
+
+    public int getLastCutter1Index() { return lastCutter1Index; }
+    public void setLastCutter1Index(int idx) { this.lastCutter1Index = idx; }
+
+    public int getLastCutter2Index() { return lastCutter2Index; }
+    public void setLastCutter2Index(int idx) { this.lastCutter2Index = idx; }
+
+    /** Clears cut ceremony card/result state (keeps last cutter indices for rotation). */
+    public void clearCutState() {
+        cutPlayer1 = null;
+        cutPlayer2 = null;
+        cutCard1 = null;
+        cutCard2 = null;
+        cutWinner = null;
+        cutTied = false;
+    }
+
     /**
      * Gets the most recently completed trick.
      * This allows the UI to display the completed trick before starting the next one.

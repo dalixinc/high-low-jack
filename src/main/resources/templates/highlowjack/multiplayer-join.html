@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Multiplayer Game - High Low Jack</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+
+        input[type="text"]:focus {
+            outline: 2px solid #ffd700;
+            background: white;
+        }
+
+        .check-button, .join-button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .check-button:hover, .join-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .join-button {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .position-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .position-option {
+            position: relative;
+        }
+
+        .position-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .position-label {
+            display: block;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .position-option input[type="radio"]:checked + .position-label {
+            background: rgba(255, 215, 0, 0.3);
+            border-color: #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+
+        .position-option input[type="radio"]:disabled + .position-label {
+            background: rgba(255, 0, 0, 0.2);
+            border-color: rgba(255, 0, 0, 0.4);
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .position-name {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .position-status {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .position-status.taken {
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+
+        .position-status.available {
+            color: #51cf66;
+            font-weight: bold;
+        }
+
+        .error {
+            background: rgba(231, 76, 60, 0.2);
+            border: 2px solid #e74c3c;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .game-info {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .game-info h3 {
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+
+        .player-slot {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .player-slot.filled {
+            background: rgba(76, 175, 80, 0.2);
+            border-left: 4px solid #4caf50;
+        }
+
+        .player-slot.empty {
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 4px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: #ffd700;
+            text-decoration: none;
+            font-size: 1.1rem;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .ai-badge {
+            background: rgba(102, 126, 234, 0.3);
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 0.85rem;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 Join Multiplayer Game</h1>
+
+        <!-- ERROR MESSAGE -->
+        <div th:if="${error}" class="error" th:text="${error}">
+            Error message here
+        </div>
+
+        <!-- PHASE 1: ENTER CODE AND CHECK GAME -->
+        <div th:if="${mpGame == null}">
+            <p style="text-align: center; margin-bottom: 25px; font-size: 1.1rem; opacity: 0.9;">
+                Enter the 6-character game code to see available seats
+            </p>
+
+            <form th:action="@{/highlowjack/multiplayer/join}" method="get">
+                <div class="form-group">
+                    <label for="code">🔢 Game Code</label>
+                    <input type="text" 
+                           id="code" 
+                           name="code" 
+                           placeholder="ABC123" 
+                           maxlength="6"
+                           required
+                           autocomplete="off"
+                           style="text-transform: uppercase;">
+                </div>
+                
+                <button type="submit" class="check-button">🔍 Check Game</button>
+            </form>
+        </div>
+
+        <!-- PHASE 2: GAME LOADED - SHOW AVAILABLE SEATS AND JOIN FORM -->
+        <div th:if="${mpGame != null}">
+            <div class="game-info">
+                <h3>🎮 Game: <span th:text="${joinCode}">ABC123</span></h3>
+                
+                <div th:each="i : ${#numbers.sequence(0, 3)}" class="player-slot"
+                     th:classappend="${mpGame.isPositionTaken(i)} ? 'filled' : 'empty'">
+                    <div>
+                        <strong th:text="${i == 0 ? '⬆️ NORTH' : (i == 1 ? '➡️ EAST' : (i == 2 ? '⬇️ SOUTH' : '⬅️ WEST'))}">Position</strong>
+                        <span th:if="${mpGame.isPositionTaken(i)}">
+                            : <span th:text="${mpGame.players.get(i).playerName}">Player</span>
+                            <span th:if="${mpGame.setup != null and mpGame.setup.players.get(i).isComputer()}" 
+                                  class="ai-badge">🤖 AI</span>
+                        </span>
+                    </div>
+                    <div th:if="${mpGame.isPositionTaken(i)}" 
+                         style="color: #4caf50; font-weight: bold;">✓</div>
+                    <div th:unless="${mpGame.isPositionTaken(i)}" 
+                         style="color: rgba(255,255,255,0.5);">○</div>
+                </div>
+            </div>
+
+            <form th:action="@{/highlowjack/multiplayer/join}" method="post">
+                <input type="hidden" name="joinCode" th:value="${joinCode}">
+                
+                <div class="form-group">
+                    <label for="playerName">👤 Your Name</label>
+                    <input type="text" 
+                           id="playerName" 
+                           name="playerName" 
+                           placeholder="Enter your name" 
+                           required>
+                </div>
+
+                <div class="form-group">
+                    <label>🎯 Choose Your Position</label>
+                    <div class="position-grid">
+                        <!-- NORTH (Position 0) -->
+                        <div class="position-option">
+                            <input type="radio" 
+                                   id="pos0" 
+                                   name="position" 
+                                   value="0"
+                                   th:disabled="${mpGame.isPositionTaken(0)}">
+                            <label for="pos0" class="position-label">
+                                <div class="position-name">⬆️ NORTH</div>
+                                <div class="position-status" 
+                                     th:classappend="${mpGame.isPositionTaken(0)} ? 'taken' : 'available'"
+                                     th:text="${mpGame.isPositionTaken(0)} ? 'TAKEN' : 'Available'">
+                                    Available
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- EAST (Position 1) -->
+                        <div class="position-option">
+                            <input type="radio" 
+                                   id="pos1" 
+                                   name="position" 
+                                   value="1"
+                                   th:disabled="${mpGame.isPositionTaken(1)}">
+                            <label for="pos1" class="position-label">
+                                <div class="position-name">➡️ EAST</div>
+                                <div class="position-status" 
+                                     th:classappend="${mpGame.isPositionTaken(1)} ? 'taken' : 'available'"
+                                     th:text="${mpGame.isPositionTaken(1)} ? 'TAKEN' : 'Available'">
+                                    Available
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- SOUTH (Position 2) -->
+                        <div class="position-option">
+                            <input type="radio" 
+                                   id="pos2" 
+                                   name="position" 
+                                   value="2"
+                                   th:disabled="${mpGame.isPositionTaken(2)}">
+                            <label for="pos2" class="position-label">
+                                <div class="position-name">⬇️ SOUTH</div>
+                                <div class="position-status" 
+                                     th:classappend="${mpGame.isPositionTaken(2)} ? 'taken' : 'available'"
+                                     th:text="${mpGame.isPositionTaken(2)} ? 'TAKEN' : 'Available'">
+                                    Available
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- WEST (Position 3) -->
+                        <div class="position-option">
+                            <input type="radio" 
+                                   id="pos3" 
+                                   name="position" 
+                                   value="3"
+                                   th:disabled="${mpGame.isPositionTaken(3)}">
+                            <label for="pos3" class="position-label">
+                                <div class="position-name">⬅️ WEST</div>
+                                <div class="position-status" 
+                                     th:classappend="${mpGame.isPositionTaken(3)} ? 'taken' : 'available'"
+                                     th:text="${mpGame.isPositionTaken(3)} ? 'TAKEN' : 'Available'">
+                                    Available
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="join-button">🚀 Join Game</button>
+            </form>
+        </div>
+
+        <a th:href="@{/highlowjack/setup}" class="back-link">← Back to Setup</a>
+    </div>
+
+    <script th:inline="javascript">
+        // Auto-uppercase the join code
+        const codeInput = document.getElementById('code');
+        if (codeInput) {
+            codeInput.addEventListener('input', function(e) {
+                e.target.value = e.target.value.toUpperCase();
+            });
+        }
+
+        // Setup player names by position (from server-side setup data)
+        const setupNames = /*[[${setup != null ? {
+            '0': setup.players[0].name,
+            '1': setup.players[1].name,
+            '2': setup.players[2].name,
+            '3': setup.players[3].name
+        } : {}}]]*/ {};
+
+        function updateNameFromPosition(radio) {
+            const nameInput = document.getElementById('playerName');
+            if (nameInput && setupNames[radio.value]) {
+                nameInput.value = setupNames[radio.value];
+            }
+        }
+
+        // Auto-select first available position and pre-populate name
+        window.addEventListener('load', function() {
+            const radios = document.querySelectorAll('input[type="radio"][name="position"]');
+            for (let radio of radios) {
+                if (!radio.disabled) {
+                    radio.checked = true;
+                    updateNameFromPosition(radio);
+                    break;
+                }
+            }
+
+            // Update name when position changes
+            radios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    updateNameFromPosition(this);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

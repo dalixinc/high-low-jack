@@ -52,6 +52,26 @@ public class Game implements Serializable{
     private Trick completedTrick;
     private int currentSetNumber;
     private int pitcherIndex;  // BUG #3 FIX: Tracks who pitched this round
+    private  List<GameEvent> recentEvents;  // Events from current round
+    private boolean roundScoresApplied;     // Guard against double-scoring in multiplayer
+    private Map<String, String> lastRoundScores;  // Stored after first scoring call
+    private int roundNumber;               // Round within the current set (1-based); shared across sessions
+    private MatchResult matchResult;       // Set when match is complete; shared across sessions
+    private SetResult lastSetResult;       // Set when a set is won; shared across sessions
+    private Match currentMatch;            // Authoritative match state from controller; shared across sessions
+    private List<String> pendingMatchQuips;        // Quips for match-winner screen; shared across sessions
+    private List<String> pendingRealtimeQuips;     // Realtime event quips; shown to all humans then cleared
+    private long realtimeQuipTimestamp;            // Epoch ms when quips were set; cleared after 6s
+
+    // Cut ceremony state (shared across sessions; cleared once dealing begins)
+    private String cutPlayer1;
+    private String cutPlayer2;
+    private Card cutCard1;
+    private Card cutCard2;
+    private String cutWinner;
+    private boolean cutTied;
+    private int lastCutter1Index = -1;  // For suggesting next-set cutter rotation
+    private int lastCutter2Index = -1;
 
     /**
      * Constructs a new game with the specified game setup.
@@ -97,10 +117,28 @@ public class Game implements Serializable{
             hands.put(name, new Hand(name));
         }
         
+        this.recentEvents = new ArrayList<>();
+        this.roundScoresApplied = false;
+        this.lastRoundScores = new HashMap<>();
+        this.roundNumber = 0;
+        this.matchResult = null;
+        this.lastSetResult = null;
+        this.currentMatch = null;
+        this.pendingMatchQuips = null;
+        this.pendingRealtimeQuips = null;
+        this.realtimeQuipTimestamp = 0;
+        this.cutPlayer1 = null;
+        this.cutPlayer2 = null;
+        this.cutCard1 = null;
+        this.cutCard2 = null;
+        this.cutWinner = null;
+        this.cutTied = false;
+        this.lastCutter1Index = -1;
+        this.lastCutter2Index = -1;
         this.currentPlayerIndex = 0;
         this.state = GameState.NOT_STARTED;
     }
-    
+
     /**
      * Legacy constructor for backwards compatibility.
      * Creates a simple single-set game with all human players in individual mode.
@@ -147,11 +185,29 @@ public class Game implements Serializable{
             scores.put(name, 0);
             setsWon.put(name, 0);
         }
-        
+
+        this.recentEvents = new ArrayList<>();
+        this.roundScoresApplied = false;
+        this.lastRoundScores = new HashMap<>();
+        this.roundNumber = 0;
+        this.matchResult = null;
+        this.lastSetResult = null;
+        this.currentMatch = null;
+        this.pendingMatchQuips = null;
+        this.pendingRealtimeQuips = null;
+        this.realtimeQuipTimestamp = 0;
+        this.cutPlayer1 = null;
+        this.cutPlayer2 = null;
+        this.cutCard1 = null;
+        this.cutCard2 = null;
+        this.cutWinner = null;
+        this.cutTied = false;
+        this.lastCutter1Index = -1;
+        this.lastCutter2Index = -1;
         this.currentPlayerIndex = 0;
         this.state = GameState.NOT_STARTED;
     }
-    
+
     /**
      * Legacy convenience constructor for 4 individual player names.
      * 
@@ -199,6 +255,9 @@ public class Game implements Serializable{
         currentTrick = null;
         completedTrick = null;
         tricks.clear();
+        roundScoresApplied = false;
+        lastRoundScores = new HashMap<>();
+        roundNumber++;
         state = GameState.IN_PROGRESS;
     }
     
@@ -226,6 +285,7 @@ public class Game implements Serializable{
         }
         
         currentSetNumber++;
+        roundNumber = 0;  // dealCards() will increment to 1
         state = GameState.NOT_STARTED;
         dealCards();
     }
@@ -291,6 +351,25 @@ public class Game implements Serializable{
             // First card of first trick determines trump
             if (trumpSuit == null) {
                 trumpSuit = card.getSuit();
+                
+                // DETECT: Trump pitch (first card of round)
+                int pitcherScore = getScore(currentPlayer);
+                recentEvents.add(new GameEvent(
+                    GameEvent.EventType.TRUMP_SET, 
+                    currentPlayer, 
+                    card, 
+                    pitcherScore
+                ));
+                
+                // DETECT: Two pitched
+                if (card.getRank() == Card.Rank.TWO) {
+                    recentEvents.add(new GameEvent(
+                        GameEvent.EventType.TWO_PITCHED, 
+                        currentPlayer, 
+                        card, 
+                        pitcherScore
+                    ));
+                }
             }
             currentTrick = new Trick(trumpSuit);
         }
@@ -308,6 +387,17 @@ public class Game implements Serializable{
         // Play the card
         hand.playCard(card);
         currentTrick.playCard(currentPlayer, card);
+        
+        // DETECT: Ace of Spades played
+        if (card.getRank() == Card.Rank.ACE && card.getSuit() == Card.Suit.SPADES) {
+            int playerScore = getScore(currentPlayer);
+            recentEvents.add(new GameEvent(
+                GameEvent.EventType.ACE_SPADES_PLAYED, 
+                currentPlayer, 
+                card, 
+                playerScore
+            ));
+        }
         
         // Check if trick is complete
         if (currentTrick.isComplete()) {
@@ -346,6 +436,30 @@ public class Game implements Serializable{
     public Hand getHand(String playerName) {
         return hands.get(playerName);
     }
+
+    /**
+     * Renames a player at the given position. Updates playerNames, hands, and
+     * (in individual mode) scores and setsWon. Also updates GameSetup so that
+     * isHumanPlayer() and AI detection remain consistent.
+     */
+    public void renamePlayer(int position, String newName) {
+        String oldName = playerNames.get(position);
+        if (oldName.equals(newName)) return;
+
+        playerNames.set(position, newName);
+
+        Hand hand = hands.remove(oldName);
+        if (hand != null) hands.put(newName, hand);
+
+        if (!isTeamMode()) {
+            Integer score = scores.remove(oldName);
+            if (score != null) scores.put(newName, score);
+            Integer sw = setsWon.remove(oldName);
+            if (sw != null) setsWon.put(newName, sw);
+        }
+
+        gameSetup.getPlayers().get(position).setName(newName);
+    }
     
     public Card.Suit getTrumpSuit() {
         return trumpSuit;
@@ -367,6 +481,83 @@ public class Game implements Serializable{
     public void setState(GameState gs) {
         this.state = gs;
     }
+
+    public int getRoundNumber() {
+        return roundNumber;
+    }
+
+    public MatchResult getMatchResult() {
+        return matchResult;
+    }
+
+    public void setMatchResult(MatchResult result) {
+        this.matchResult = result;
+    }
+
+    public SetResult getLastSetResult() {
+        return lastSetResult;
+    }
+
+    public void setLastSetResult(SetResult result) {
+        this.lastSetResult = result;
+    }
+
+    public Match getCurrentMatch() {
+        return currentMatch;
+    }
+
+    public void setCurrentMatch(Match match) {
+        this.currentMatch = match;
+    }
+
+    public List<String> getPendingMatchQuips() {
+        return pendingMatchQuips;
+    }
+
+    public void setPendingMatchQuips(List<String> quips) {
+        this.pendingMatchQuips = quips;
+    }
+
+    /**
+     * Returns pending realtime quips if they were set within the last 6 seconds,
+     * otherwise clears and returns null. This lets all human players see the quips
+     * during the polling window without double-applying them.
+     */
+    public List<String> getAndMaybeExpireRealtimeQuips() {
+        if (pendingRealtimeQuips == null || pendingRealtimeQuips.isEmpty()) return null;
+        if (System.currentTimeMillis() - realtimeQuipTimestamp > 6000) {
+            pendingRealtimeQuips = null;
+            realtimeQuipTimestamp = 0;
+            return null;
+        }
+        return pendingRealtimeQuips;
+    }
+
+    public void setPendingRealtimeQuips(List<String> quips) {
+        this.pendingRealtimeQuips = quips;
+        this.realtimeQuipTimestamp = System.currentTimeMillis();
+    }
+
+    public void clearRealtimeQuips() {
+        this.pendingRealtimeQuips = null;
+        this.realtimeQuipTimestamp = 0;
+    }
+
+    public boolean isRoundScoresApplied() {
+        return roundScoresApplied;
+    }
+
+    public void setRoundScoresApplied(boolean applied) {
+        this.roundScoresApplied = applied;
+    }
+
+    public Map<String, String> getLastRoundScores() {
+        return lastRoundScores;
+    }
+
+    public void setLastRoundScores(Map<String, String> scores) {
+        this.lastRoundScores = scores;
+    }
     
     public List<String> getPlayerNames() {
         return new ArrayList<>(playerNames);
@@ -382,6 +573,77 @@ public class Game implements Serializable{
         return playerNames.get(pitcherIndex);
     }
     
+    /** Sets the pitcher (first to play) by player index. Used by cut ceremony. */
+    public void setPitcherIndex(int index) {
+        this.pitcherIndex = index;
+    }
+
+    /**
+     * Prepares for a new set (resets scores, increments set number) WITHOUT dealing cards.
+     * Call dealCards() separately (e.g. after cut ceremony completes).
+     */
+    public void prepareForNewSet() {
+        if (state != GameState.SET_COMPLETE) {
+            throw new IllegalStateException("Cannot prepare new set - current set not complete");
+        }
+        if (gameSetup.isTeamMode()) {
+            for (Team team : teams) {
+                team.resetScore();
+                scores.put(team.getName(), 0);
+            }
+        } else {
+            for (String player : playerNames) {
+                scores.put(player, 0);
+            }
+        }
+        currentSetNumber++;
+        roundNumber = 0;
+        state = GameState.NOT_STARTED;
+        // Clear cut state for new ceremony
+        cutPlayer1 = null;
+        cutPlayer2 = null;
+        cutCard1 = null;
+        cutCard2 = null;
+        cutWinner = null;
+        cutTied = false;
+    }
+
+    // ── Cut ceremony state ──────────────────────────────────────────────────
+
+    public String getCutPlayer1() { return cutPlayer1; }
+    public void setCutPlayer1(String cutPlayer1) { this.cutPlayer1 = cutPlayer1; }
+
+    public String getCutPlayer2() { return cutPlayer2; }
+    public void setCutPlayer2(String cutPlayer2) { this.cutPlayer2 = cutPlayer2; }
+
+    public Card getCutCard1() { return cutCard1; }
+    public void setCutCard1(Card cutCard1) { this.cutCard1 = cutCard1; }
+
+    public Card getCutCard2() { return cutCard2; }
+    public void setCutCard2(Card cutCard2) { this.cutCard2 = cutCard2; }
+
+    public String getCutWinner() { return cutWinner; }
+    public void setCutWinner(String cutWinner) { this.cutWinner = cutWinner; }
+
+    public boolean isCutTied() { return cutTied; }
+    public void setCutTied(boolean cutTied) { this.cutTied = cutTied; }
+
+    public int getLastCutter1Index() { return lastCutter1Index; }
+    public void setLastCutter1Index(int idx) { this.lastCutter1Index = idx; }
+
+    public int getLastCutter2Index() { return lastCutter2Index; }
+    public void setLastCutter2Index(int idx) { this.lastCutter2Index = idx; }
+
+    /** Clears cut ceremony card/result state (keeps last cutter indices for rotation). */
+    public void clearCutState() {
+        cutPlayer1 = null;
+        cutPlayer2 = null;
+        cutCard1 = null;
+        cutCard2 = null;
+        cutWinner = null;
+        cutTied = false;
+    }
+
     /**
      * Gets the most recently completed trick.
      * This allows the UI to display the completed trick before starting the next one.
@@ -398,6 +660,17 @@ public class Game implements Serializable{
      */
     public void clearCompletedTrick() { 
         this.completedTrick = null; 
+    }
+    
+    /**
+     * Accessor/Mutator for Recent Events
+     */
+    public List<GameEvent> getRecentEvents() {
+        return new ArrayList<>(recentEvents);
+    }
+    
+    public void clearRecentEvents() {
+        recentEvents.clear();
     }
     
     /**

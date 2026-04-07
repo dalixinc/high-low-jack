@@ -20,7 +20,7 @@ public class PlayerInfo implements Serializable {
         COMPUTER
     }
     
-    private final String name;
+    private String name;
     private final PlayerType type;
     private final boolean isController;
     
@@ -51,6 +51,13 @@ public class PlayerInfo implements Serializable {
      */
     public String getName() {
         return name;
+    }
+
+    public void setName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Player name cannot be null or empty");
+        }
+        this.name = name.trim();
     }
     
     /**

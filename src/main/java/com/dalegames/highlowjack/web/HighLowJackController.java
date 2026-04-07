@@ -11,10 +11,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.dalegames.highlowjack.SimpleAI;
 import com.dalegames.highlowjack.engine.GameEngine;
 import com.dalegames.highlowjack.model.Card;
+import com.dalegames.highlowjack.model.Deck;
 import com.dalegames.highlowjack.model.Game;
 import com.dalegames.highlowjack.model.GameSetup;
 import com.dalegames.highlowjack.model.Hand;
@@ -29,6 +31,9 @@ import com.dalegames.highlowjack.persistence.entity.Player;
 import com.dalegames.highlowjack.persistence.service.PlayerService;
 import com.dalegames.highlowjack.persistence.service.TeamStatsService;
 import com.dalegames.highlowjack.persistence.entity.TeamStats;
+import com.dalegames.highlowjack.service.QuipDetector;
+import com.dalegames.highlowjack.service.RealtimeQuipDetector;
+
 
 import jakarta.servlet.http.HttpSession;
 
@@ -38,7 +43,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  * Web controller for High Low Jack card game.
  * 
  * @author Dale &amp; Primus
- * @version 8.12 - Modified (by Primus) for team stats
+ * @version 8.13 - Adding quip mechanism
  */
 @Controller
 @RequestMapping("/highlowjack")
@@ -50,6 +55,12 @@ public class HighLowJackController {
     @Autowired
     private TeamStatsService teamStatsService;
     
+    @Autowired
+    private QuipDetector quipDetector;
+    
+    @Autowired
+    private RealtimeQuipDetector realtimeQuipDetector;
+    
     @GetMapping
     public String showGame(Model model, HttpSession session) {
         GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
@@ -60,14 +71,26 @@ public class HighLowJackController {
         }
         
         Game game = (Game) session.getAttribute("hlj_game");
-        
-        // Setup exists but no game - create new game
+
         if (game == null) {
-            game = new Game(setup);
-            game.dealCards();
-            session.setAttribute("hlj_game", game);
+            return "redirect:/highlowjack/setup";
         }
-        
+
+        // If game hasn't started yet, go through cut ceremony first
+        if (game.getState() == Game.GameState.NOT_STARTED) {
+            return "redirect:/highlowjack/cut";
+        }
+
+        // Match is over — send all players to the winner page
+        if (game.getState() == Game.GameState.MATCH_COMPLETE) {
+            return "redirect:/highlowjack/match-winner";
+        }
+
+        // Set is over — send all players to the set winner page
+        if (game.getState() == Game.GameState.SET_COMPLETE) {
+            return "redirect:/highlowjack/set-winner";
+        }
+
         // Check if we should show final trick before scoring
         Boolean showFinalTrick = (Boolean) session.getAttribute("hlj_showFinalTrick");
         ////System.out.println("🔍 showGame() - showFinalTrick flag: " + showFinalTrick);
@@ -81,6 +104,16 @@ public class HighLowJackController {
                 model.addAttribute("showFinalTrick", true);
                 // DON'T clear the completed trick - we want to see it!
                 // DON'T return - continue to render the view below
+                
+                // ═══════════════════════════════════════════════════════════════
+                // TEST: FORCE QUIPS TO DISPLAY ON GAME PAGE
+                // ═══════════════════════════════════════════════════════════════
+//                List<String> testQuips = new ArrayList<>();
+//                testQuips.add("🔥 TEST QUIP - If you see this, the display works!");
+//                testQuips.add("⚡ THE ACE OF AFRICA STRIKES!");
+//                model.addAttribute("eventQuips", testQuips);
+//                System.out.println("🧪 FORCED TEST QUIPS IN showGame(): " + testQuips);
+                
             } else {
                 // First time seeing ROUND_COMPLETE - set flag and show final trick
                 System.out.println("🎯 ROUND COMPLETE - Setting showFinalTrick flag");
@@ -104,7 +137,24 @@ public class HighLowJackController {
         
         if (completedTrick != null) {
             session.setAttribute("hlj_clearTrick", true);
+
+            // ═══════════════════════════════════════════════════════════════
+            // REALTIME QUIPS: Store in shared game so ALL humans see them
+            // ═══════════════════════════════════════════════════════════════
+            try {
+                List<String> eventQuips = realtimeQuipDetector.checkRealtimeEvents(game);
+                if (!eventQuips.isEmpty()) {
+                    game.setPendingRealtimeQuips(eventQuips);  // shared with all sessions
+                    System.out.println("⚡ REALTIME EVENT QUIPS: " + eventQuips);
+                }
+                game.clearRecentEvents();
+            } catch (Exception e) {
+                System.err.println("❌ Error checking realtime quips: " + e.getMessage());
+            }
         } 
+        
+        
+        
         else if (game.getState() == Game.GameState.IN_PROGRESS &&
                  !isCurrentPlayerHuman(game, setup)) {
             playAITurn(game);
@@ -125,9 +175,14 @@ public class HighLowJackController {
             session.setAttribute("hlj_game", game);
         }
         
-        String humanPlayer = getHumanPlayerName(setup);
+        String humanPlayer = (String) session.getAttribute("hlj_playerName");
+        if (humanPlayer == null) {
+            humanPlayer = getHumanPlayerName(setup);
+        }
         List<Card> validCards = calculateValidCards(game, humanPlayer);
         boolean isAITurn = !isCurrentPlayerHuman(game, setup);
+        boolean isMultiplayer = session.getAttribute("hlj_playerName") != null;
+        boolean isMyTurn = game.getCurrentPlayer() != null && game.getCurrentPlayer().equals(humanPlayer);
         
         Card.Suit leadSuit = null;
         if (game.getCurrentTrick() != null && game.getCurrentTrick().size() > 0) {
@@ -141,6 +196,8 @@ public class HighLowJackController {
         model.addAttribute("humanPlayer", humanPlayer);
         model.addAttribute("isController", true); // For now, always player 1
         model.addAttribute("isAITurn", isAITurn);
+        model.addAttribute("isMultiplayer", isMultiplayer);
+        model.addAttribute("isMyTurn", isMyTurn);
         model.addAttribute("completedTrick", completedTrick);
         model.addAttribute("validCards", validCards);
         model.addAttribute("leadSuit", leadSuit);
@@ -163,13 +220,15 @@ public class HighLowJackController {
         }
         model.addAttribute("tricksWon", tricksWon);
 
-        // Round counter: Initialize if needed
-        Integer roundNumber = (Integer) session.getAttribute("hlj_roundNumber");
-        if (roundNumber == null) {
-            roundNumber = 1;
-            session.setAttribute("hlj_roundNumber", roundNumber);
+        // Round number comes from the shared Game object — accurate for all players in multiplayer
+        model.addAttribute("roundNumber", game.getRoundNumber());
+        model.addAttribute("setsWon", game.getSetsWon());
+
+        // Realtime quips: read from shared game so all humans (not just the card-player) see them
+        List<String> pendingQuips = game.getAndMaybeExpireRealtimeQuips();
+        if (pendingQuips != null && !pendingQuips.isEmpty()) {
+            model.addAttribute("eventQuips", pendingQuips);
         }
-        model.addAttribute("roundNumber", roundNumber);
         
         return "highlowjack/game";
     }
@@ -260,12 +319,16 @@ public class HighLowJackController {
         session.setAttribute("hlj_setup", setup);
         session.removeAttribute("hlj_game");
         session.removeAttribute("hlj_clearTrick");
-        
-     // ADD THIS - Create match tracker
+
+        // Create match tracker
         Match match = new Match(matchType);
         session.setAttribute("hlj_match", match);
-        
-        return "redirect:/highlowjack";
+
+        // Create game (NOT_STARTED — cut ceremony will deal the cards)
+        Game game = new Game(setup);
+        session.setAttribute("hlj_game", game);
+
+        return "redirect:/highlowjack/cut";
     }
     
     @PostMapping("/play")
@@ -273,17 +336,27 @@ public class HighLowJackController {
         Game game = (Game) session.getAttribute("hlj_game");
         GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
         
-        if (game != null && setup != null &&
-            game.getState() == Game.GameState.IN_PROGRESS &&
-            isCurrentPlayerHuman(game, setup)) {
+        if (game != null && setup != null && game.getState() == Game.GameState.IN_PROGRESS) {
             
-            String currentPlayer = game.getCurrentPlayer();
-            Hand hand = game.getHand(currentPlayer);
+            // Get THIS session's player name
+            String humanPlayer = (String) session.getAttribute("hlj_playerName");
+            if (humanPlayer == null) {
+                humanPlayer = getHumanPlayerName(setup);
+            }
             
-            if (cardIndex >= 0 && cardIndex < hand.getCards().size()) {
+            // Check if it's this player's turn
+            if (!game.getCurrentPlayer().equals(humanPlayer)) {
+                // Not this player's turn - just refresh
+                return "redirect:/highlowjack";
+            }
+            
+            // It's their turn - get their hand
+            Hand hand = game.getHand(humanPlayer);
+            
+            if (hand != null && cardIndex >= 0 && cardIndex < hand.getCards().size()) {
                 Card card = hand.getCards().get(cardIndex);
                 
-                if (GameEngine.isValidPlay(game, currentPlayer, card)) {
+                if (GameEngine.isValidPlay(game, humanPlayer, card)) {
                     game.playCard(card);
                     session.setAttribute("hlj_game", game);
                 }
@@ -307,7 +380,8 @@ public class HighLowJackController {
         GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
         
         if (game != null && setup != null) {
-            String humanPlayer = getHumanPlayerName(setup);
+            String humanPlayer = (String) session.getAttribute("hlj_playerName");
+            if (humanPlayer == null) humanPlayer = getHumanPlayerName(setup);
             Hand hand = game.getHand(humanPlayer);
             hand.sort();
             session.setAttribute("hlj_game", game);
@@ -370,6 +444,21 @@ public class HighLowJackController {
         }
         
         SetResult setResult = SetResult.determineWinner(scoresBefore, results.getRoundPointWinners());
+
+	     // ═══════════════════════════════════════════════════════════════
+	     // PERSONALITY: Set completion quips
+	     // ═══════════════════════════════════════════════════════════════
+	     try {
+	         List<String> setQuips = quipDetector.checkSetQuips(game, setResult);
+	         if (!setQuips.isEmpty()) {
+	             model.addAttribute("setQuips", setQuips);
+	             System.out.println("🎭 SET QUIPS: " + setQuips);
+	         }
+	     } catch (Exception e) {
+	         System.err.println("❌ Error checking set quips: " + e.getMessage());
+	     }
+
+     // ... rest of the code continues
         
      // DEBUG: Print set result in showScoring
         boolean doADebug = true;
@@ -402,7 +491,14 @@ public class HighLowJackController {
         }
 
         
-        boolean isController = true;
+        String scoringHumanPlayer = (String) session.getAttribute("hlj_playerName");
+        boolean isController;
+        if (scoringHumanPlayer == null) {
+            isController = true; // local game — always controller
+        } else {
+            isController = setup.getPlayers().stream()
+                .anyMatch(p -> p.getName().equals(scoringHumanPlayer) && p.isController());
+        }
 
         // PHASE 5: Add pitcher name
         model.addAttribute("pitcherName", game.getPitcherName());
@@ -472,6 +568,28 @@ public class HighLowJackController {
         }
     }
     
+    /**
+     * Polling endpoint for multiplayer turn detection.
+     * Returns the current player and game state so clients can detect when it's their turn.
+     */
+    @GetMapping("/poll")
+    @ResponseBody
+    public Map<String, Object> pollGameState(HttpSession session) {
+        Game game = (Game) session.getAttribute("hlj_game");
+        String humanPlayer = (String) session.getAttribute("hlj_playerName");
+        Map<String, Object> response = new HashMap<>();
+        if (game != null) {
+            response.put("currentPlayer", game.getCurrentPlayer());
+            response.put("gameState", game.getState().name());
+            // Extra state for real-time card-play detection
+            int trickSize = (game.getCurrentTrick() != null) ? game.getCurrentTrick().size() : 0;
+            response.put("currentTrickSize", trickSize);
+            response.put("completedTrickCount", game.getTricks().size());
+        }
+        response.put("humanPlayer", humanPlayer);
+        return response;
+    }
+
     @PostMapping("/continue")
     public String continueGame(HttpSession session, Model model) {
         Game game = (Game) session.getAttribute("hlj_game");
@@ -518,6 +636,38 @@ public class HighLowJackController {
                 }
                 
                 System.out.println("\n═══ ROUND POINT WINNERS ═══");
+                
+                // ═══════════════════════════════════════════════════════════════
+                // PERSONALITY: Check for quips
+                // ═══════════════════════════════════════════════════════════════
+                try {
+                    List<String> quips = quipDetector.checkRoundQuips(game, results);
+                    if (!quips.isEmpty()) {
+                        model.addAttribute("quips", quips);
+                        System.out.println("🎭 QUIPS: " + quips);
+                    }
+                } catch (Exception e) {
+                    System.err.println("❌ Error checking quips: " + e.getMessage());
+                }
+                
+
+                
+                // ═══════════════════════════════════════════════════════════════
+                // PERSONALITY: Check for real-time event quips
+                // ═══════════════════════════════════════════════════════════════
+                try {
+                	List<String> eventQuips = realtimeQuipDetector.checkRealtimeEvents(game);
+                    if (!eventQuips.isEmpty()) {
+                        model.addAttribute("eventQuips", eventQuips);
+                        System.out.println("🎭 EVENT QUIPS: " + eventQuips);
+                    }
+                    
+                    // Clear events after checking
+                    game.clearRecentEvents();
+                } catch (Exception e) {
+                    System.err.println("❌ Error checking event quips: " + e.getMessage());
+                }
+                
                 for (String category : new String[]{"High", "Low", "Jack", "Game"}) {
                     String winner = results.getRoundPointWinner(category);
                     System.out.println(category + ": " + (winner != null ? winner : "none"));
@@ -557,6 +707,19 @@ public class HighLowJackController {
             
             SetResult setResult = SetResult.determineWinner(scoresBefore, results.getRoundPointWinners());
             
+            // ═══════════════════════════════════════════════════════════════
+            // PERSONALITY: Set completion quips
+            // ═══════════════════════════════════════════════════════════════
+            try {
+                List<String> setQuips = quipDetector.checkSetQuips(game, setResult);
+                if (!setQuips.isEmpty()) {
+                    model.addAttribute("setQuips", setQuips);
+                    System.out.println("🎭 SET QUIPS: " + setQuips);
+                }
+            } catch (Exception e) {
+                System.err.println("❌ Error checking set quips: " + e.getMessage());
+            }
+            
             // DEBUG: Print result
             System.out.println("\n═══ SET RESULT ═══");
             if (setResult != null) {
@@ -576,7 +739,10 @@ public class HighLowJackController {
                 
                 boolean matchWon = match.recordSetWin(setResult);
                 session.setAttribute("hlj_match", match);  // Update match in session
-                
+
+                // Update game's own setsWon so game.html scoreboard reflects the new count
+                game.recordSetWin(setResult.getWinner());
+
                 if (matchWon) {
                     // ═══════════════════════════════════════════════════════════
                     // MATCH WINNER! Show epic victory screen
@@ -584,9 +750,21 @@ public class HighLowJackController {
                     System.out.println("🏆 MATCH WINNER: " + match.getMatchWinner());
                     
                     MatchResult matchResult = new MatchResult(match);
-                    model.addAttribute("matchResult", matchResult);
-                    model.addAttribute("game", game);
-                    
+
+                    // ═══════════════════════════════════════════════════════════════
+                    // PERSONALITY: Set(match???) completion quips????
+                    // ═══════════════════════════════════════════════════════════════
+                    try {
+                    	List<String> matchQuips = quipDetector.checkMatchQuips(game, matchResult);
+                        if (!matchQuips.isEmpty()) {
+                        	session.setAttribute("hlj_matchQuips", matchQuips);
+                            game.setPendingMatchQuips(matchQuips);  // Share with non-controller sessions
+                        	System.out.println("🎭 MATCH QUIPS: " + matchQuips);
+                        }
+                    } catch (Exception e) {
+                        System.err.println("❌ Error checking set quips: " + e.getMessage());
+                    }
+
                     // ═══════════════════════════════════════════════════════════════
                     // UPDATE DATABASE - Record match stats for all players
                     // ═══════════════════════════════════════════════════════════════
@@ -596,11 +774,11 @@ public class HighLowJackController {
                             for (Team team : game.getTeams()) {
                                 boolean teamWon = team.getName().equals(matchResult.getWinner());
                                 int teamSetsWon = matchResult.getFinalSetWins().getOrDefault(team.getName(), 0);
-                                
+
                                 for (String playerName : team.getPlayerNames()) {
                                     playerService.updateMatchStats(playerName, teamWon, teamSetsWon);
-                                    System.out.println("📊 Updated stats for " + playerName + 
-                                                     " (team " + team.getName() + "): " + 
+                                    System.out.println("📊 Updated stats for " + playerName +
+                                                     " (team " + team.getName() + "): " +
                                                      (teamWon ? "WIN" : "LOSS"));
                                 }
                             }
@@ -610,7 +788,7 @@ public class HighLowJackController {
                                 boolean won = playerName.equals(matchResult.getWinner());
                                 int setsWon = matchResult.getFinalSetWins().getOrDefault(playerName, 0);
                                 playerService.updateMatchStats(playerName, won, setsWon);
-                                System.out.println("📊 Updated stats for " + playerName + ": " + 
+                                System.out.println("📊 Updated stats for " + playerName + ": " +
                                                  (won ? "WIN" : "LOSS"));
                             }
                         }
@@ -618,12 +796,18 @@ public class HighLowJackController {
                         System.err.println("❌ Error updating player stats: " + e.getMessage());
                         e.printStackTrace();
                     }
-                    
-                    // Clear session for new match
+
+                    // Store match result in session AND in the shared game object so all players can see it
+                    session.setAttribute("hlj_matchResult", matchResult);
+                    game.setMatchResult(matchResult);
+                    game.setState(Game.GameState.MATCH_COMPLETE);
+                    session.setAttribute("hlj_game", game);
+
+                    // Clear round data
                     session.removeAttribute("hlj_roundResult");
                     session.removeAttribute("hlj_roundNumber");
-                    
-                    return "highlowjack/match-winner";
+
+                    return "redirect:/highlowjack/match-winner";
                     
                 } else {
                     // ═══════════════════════════════════════════════════════════
@@ -635,18 +819,21 @@ public class HighLowJackController {
                         game.isTeamMode() ? game.getTeams().get(1).getName() : game.getPlayerNames().get(1)
                     ));
                     
-                    model.addAttribute("setResult", setResult);
-                    model.addAttribute("game", game);
-                    model.addAttribute("match", match);
-                    
                     // CRITICAL: Set game state so startNewSet() can work later
                     game.setState(Game.GameState.SET_COMPLETE);
+
+                    // Store shared data in game object so non-controller sessions can read it
+                    game.setLastSetResult(setResult);
+                    game.setCurrentMatch(match);
                     session.setAttribute("hlj_game", game);
-                    
+
+                    // Also store in controller's session for the GET endpoint
+                    session.setAttribute("hlj_setResult", setResult);
+
                     // Clear round data (will be reset when next set starts)
                     session.removeAttribute("hlj_roundResult");
-                    
-                    return "highlowjack/set-winner";
+
+                    return "redirect:/highlowjack/set-winner";
                 }
                 
             } else {
@@ -670,6 +857,78 @@ public class HighLowJackController {
     }
     
     /**
+     * Shows the match winner screen. Accessible via GET so non-controller multiplayer
+     * players can be polled/redirected here after the match ends.
+     */
+    @GetMapping("/match-winner")
+    public String showMatchWinner(HttpSession session, Model model) {
+        Game game = (Game) session.getAttribute("hlj_game");
+        MatchResult matchResult = (MatchResult) session.getAttribute("hlj_matchResult");
+
+        // Non-controller players won't have matchResult in their session;
+        // fall back to the shared game object which the controller populated.
+        if (matchResult == null && game != null) {
+            matchResult = game.getMatchResult();
+        }
+
+        if (matchResult == null) {
+            return "redirect:/highlowjack/setup";
+        }
+
+        model.addAttribute("matchResult", matchResult);
+        model.addAttribute("game", game);
+
+        @SuppressWarnings("unchecked")
+        List<String> matchQuips = (List<String>) session.getAttribute("hlj_matchQuips");
+        if (matchQuips == null && game != null) {
+            matchQuips = game.getPendingMatchQuips();  // Fall back to shared game object for non-controller
+        }
+        if (matchQuips != null) {
+            model.addAttribute("matchQuips", matchQuips);
+            session.removeAttribute("hlj_matchQuips");
+        }
+
+        return "highlowjack/match-winner";
+    }
+
+    /**
+     * Shows the set winner screen. Accessible via GET so non-controller multiplayer
+     * players can be redirected here after a set ends.
+     */
+    @GetMapping("/set-winner")
+    public String showSetWinner(HttpSession session, Model model) {
+        Game game = (Game) session.getAttribute("hlj_game");
+        GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
+
+        // Try session first (controller), then shared game object (non-controller)
+        SetResult setResult = (SetResult) session.getAttribute("hlj_setResult");
+        if (setResult == null && game != null) {
+            setResult = game.getLastSetResult();
+        }
+
+        Match match = (Match) session.getAttribute("hlj_match");
+        if (match == null && game != null) {
+            match = game.getCurrentMatch();
+        }
+
+        if (setResult == null || game == null) {
+            return "redirect:/highlowjack/setup";
+        }
+
+        String humanPlayer = (String) session.getAttribute("hlj_playerName");
+        boolean isController = humanPlayer == null ||
+            (setup != null && setup.getPlayers().stream()
+                .anyMatch(p -> p.getName().equals(humanPlayer) && p.isController()));
+
+        model.addAttribute("setResult", setResult);
+        model.addAttribute("game", game);
+        model.addAttribute("match", match);
+        model.addAttribute("isController", isController);
+
+        return "highlowjack/set-winner";
+    }
+
+    /**
      * KIck off the next set
      * @param session
      * @return
@@ -678,25 +937,220 @@ public class HighLowJackController {
     public String startNextSet(HttpSession session) {
         Game game = (Game) session.getAttribute("hlj_game");
         Match match = (Match) session.getAttribute("hlj_match");
-        
+
         if (game == null || match == null) {
             return "redirect:/highlowjack/setup";
         }
-        
-        // Reset game for new set (clears scores, tricks, rounds)
-        game.startNewSet();
+
+        // Prepare for new set (reset scores, increment set number) WITHOUT dealing cards.
+        // The cut ceremony (GET /cut) will deal when done.
+        game.prepareForNewSet();
         session.setAttribute("hlj_game", game);
-        
-        // Reset round counter
-        session.setAttribute("hlj_roundNumber", 1);
-        
-        System.out.println("🎮 Starting Set " + match.getCurrentSetNumber());
-        
+
+        System.out.println("🎮 Preparing Set " + game.getCurrentSetNumber() + " — going to cut ceremony");
+
+        return "redirect:/highlowjack/cut";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CUT CEREMONY
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Shows the cut ceremony page.
+     * Controller sees player selectors; non-controllers see a waiting screen.
+     */
+    @GetMapping("/cut")
+    public String showCut(Model model, HttpSession session) {
+        Game game = (Game) session.getAttribute("hlj_game");
+        GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
+
+        if (game == null || setup == null) {
+            return "redirect:/highlowjack/setup";
+        }
+
+        // Determine if this session is the controller
+        String sessionPlayerName = (String) session.getAttribute("hlj_playerName");
+        boolean isController;
+        if (sessionPlayerName != null) {
+            // Multiplayer: controller is whoever has isController flag in setup
+            isController = setup.getPlayers().stream()
+                .filter(p -> p.getName().equals(sessionPlayerName))
+                .anyMatch(PlayerInfo::isController);
+        } else {
+            isController = true;  // Single-player session
+        }
+
+        // Build cutter candidate lists for team vs individual mode
+        List<String> team1Options = new ArrayList<>();
+        List<String> team2Options = new ArrayList<>();
+
+        List<String> names = game.getPlayerNames();
+
+        if (setup.isTeamMode()) {
+            // Team 1: players 0 & 2 (North/South); Team 2: players 1 & 3 (East/West)
+            team1Options.add(names.get(0));
+            team1Options.add(names.get(2));
+            team2Options.add(names.get(1));
+            team2Options.add(names.get(3));
+        } else {
+            // Individual: any two players — put all in both lists; JS prevents same selection
+            team1Options.addAll(names);
+            team2Options.addAll(names);
+        }
+
+        // Suggest defaults based on cutter rotation from last set
+        String suggestedCutter1 = resolveSuggestedCutter(game, setup, 1, team1Options);
+        String suggestedCutter2 = resolveSuggestedCutter(game, setup, 2, team2Options);
+
+        // Pre-compute card image paths so template doesn't need complex Thymeleaf expressions
+        if (game.getCutCard1() != null) {
+            model.addAttribute("cutCard1Image", CardImageHelper.getCardImage(game.getCutCard1()));
+            model.addAttribute("cutCard2Image", CardImageHelper.getCardImage(game.getCutCard2()));
+            model.addAttribute("cutCard1Label", cardLabel(game.getCutCard1()));
+            model.addAttribute("cutCard2Label", cardLabel(game.getCutCard2()));
+        }
+
+        model.addAttribute("game", game);
+        model.addAttribute("setup", setup);
+        model.addAttribute("isController", isController);
+        model.addAttribute("team1Options", team1Options);
+        model.addAttribute("team2Options", team2Options);
+        model.addAttribute("suggestedCutter1", suggestedCutter1);
+        model.addAttribute("suggestedCutter2", suggestedCutter2);
+        model.addAttribute("isTeamMode", setup.isTeamMode());
+
+        return "highlowjack/cut-ceremony";
+    }
+
+    private String resolveSuggestedCutter(Game game, GameSetup setup, int slot, List<String> options) {
+        int lastIdx = (slot == 1) ? game.getLastCutter1Index() : game.getLastCutter2Index();
+        if (lastIdx < 0 || options.isEmpty()) return options.isEmpty() ? null : options.get(0);
+        // Rotate within the option list
+        String lastName = game.getPlayerNames().get(lastIdx);
+        int posInOptions = options.indexOf(lastName);
+        if (posInOptions < 0) return options.get(0);
+        return options.get((posInOptions + 1) % options.size());
+    }
+
+    /**
+     * Performs the cut: draws one card for each cutter and determines the winner.
+     * Controller-only POST. Supports "random" cutter selection.
+     */
+    @PostMapping("/cut")
+    public String performCut(
+            @RequestParam(required = false) String cutter1,
+            @RequestParam(required = false) String cutter2,
+            @RequestParam(required = false, defaultValue = "false") boolean random,
+            HttpSession session) {
+
+        Game game = (Game) session.getAttribute("hlj_game");
+        GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
+
+        if (game == null || setup == null) return "redirect:/highlowjack/setup";
+
+        List<String> names = game.getPlayerNames();
+
+        if (random || cutter1 == null || cutter2 == null) {
+            // Random selection
+            if (setup.isTeamMode()) {
+                // One from each team
+                boolean flip = Math.random() < 0.5;
+                cutter1 = flip ? names.get(0) : names.get(2);
+                cutter2 = (Math.random() < 0.5) ? names.get(1) : names.get(3);
+            } else {
+                // Any two different players
+                names = new ArrayList<>(names);
+                java.util.Collections.shuffle(names);
+                cutter1 = names.get(0);
+                cutter2 = names.get(1);
+                names = game.getPlayerNames(); // restore
+            }
+        }
+
+        // Draw one card each from a fresh shuffled deck
+        Deck cutDeck = new Deck();
+        cutDeck.shuffle();
+        Card card1 = cutDeck.dealHand(1).get(0);
+        Card card2 = cutDeck.dealHand(1).get(0);
+
+        game.setCutPlayer1(cutter1);
+        game.setCutPlayer2(cutter2);
+        game.setCutCard1(card1);
+        game.setCutCard2(card2);
+
+        int rank1 = card1.getRank().getValue();
+        int rank2 = card2.getRank().getValue();
+
+        if (rank1 == rank2) {
+            // Tied — cut again
+            game.setCutTied(true);
+            game.setCutWinner(null);
+        } else {
+            game.setCutTied(false);
+            String winner = (rank1 > rank2) ? cutter1 : cutter2;
+            game.setCutWinner(winner);
+
+            // Set pitcher to the winner
+            int winnerIndex = game.getPlayerNames().indexOf(winner);
+            game.setPitcherIndex(winnerIndex);
+
+            // Track cutter indices for next-set rotation
+            game.setLastCutter1Index(game.getPlayerNames().indexOf(cutter1));
+            game.setLastCutter2Index(game.getPlayerNames().indexOf(cutter2));
+
+            // Record stats (human players only — AI don't have DB records)
+            recordCutStats(cutter1, card1, rank1 > rank2, setup);
+            recordCutStats(cutter2, card2, rank2 > rank1, setup);
+        }
+
+        session.setAttribute("hlj_game", game);
+        return "redirect:/highlowjack/cut";
+    }
+
+    private void recordCutStats(String playerName, Card card, boolean won, GameSetup setup) {
+        boolean isHuman = setup.isHumanPlayer(playerName);
+        if (isHuman) {
+            try {
+                playerService.recordCut(playerName, card.getRank().name(), won);
+                if (card.getRank() == Card.Rank.TWO) {
+                    playerService.recordTwoCut(playerName);
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ Error recording cut stat for " + playerName + ": " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Controller clicks "Start Game" after the cut winner is determined.
+     * Deals the cards and starts the game.
+     */
+    @PostMapping("/cut/complete")
+    public String completeCut(HttpSession session) {
+        Game game = (Game) session.getAttribute("hlj_game");
+
+        if (game == null) return "redirect:/highlowjack/setup";
+
+        game.dealCards();
+        game.clearCutState();
+        session.setAttribute("hlj_game", game);
+
         return "redirect:/highlowjack";
     }
 
     // Helper methods
     
+    private String cardLabel(Card card) {
+        if (card == null) return "";
+        String rank = card.getRank().name();
+        String suit = card.getSuit().name();
+        // Capitalise first letter only
+        rank = rank.charAt(0) + rank.substring(1).toLowerCase();
+        suit = suit.charAt(0) + suit.substring(1).toLowerCase();
+        return rank + " of " + suit;
+    }
+
     private boolean isCurrentPlayerHuman(Game game, GameSetup setup) {
         String currentPlayer = game.getCurrentPlayer();
         return setup.isHumanPlayer(currentPlayer);

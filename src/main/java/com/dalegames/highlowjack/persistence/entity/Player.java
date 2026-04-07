@@ -81,7 +81,13 @@ public class Player {
     
     @Column(name = "total_ace_spades_played")
     private int totalAceSpadesPlayed = 0;
-    
+
+    @Column(name = "total_aces_cut")
+    private int totalAcesCut = 0;
+
+    @Column(name = "total_cuts_won")
+    private int totalCutsWon = 0;
+
     // Metadata
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -158,6 +164,16 @@ public class Player {
      */
     public void recordAceSpadesPlayed() {
         this.totalAceSpadesPlayed++;
+    }
+
+    /**
+     * Records a cut result for this player.
+     * @param cutAnAce true if this player cut an Ace
+     * @param won true if this player won the cut
+     */
+    public void recordCutResult(boolean cutAnAce, boolean won) {
+        if (cutAnAce) this.totalAcesCut++;
+        if (won) this.totalCutsWon++;
     }
     
     /**
@@ -313,9 +329,25 @@ public class Player {
     public int getTotalAceSpadesPlayed() {
         return totalAceSpadesPlayed;
     }
-    
+
     public void setTotalAceSpadesPlayed(int totalAceSpadesPlayed) {
         this.totalAceSpadesPlayed = totalAceSpadesPlayed;
+    }
+
+    public int getTotalAcesCut() {
+        return totalAcesCut;
+    }
+
+    public void setTotalAcesCut(int totalAcesCut) {
+        this.totalAcesCut = totalAcesCut;
+    }
+
+    public int getTotalCutsWon() {
+        return totalCutsWon;
+    }
+
+    public void setTotalCutsWon(int totalCutsWon) {
+        this.totalCutsWon = totalCutsWon;
     }
     
     public LocalDateTime getCreatedAt() {

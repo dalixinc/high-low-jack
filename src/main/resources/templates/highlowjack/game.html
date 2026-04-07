@@ -494,6 +494,9 @@
                                 <span th:text="${tricksWon.get(player)}">0</span>
                                 <span>🏆</span>
                             </div>
+                            <div th:if="${setsWon != null}" style="font-size: 0.8rem; opacity: 0.75; margin-top: 2px;">
+                                Sets: <span th:text="${setsWon.get(player) ?: 0}">0</span>
+                            </div>
                         </div>
                     </div>
                     
@@ -563,6 +566,35 @@
                         <strong th:text="${game.currentPlayer}">Computer</strong> is thinking...
                     </div>
                     
+                    <!-- ═══════════════════════════════════════════════════════════════ -->
+                    <!-- REALTIME EVENT QUIPS - shown above hand so all players see them -->
+                    <!-- ═══════════════════════════════════════════════════════════════ -->
+                    <div th:if="${eventQuips != null and !eventQuips.empty}"
+                         style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+                                border-radius: 15px;
+                                padding: 25px 35px;
+                                margin: 0 0 20px 0;
+                                box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+                                animation: quipPop 6s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;">
+
+                        <div style="text-align: center; font-size: 2.8rem; margin-bottom: 15px;">⚡</div>
+
+                        <div th:each="quip : ${eventQuips}"
+                             style="background: white;
+                                    color: #2c3e50;
+                                    padding: 20px 30px;
+                                    border-radius: 12px;
+                                    margin: 12px 0;
+                                    box-shadow: 0 5px 20px rgba(0,0,0,0.25);
+                                    font-size: 1.4rem;
+                                    font-weight: bold;
+                                    text-align: center;
+                                    border-left: 5px solid #9b59b6;"
+                             th:text="${quip}">
+                            Realtime event quip here
+                        </div>
+                    </div>
+
                     <div class="your-hand">
                         <h3>Your Hand</h3>
                         
@@ -593,7 +625,72 @@
                             </form>
                         </div>
                     </div>
+        
+                    <!-- ═══════════════════════════════════════════════════════════════ -->
+                    <!-- QUIPS DISPLAY - Shows personality quips after round scoring -->
+                    <!-- ═══════════════════════════════════════════════════════════════ -->
+                    <div th:if="${quips != null and !quips.empty}" 
+                         style="background: linear-gradient(135deg, #f39c12 0%, #e74c3c 100%);
+                                border-radius: 15px;
+                                padding: 25px 35px;
+                                margin: 25px auto;
+                                max-width: 900px;
+                                box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+                                animation: quipSlideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);">
+                        
+                        <div style="text-align: center; font-size: 2.8rem; margin-bottom: 15px;">🎭</div>
+                        
+                        <div th:each="quip : ${quips}" 
+                             style="background: white;
+                                    color: #2c3e50;
+                                    padding: 20px 30px;
+                                    border-radius: 12px;
+                                    margin: 12px 0;
+                                    box-shadow: 0 5px 20px rgba(0,0,0,0.25);
+                                    font-size: 1.4rem;
+                                    font-weight: bold;
+                                    font-style: italic;
+                                    text-align: center;
+                                    border-left: 5px solid #e74c3c;"
+                             th:text="${quip}">
+                            Quip text here
+                        </div>
+                    </div>
                     
+                    <style>
+                        @keyframes quipSlideIn {
+                            from { 
+                                opacity: 0; 
+                                transform: translateY(-40px) scale(0.85); 
+                            }
+                            to { 
+                                opacity: 1; 
+                                transform: translateY(0) scale(1); 
+                            }
+                        }
+                    </style>
+					
+                    
+					<style>
+					    @keyframes quipPop {
+					        0% { 
+					            opacity: 0; 
+					            transform: scale(0.3) rotate(-10deg); 
+					        }
+					        10% { 
+					            transform: scale(1.1) rotate(3deg); 
+					        }
+					        15%, 90% { 
+					            opacity: 1; 
+					            transform: scale(1) rotate(0deg); 
+					        }
+					        100% { 
+					            opacity: 0; 
+					            transform: scale(0.9); 
+					        }
+					    }
+					</style>
+					
                     <div class="buttons">
                         <!-- SURGICAL MODIFICATION: Changed to use modal confirmation -->
                         <button type="button" class="btn" onclick="confirmNewGame()">New Game</button>
@@ -613,13 +710,16 @@
             </div>
             <div class="scoreboard-score" th:text="${game.getScore(team.name)}">0</div>
             <div class="scoreboard-progress">
-                <div class="scoreboard-progress-fill" 
+                <div class="scoreboard-progress-fill"
                      th:style="'width: ' + (${game.getScore(team.name)} * 100.0 / 11) + '%;'">
                 </div>
             </div>
             <div style="font-size: 0.75rem; opacity: 0.7; margin-top: 3px;">
-                <span th:text="${team.player1Name}">P1</span> & 
+                <span th:text="${team.player1Name}">P1</span> &
                 <span th:text="${team.player2Name}">P2</span>
+            </div>
+            <div th:if="${setsWon != null}" style="font-size: 0.75rem; opacity: 0.75; margin-top: 2px;">
+                Sets won: <span th:text="${setsWon.get(team.name) ?: 0}">0</span>
             </div>
         </div>
     </div>
@@ -631,9 +731,12 @@
             <div class="scoreboard-player-name" th:text="${player}">Player</div>
             <div class="scoreboard-score" th:text="${game.getScore(player)}">0</div>
             <div class="scoreboard-progress">
-                <div class="scoreboard-progress-fill" 
+                <div class="scoreboard-progress-fill"
                      th:style="'width: ' + (${game.getScore(player)} * 100.0 / 11) + '%;'">
                 </div>
+            </div>
+            <div th:if="${setsWon != null}" style="font-size: 0.75rem; opacity: 0.75; margin-top: 3px;">
+                Sets won: <span th:text="${setsWon.get(player) ?: 0}">0</span>
             </div>
         </div>
     </div>
@@ -684,24 +787,50 @@
         const currentPlayer = /*[[${game.currentPlayer}]]*/ 'Dale';
         const humanPlayer = /*[[${humanPlayer}]]*/ 'Dale';
         const isRoundComplete = /*[[${game.state.name() == 'ROUND_COMPLETE'}]]*/ false;
-        
+        const isMultiplayer = /*[[${isMultiplayer}]]*/ false;
+        const isMyTurn = /*[[${isMyTurn}]]*/ true;
+        const hasEventQuips = /*[[${eventQuips != null and !eventQuips.empty}]]*/ false;
+
         // BUG #1 FIX: Longer pause for completed tricks, especially the last one
         if (hasCompletedTrick && !isRoundComplete) {
+            const quipBuffer = hasEventQuips ? 1000 : 0;
             if (currentPlayer === humanPlayer) {
-                setTimeout(() => {
-                    location.reload();
-                }, 5000);  // CHANGED: 5 seconds instead of 3
+                setTimeout(() => { location.reload(); }, 5000 + quipBuffer);
             } else {
-                setTimeout(() => {
-                    location.reload();
-                }, 4500);  // CHANGED: 4.5 seconds instead of 2
+                setTimeout(() => { location.reload(); }, 4500 + quipBuffer);
             }
-        } 
+        }
         else if (isAITurn) {
-            const delay = 1000 + Math.random() * 2000;
+            const baseDelay = 1000 + Math.random() * 2000;
+            const delay = hasEventQuips ? Math.max(baseDelay, 3000) : baseDelay;
             setTimeout(() => {
                 location.reload();
             }, delay);
+        }
+        else if (isMultiplayer && !isMyTurn && !isRoundComplete) {
+            // Multiplayer: poll for any game state change so all players see cards in real-time
+            let lastTrickSize = -1;
+            let lastCompletedTricks = -1;
+            const mpPollInterval = setInterval(() => {
+                fetch('/highlowjack/poll')
+                    .then(r => r.json())
+                    .then(data => {
+                        const myTurnNow = data.humanPlayer && data.currentPlayer === data.humanPlayer;
+                        const roundOver = data.gameState && data.gameState !== 'IN_PROGRESS';
+                        const trickSizeChanged = data.currentTrickSize !== undefined && lastTrickSize >= 0 && data.currentTrickSize !== lastTrickSize;
+                        const completedTricksChanged = data.completedTrickCount !== undefined && lastCompletedTricks >= 0 && data.completedTrickCount !== lastCompletedTricks;
+
+                        // Update tracked values
+                        if (data.currentTrickSize !== undefined) lastTrickSize = data.currentTrickSize;
+                        if (data.completedTrickCount !== undefined) lastCompletedTricks = data.completedTrickCount;
+
+                        if (myTurnNow || roundOver || trickSizeChanged || completedTricksChanged) {
+                            clearInterval(mpPollInterval);
+                            location.reload();
+                        }
+                    })
+                    .catch(() => {}); // ignore transient network errors
+            }, 1000);
         }
         
         // SURGICAL ADDITION #3: Modal Functions

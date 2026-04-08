@@ -1,9 +1,8 @@
 [build]
-builder = "nixpacks"
-buildCommand = "mvn clean package -DskipTests"
+builder = "dockerfile"
 
 [deploy]
-startCommand = "java -jar target/high-low-jack.jar"
+startCommand = "java -jar app.jar"
 healthcheckPath = "/highlowjack/setup"
 healthcheckTimeout = 60
 restartPolicyType = "on_failure"

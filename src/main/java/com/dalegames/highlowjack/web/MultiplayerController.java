@@ -384,7 +384,7 @@ public class MultiplayerController {
      * Non-host players call this when game starts (detected by polling).
      * Transfers game to their session and redirects to game.
      */
-    @PostMapping("/start-player")
+    @GetMapping("/start-player")
     public String startPlayer(HttpSession session) {
         String code = (String) session.getAttribute("mp_code");
         Integer position = (Integer) session.getAttribute("mp_position");

@@ -349,13 +349,9 @@
 	            .then(response => response.json())
 	            .then(data => {
 	                if (data.gameStarted) {
-	                    // Game started! Transfer to game and redirect
+	                    // Game started! Navigate directly - server sets session and redirects to /cut
 	                    console.log('🚀 Game started! Redirecting...');
-	                    fetch('/highlowjack/multiplayer/start-player', {
-	                        method: 'POST'
-	                    }).then(() => {
-	                        window.location.href = '/highlowjack/cut';
-	                    });
+	                    window.location.href = '/highlowjack/multiplayer/start-player';
 	                } else if (data.updated) {
 	                    console.log('🔄 Game state updated, reloading...');
 	                    location.reload();

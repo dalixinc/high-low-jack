@@ -1011,6 +1011,13 @@ public class HighLowJackController {
             model.addAttribute("cutCard2Label", cardLabel(game.getCutCard2()));
         }
 
+        // Read cut quips from session (set by POST /cut, consumed once here)
+        List<String> cutQuips = (List<String>) session.getAttribute("hlj_cutQuips");
+        if (cutQuips != null) {
+            model.addAttribute("cutQuips", cutQuips);
+            session.removeAttribute("hlj_cutQuips");
+        }
+
         model.addAttribute("game", game);
         model.addAttribute("setup", setup);
         model.addAttribute("isController", isController);
@@ -1102,6 +1109,19 @@ public class HighLowJackController {
             // Record stats (human players only — AI don't have DB records)
             recordCutStats(cutter1, card1, rank1 > rank2, setup);
             recordCutStats(cutter2, card2, rank2 > rank1, setup);
+        }
+
+        // Cut quips — store in session so GET /cut can display them once
+        if (!game.isCutTied()) {
+            try {
+                List<String> cutQuips = quipDetector.checkCutQuips(
+                    cutter1, card1, cutter2, card2);
+                if (!cutQuips.isEmpty()) {
+                    session.setAttribute("hlj_cutQuips", cutQuips);
+                }
+            } catch (Exception e) {
+                System.err.println("❌ Error checking cut quips: " + e.getMessage());
+            }
         }
 
         session.setAttribute("hlj_game", game);

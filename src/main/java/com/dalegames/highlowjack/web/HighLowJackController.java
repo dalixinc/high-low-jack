@@ -548,13 +548,25 @@ public class HighLowJackController {
                               p.getJacksWon() + p.getGamesWon())
                 .sum();
             
-            // Get team stats (for now, empty - we'll implement this next)
-            List<TeamStats> teams = new ArrayList<>();
-            
+            // Get team stats
+            List<TeamStats> teams = teamStatsService.getLeaderboard();
+
+            // Awards: Hall of Fame (most aces cut) and Hall of Shame (most twos cut)
+            Player topAceCutter = players.stream()
+                .filter(p -> p.getTotalAcesCut() > 0)
+                .max(java.util.Comparator.comparingInt(Player::getTotalAcesCut))
+                .orElse(null);
+            Player topTwoCutter = players.stream()
+                .filter(p -> p.getTotalTwosCut() > 0)
+                .max(java.util.Comparator.comparingInt(Player::getTotalTwosCut))
+                .orElse(null);
+
             model.addAttribute("players", players);
             model.addAttribute("teams", teams);
             model.addAttribute("totalMatches", totalMatches);
             model.addAttribute("totalPoints", totalPoints);
+            model.addAttribute("topAceCutter", topAceCutter);
+            model.addAttribute("topTwoCutter", topTwoCutter);
             
             return "highlowjack/stats";
         } catch (Exception e) {
@@ -564,6 +576,8 @@ public class HighLowJackController {
             model.addAttribute("teams", new ArrayList<>());
             model.addAttribute("totalMatches", 0);
             model.addAttribute("totalPoints", 0);
+            model.addAttribute("topAceCutter", null);
+            model.addAttribute("topTwoCutter", null);
             return "highlowjack/stats";
         }
     }
@@ -770,17 +784,25 @@ public class HighLowJackController {
                     // ═══════════════════════════════════════════════════════════════
                     try {
                         if (game.isTeamMode()) {
-                            // Team mode: update stats for each player
+                            // Team mode: update stats for each player and each team
                             for (Team team : game.getTeams()) {
                                 boolean teamWon = team.getName().equals(matchResult.getWinner());
                                 int teamSetsWon = matchResult.getFinalSetWins().getOrDefault(team.getName(), 0);
+                                List<String> teamPlayers = team.getPlayerNames();
 
-                                for (String playerName : team.getPlayerNames()) {
+                                for (String playerName : teamPlayers) {
                                     playerService.updateMatchStats(playerName, teamWon, teamSetsWon);
                                     System.out.println("📊 Updated stats for " + playerName +
                                                      " (team " + team.getName() + "): " +
                                                      (teamWon ? "WIN" : "LOSS"));
                                 }
+
+                                // Update team stats record
+                                String p1 = teamPlayers.size() > 0 ? teamPlayers.get(0) : "";
+                                String p2 = teamPlayers.size() > 1 ? teamPlayers.get(1) : "";
+                                teamStatsService.updateMatchStats(team.getName(), p1, p2, teamWon, teamSetsWon);
+                                System.out.println("📊 Updated team stats for " + team.getName() +
+                                                 ": " + (teamWon ? "WIN" : "LOSS"));
                             }
                         } else {
                             // Individual mode: update stats for each player

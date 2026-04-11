@@ -809,5 +809,13 @@
             }
         });
     </script>
+
+    <!-- Version badge -->
+    <div th:text="${appVersion}"
+         style="position:fixed; bottom:10px; right:14px;
+                font-size:0.75rem; color:rgba(255,255,255,0.35);
+                font-family:monospace; pointer-events:none; user-select:none;">
+        v?
+    </div>
 </body>
 </html>

@@ -368,12 +368,19 @@
             </div>
         </div>
         
-        <!-- Play Again -->
-        <form th:action="@{/highlowjack/setup}" method="get">
-            <button type="submit" class="play-again-button">
-                🎮 Play Again
-            </button>
-        </form>
+        <!-- Rematch / Play Again -->
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; margin-top: 40px;">
+            <form th:action="@{/highlowjack/rematch}" method="post">
+                <button type="submit" class="play-again-button" style="background: linear-gradient(135deg, #f39c12 0%, #e74c3c 100%);">
+                    🔄 Rematch!
+                </button>
+            </form>
+            <form th:action="@{/highlowjack/setup}" method="get">
+                <button type="submit" class="play-again-button">
+                    🎮 New Game
+                </button>
+            </form>
+        </div>
         
         <div style="margin-top: 30px; color: rgba(255,255,255,0.7); font-size: 1.2rem;">
             🎉 CHAMPIONS! 🎉
@@ -400,15 +407,30 @@
         <!-- Victory fanfare synthesizer -->
     <script th:src="@{/js/victory-fanfare.js}"></script>
     
-    <script>
+    <script th:inline="javascript">
         // Play epic synthesized fanfare on load!
         window.addEventListener('load', function() {
-            // Small delay to ensure everything is loaded
             setTimeout(function() {
                 const fanfare = new VictoryFanfare();
                 fanfare.play();
             }, 300);
         });
+
+        // Non-controller: poll so we follow when the controller triggers a rematch.
+        // When the game resets (NOT_STARTED), navigate to the cut ceremony.
+        const isController = /*[[${isController}]]*/ true;
+        if (!isController) {
+            setInterval(function() {
+                fetch('/highlowjack/poll')
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.gameState === 'NOT_STARTED') {
+                            window.location.href = '/highlowjack/cut';
+                        }
+                    })
+                    .catch(function() {});
+            }, 1500);
+        }
     </script>
 </body>
 </html>

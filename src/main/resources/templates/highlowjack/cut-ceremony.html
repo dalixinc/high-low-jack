@@ -218,6 +218,41 @@
 
         .btn-cut-again:hover { transform: scale(1.05); }
 
+        /* ── Interactive card flip ── */
+        .flip-img {
+            width: 100px;
+            border-radius: 8px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            display: block;
+            margin: 0 auto;
+        }
+        .flip-img.winner-card {
+            border: 3px solid #ffd700;
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.8), 0 8px 25px rgba(0,0,0,0.5);
+        }
+
+        .btn-flip {
+            background: linear-gradient(135deg, #ffd700 0%, #f39c12 100%);
+            color: #1a1a2e;
+            border: none;
+            padding: 12px 28px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 14px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+        }
+        .btn-flip:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(255,215,0,0.6); }
+
+        .waiting-to-flip {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-top: 10px;
+            font-style: italic;
+        }
+
         /* ── Waiting (non-controller) ── */
         .waiting-message {
             margin-top: 30px;
@@ -252,102 +287,145 @@
     </div>
 
     <!-- ══════════════════════════════════════════════════════ -->
-    <!-- CONTROLLER VIEW                                        -->
+    <!-- SECTION A: CONTROLLER ONLY — pick cutters             -->
     <!-- ══════════════════════════════════════════════════════ -->
-    <div th:if="${isController}">
+    <div th:if="${isController and (game.cutCard1 == null or game.cutTied)}">
 
-        <!-- ── A: No cut done yet OR tied (show selectors + cut button) ── -->
-        <div th:if="${game.cutCard1 == null or game.cutTied}">
-
-            <!-- Tie message -->
-            <div th:if="${game.cutTied}" class="outcome-banner outcome-tied" style="margin-bottom:20px;">
-                ⚡ It's a TIE! Cut again.
-            </div>
-
-            <form id="cutForm" th:action="@{/highlowjack/cut}" method="post">
-
-                <!-- Team mode: separate dropdowns per team -->
-                <div th:if="${isTeamMode}" class="selector-row">
-                    <div class="selector-group">
-                        <div class="selector-label"
-                             th:text="${setup.getTeam(0).name}">Team 1</div>
-                        <select name="cutter1" id="cutter1">
-                            <option th:each="p : ${team1Options}"
-                                    th:value="${p}"
-                                    th:text="${p}"
-                                    th:selected="${p == suggestedCutter1}">Player</option>
-                        </select>
-                    </div>
-                    <div class="vs-badge">VS</div>
-                    <div class="selector-group">
-                        <div class="selector-label"
-                             th:text="${setup.getTeam(1).name}">Team 2</div>
-                        <select name="cutter2" id="cutter2">
-                            <option th:each="p : ${team2Options}"
-                                    th:value="${p}"
-                                    th:text="${p}"
-                                    th:selected="${p == suggestedCutter2}">Player</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Individual mode: two dropdowns, JS prevents same selection -->
-                <div th:unless="${isTeamMode}" class="selector-row">
-                    <div class="selector-group">
-                        <div class="selector-label">Cutter 1</div>
-                        <select name="cutter1" id="cutter1" onchange="preventSame()">
-                            <option th:each="p : ${team1Options}"
-                                    th:value="${p}"
-                                    th:text="${p}"
-                                    th:selected="${p == suggestedCutter1}">Player</option>
-                        </select>
-                    </div>
-                    <div class="vs-badge">VS</div>
-                    <div class="selector-group">
-                        <div class="selector-label">Cutter 2</div>
-                        <select name="cutter2" id="cutter2" onchange="preventSame()">
-                            <option th:each="p : ${team2Options}"
-                                    th:value="${p}"
-                                    th:text="${p}"
-                                    th:selected="${p == suggestedCutter2}">Player</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="btn-row">
-                    <button type="submit" class="btn-cut">✂️ Cut!</button>
-                    <button type="submit" name="random" value="true" class="btn-random">🎲 Random</button>
-                </div>
-            </form>
+        <!-- Tie message -->
+        <div th:if="${game.cutTied}" class="outcome-banner outcome-tied" style="margin-bottom:20px;">
+            ⚡ It's a TIE! Cut again.
         </div>
 
-        <!-- ── B: Cut done, winner determined ── -->
-        <div th:if="${game.cutCard1 != null and !game.cutTied}">
+        <form id="cutForm" th:action="@{/highlowjack/cut}" method="post">
 
-            <div class="cards-reveal">
-                <!-- Cutter 1 -->
-                <div class="cutter-card">
-                    <div class="cutter-name" th:text="${game.cutPlayer1}">Player 1</div>
+            <!-- Team mode: separate dropdowns per team -->
+            <div th:if="${isTeamMode}" class="selector-row">
+                <div class="selector-group">
+                    <div class="selector-label" th:text="${setup.getTeam(0).name}">Team 1</div>
+                    <select name="cutter1" id="cutter1">
+                        <option th:each="p : ${team1Options}" th:value="${p}" th:text="${p}"
+                                th:selected="${p == suggestedCutter1}">Player</option>
+                    </select>
+                </div>
+                <div class="vs-badge">VS</div>
+                <div class="selector-group">
+                    <div class="selector-label" th:text="${setup.getTeam(1).name}">Team 2</div>
+                    <select name="cutter2" id="cutter2">
+                        <option th:each="p : ${team2Options}" th:value="${p}" th:text="${p}"
+                                th:selected="${p == suggestedCutter2}">Player</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Individual mode -->
+            <div th:unless="${isTeamMode}" class="selector-row">
+                <div class="selector-group">
+                    <div class="selector-label">Cutter 1</div>
+                    <select name="cutter1" id="cutter1" onchange="preventSame()">
+                        <option th:each="p : ${team1Options}" th:value="${p}" th:text="${p}"
+                                th:selected="${p == suggestedCutter1}">Player</option>
+                    </select>
+                </div>
+                <div class="vs-badge">VS</div>
+                <div class="selector-group">
+                    <div class="selector-label">Cutter 2</div>
+                    <select name="cutter2" id="cutter2" onchange="preventSame()">
+                        <option th:each="p : ${team2Options}" th:value="${p}" th:text="${p}"
+                                th:selected="${p == suggestedCutter2}">Player</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="btn-row">
+                <button type="submit" class="btn-cut">✂️ Cut!</button>
+                <button type="submit" name="random" value="true" class="btn-random">🎲 Random</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Non-controller waiting for cut to start -->
+    <div th:if="${!isController and game.cutCard1 == null and !game.cutTied}" class="waiting-message">
+        ⏳ Waiting for host to start the cut...
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- SECTION B: ALL PLAYERS — card flip reveal             -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <div th:if="${game.cutCard1 != null and !game.cutTied}">
+
+        <div class="cards-reveal">
+
+            <!-- ── Cutter 1 ── -->
+            <div class="cutter-card">
+                <div class="cutter-name" th:text="${game.cutPlayer1}">Player 1</div>
+
+                <!-- Human cutter: flip card -->
+                <div th:if="${cutter1IsHuman}">
+                    <img id="flipImg1"
+                         th:src="@{/images/cards/back-blue.png}"
+                         th:data-real="${cutCard1Image}"
+                         th:data-winner="${game.cutWinner == game.cutPlayer1}"
+                         class="flip-img"
+                         alt="Cut card"/>
+                    <!-- This session's flip button OR waiting indicator -->
+                    <div th:if="${showFlipBtn1}">
+                        <button class="btn-flip" id="flipBtn1" onclick="flipCard(1)">✂️ Cut!</button>
+                    </div>
+                    <div th:unless="${showFlipBtn1}" class="waiting-to-flip" id="waitLabel1">
+                        ⏳ Waiting for <span th:text="${game.cutPlayer1}">Player 1</span>...
+                    </div>
+                </div>
+
+                <!-- AI cutter: always visible -->
+                <div th:unless="${cutter1IsHuman}">
                     <img th:src="${cutCard1Image}"
                          th:classappend="${game.cutWinner == game.cutPlayer1} ? 'winner-card' : ''"
                          class="card-image" alt="Cut card"/>
-                    <div class="card-rank-label" th:text="${cutCard1Label}">Rank</div>
-                </div>
-
-                <!-- VS divider -->
-                <div style="align-self:center; font-size:1.8rem; color:#aaa;">VS</div>
-
-                <!-- Cutter 2 -->
-                <div class="cutter-card">
-                    <div class="cutter-name" th:text="${game.cutPlayer2}">Player 2</div>
-                    <img th:src="${cutCard2Image}"
-                         th:classappend="${game.cutWinner == game.cutPlayer2} ? 'winner-card' : ''"
-                         class="card-image" alt="Cut card"/>
-                    <div class="card-rank-label" th:text="${cutCard2Label}">Rank</div>
                 </div>
             </div>
 
-            <!-- Winner banner -->
+            <!-- VS divider -->
+            <div style="align-self:center; font-size:1.8rem; color:#aaa;">VS</div>
+
+            <!-- ── Cutter 2 ── -->
+            <div class="cutter-card">
+                <div class="cutter-name" th:text="${game.cutPlayer2}">Player 2</div>
+
+                <!-- Human cutter: flip card -->
+                <div th:if="${cutter2IsHuman}">
+                    <img id="flipImg2"
+                         th:src="@{/images/cards/back-blue.png}"
+                         th:data-real="${cutCard2Image}"
+                         th:data-winner="${game.cutWinner == game.cutPlayer2}"
+                         class="flip-img"
+                         alt="Cut card"/>
+                    <div th:if="${showFlipBtn2}">
+                        <button class="btn-flip" id="flipBtn2" onclick="flipCard(2)">✂️ Cut!</button>
+                    </div>
+                    <div th:unless="${showFlipBtn2}" class="waiting-to-flip" id="waitLabel2">
+                        ⏳ Waiting for <span th:text="${game.cutPlayer2}">Player 2</span>...
+                    </div>
+                </div>
+
+                <!-- AI cutter: always visible -->
+                <div th:unless="${cutter2IsHuman}">
+                    <img th:src="${cutCard2Image}"
+                         th:classappend="${game.cutWinner == game.cutPlayer2} ? 'winner-card' : ''"
+                         class="card-image" alt="Cut card"/>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Outcome: hidden until all local flips done ── -->
+        <div id="outcomeSection" style="display:none;">
+
+            <!-- Rank labels revealed here (not before) -->
+            <div style="display:flex; gap:40px; justify-content:center; margin-bottom:10px; flex-wrap:wrap;">
+                <div class="card-rank-label" th:text="${cutCard1Label}">Rank 1</div>
+                <div style="width:40px;"></div>
+                <div class="card-rank-label" th:text="${cutCard2Label}">Rank 2</div>
+            </div>
+
             <div class="outcome-banner outcome-winner">
                 🏆 <span th:text="${game.cutWinner}">Winner</span> cuts high — they pitch first!
             </div>
@@ -361,53 +439,18 @@
                      th:text="${quip}">Cut quip here</div>
             </div>
 
-            <!-- Start Game button -->
-            <form th:action="@{/highlowjack/cut/complete}" method="post">
-                <button type="submit" class="btn-start-game">
-                    ▶️ <span th:if="${game.currentSetNumber == 1}">Start Game!</span>
-                    <span th:if="${game.currentSetNumber > 1}">Start Set <span th:text="${game.currentSetNumber}">2</span>!</span>
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <!-- ══════════════════════════════════════════════════════ -->
-    <!-- NON-CONTROLLER VIEW                                    -->
-    <!-- ══════════════════════════════════════════════════════ -->
-    <div th:unless="${isController}">
-
-        <!-- Show result if cut is done -->
-        <div th:if="${game.cutCard1 != null and !game.cutTied}">
-
-            <div class="cards-reveal">
-                <div class="cutter-card">
-                    <div class="cutter-name" th:text="${game.cutPlayer1}">Player 1</div>
-                    <img th:src="${cutCard1Image}"
-                         th:classappend="${game.cutWinner == game.cutPlayer1} ? 'winner-card' : ''"
-                         class="card-image" alt="Cut card"/>
-                    <div class="card-rank-label" th:text="${cutCard1Label}">Rank</div>
-                </div>
-                <div style="align-self:center; font-size:1.8rem; color:#aaa;">VS</div>
-                <div class="cutter-card">
-                    <div class="cutter-name" th:text="${game.cutPlayer2}">Player 2</div>
-                    <img th:src="${cutCard2Image}"
-                         th:classappend="${game.cutWinner == game.cutPlayer2} ? 'winner-card' : ''"
-                         class="card-image" alt="Cut card"/>
-                    <div class="card-rank-label" th:text="${cutCard2Label}">Rank</div>
-                </div>
+            <!-- Start Game: controller only -->
+            <div th:if="${isController}">
+                <form th:action="@{/highlowjack/cut/complete}" method="post">
+                    <button type="submit" class="btn-start-game">
+                        ▶️ <span th:if="${game.currentSetNumber == 1}">Start Game!</span>
+                        <span th:if="${game.currentSetNumber > 1}">Start Set <span th:text="${game.currentSetNumber}">2</span>!</span>
+                    </button>
+                </form>
             </div>
-
-            <div class="outcome-banner outcome-winner">
-                🏆 <span th:text="${game.cutWinner}">Winner</span> cuts high — they pitch first!
+            <div th:unless="${isController}" class="waiting-message" style="margin-top:20px;">
+                ⏳ Waiting for host to start the game...
             </div>
-        </div>
-
-        <div th:if="${game.cutTied}" class="outcome-banner outcome-tied">
-            ⚡ It was a tie! Host is cutting again...
-        </div>
-
-        <div class="waiting-message">
-            ⏳ Waiting for host to perform the cut...
         </div>
     </div>
 
@@ -415,10 +458,84 @@
 
 <script th:inline="javascript">
     const isController = /*[[${isController}]]*/ false;
-    const cutWinner    = /*[[${game.cutWinner}]]*/ null;
+    const cutter1Human = /*[[${cutter1IsHuman}]]*/ false;
+    const cutter2Human = /*[[${cutter2IsHuman}]]*/ false;
+    const showFlipBtn1 = /*[[${showFlipBtn1}]]*/ false;
+    const showFlipBtn2 = /*[[${showFlipBtn2}]]*/ false;
+    const cardsDrawn   = /*[[${game.cutCard1 != null and !game.cutTied}]]*/ false;
 
-    // Non-controllers poll until game goes IN_PROGRESS (cut complete + cards dealt)
-    if (!isController) {
+    // Locally revealed state — AI cards start as already revealed
+    let flipped1 = !cutter1Human;
+    let flipped2 = !cutter2Human;
+
+    // ── Animate a card reveal (scaleX fold → src-swap → unfold) ─────────
+    function animateFlip(n, onDone) {
+        const img = document.getElementById('flipImg' + n);
+        if (!img || img.dataset.flipped) { if (onDone) onDone(); return; }
+        img.dataset.flipped = 'true';
+
+        const waitLabel = document.getElementById('waitLabel' + n);
+        if (waitLabel) waitLabel.style.display = 'none';
+
+        img.style.transition = 'transform 0.25s ease-in';
+        img.style.transform  = 'scaleX(0)';
+        setTimeout(() => {
+            img.src = img.dataset.real;
+            if (img.dataset.winner === 'true') img.classList.add('winner-card');
+            img.style.transition = 'transform 0.25s ease-out';
+            img.style.transform  = 'scaleX(1)';
+            if (n === 1) flipped1 = true; else flipped2 = true;
+            setTimeout(() => { checkAllFlipped(); if (onDone) onDone(); }, 300);
+        }, 250);
+    }
+
+    // ── Player presses their flip button ────────────────────────────────
+    function flipCard(n) {
+        const btn = document.getElementById('flipBtn' + n);
+        if (btn) btn.style.display = 'none';
+
+        animateFlip(n, () => {
+            // Tell server this cutter has revealed (for cross-session coordination)
+            fetch('/highlowjack/cut/player-revealed?cutter=' + n, { method: 'POST' })
+                .catch(() => {});
+        });
+    }
+
+    // ── Show outcome section once both cards are revealed locally ────────
+    function checkAllFlipped() {
+        if (flipped1 && flipped2) {
+            setTimeout(() => {
+                const outcome = document.getElementById('outcomeSection');
+                if (outcome && outcome.style.display === 'none') {
+                    outcome.style.display = 'block';
+                    outcome.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }, 400);
+        }
+    }
+
+    window.addEventListener('load', () => {
+        if (!cardsDrawn) return;
+
+        if (flipped1 && flipped2) {
+            // Both cutters are AI — cards already face-up, show outcome after brief pause
+            setTimeout(checkAllFlipped, 800);
+        } else if (!showFlipBtn1 && !showFlipBtn2) {
+            // Spectator (human cards exist but no buttons on this screen): auto-reveal
+            setTimeout(() => animateFlip(1), 1000);
+            setTimeout(() => animateFlip(2), 1600);
+        } else {
+            // This session owns at least one flip button.
+            // AI cards are already counted as flipped; check if outcome can show immediately.
+            checkAllFlipped();
+        }
+    });
+
+    // ── Polling ──────────────────────────────────────────────────────────
+    // Non-controller always polls: detects when controller draws cards (reload)
+    //   and when game starts (navigate to game).
+    // Controller polls only after cards are drawn: detects other player's reveal.
+    if (!isController || cardsDrawn) {
         const cutPoll = setInterval(() => {
             fetch('/highlowjack/poll')
                 .then(r => r.json())
@@ -426,28 +543,32 @@
                     if (data.gameState === 'IN_PROGRESS') {
                         clearInterval(cutPoll);
                         window.location.href = '/highlowjack';
-                    } else if (data.gameState === 'NOT_STARTED') {
-                        // Refresh so they see any cut result the controller posted
-                        location.reload();
+                        return;
                     }
+                    if (!isController && !cardsDrawn) {
+                        // Waiting for controller to draw cards
+                        if (data.cutCardsDrawn) location.reload();
+                        return;
+                    }
+                    // Cards drawn — auto-flip any card the server says is revealed
+                    if (data.cut1Revealed && !flipped1) animateFlip(1);
+                    if (data.cut2Revealed && !flipped2) animateFlip(2);
                 })
                 .catch(() => {});
-        }, 2000);
+        }, 1500);
     }
 
-    // Individual mode: prevent selecting the same player in both dropdowns
+    // ── Individual mode: prevent same player in both dropdowns ────────────
     function preventSame() {
         const s1 = document.getElementById('cutter1');
         const s2 = document.getElementById('cutter2');
         if (!s1 || !s2) return;
         if (s1.value === s2.value) {
-            // Move s2 to next option
             const opts = Array.from(s2.options).map(o => o.value);
             const next = opts.find(v => v !== s1.value);
             if (next) s2.value = next;
         }
     }
-    // Run once on load
     preventSame();
 </script>
 </body>

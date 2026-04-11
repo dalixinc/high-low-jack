@@ -132,7 +132,8 @@ public class QuipDetector {
      */
     public List<String> checkSetQuips(Game game, SetResult setResult) {
         List<String> quips = new ArrayList<>();
-        
+        if (setResult == null) return quips;
+
         String winner = setResult.getWinner();
         Map<String, Integer> scores = setResult.getFinalScores();
         int winnerScore = scores.get(winner);

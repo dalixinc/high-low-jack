@@ -267,6 +267,51 @@
         .empty-state-text {
             font-size: 1.5rem;
         }
+
+        /* HEAD-TO-HEAD TABLE */
+        .h2h-table {
+            border-collapse: collapse;
+            font-size: 1rem;
+            min-width: 400px;
+        }
+        .h2h-table thead th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .h2h-table thead th:first-child {
+            border-radius: 10px 0 0 0;
+        }
+        .h2h-table thead th:last-child {
+            border-radius: 0 10px 0 0;
+        }
+        .h2h-row-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            font-weight: bold;
+            text-align: left;
+            white-space: nowrap;
+        }
+        .h2h-corner {
+            background: #4a3a7a !important;
+        }
+        .h2h-cell {
+            padding: 14px 20px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        .h2h-self   { background: #f0f0f0; }
+        .h2h-win    { background: #eafaf1; }
+        .h2h-loss   { background: #fdf0ef; }
+        .h2h-even   { background: #fefefe; }
+        .h2h-wins   { color: #27ae60; }
+        .h2h-losses { color: #e74c3c; }
+        .h2h-sep    { color: #999; margin: 0 4px; }
     </style>
 </head>
 <body>
@@ -304,6 +349,9 @@
             </button>
             <button class="tab-button" onclick="switchTab('awards')">
                 🏅 Awards
+            </button>
+            <button class="tab-button" onclick="switchTab('h2h')">
+                ⚔️ Head-to-Head
             </button>
         </div>
         
@@ -470,6 +518,46 @@
             </div>
         </div>
 
+        <!-- HEAD-TO-HEAD TAB -->
+        <div id="h2hTab" class="tab-content">
+            <h2 style="font-size: 2rem; color: #2c3e50; margin-bottom: 10px;">⚔️ Head-to-Head Records</h2>
+            <p style="color: #666; margin-bottom: 30px;">Individual match wins against each opponent.</p>
+
+            <div th:if="${!playerNames.isEmpty()}" style="overflow-x: auto;">
+                <table class="h2h-table">
+                    <thead>
+                        <tr>
+                            <th class="h2h-corner">vs</th>
+                            <th th:each="col : ${playerNames}" th:text="${col}">Opponent</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="rowCells, rowStat : ${h2hGrid}">
+                            <th class="h2h-row-header" th:text="${playerNames[rowStat.index]}">Player</th>
+                            <td th:each="cell : ${rowCells}"
+                                th:class="${cell.cssClass}">
+                                <span th:if="${!cell.self}">
+                                    <span class="h2h-wins" th:text="${cell.wins}">0</span>
+                                    <span class="h2h-sep">–</span>
+                                    <span class="h2h-losses" th:text="${cell.losses}">0</span>
+                                </span>
+                                <span th:if="${cell.self}" style="color: #ccc;">—</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p style="font-size: 0.85rem; color: #999; margin-top: 15px; text-align: center;">
+                    Read across a row: <strong>wins – losses</strong> against each column player.
+                    Green = winning record, red = losing record.
+                </p>
+            </div>
+
+            <div th:if="${playerNames.isEmpty()}" class="empty-state">
+                <div class="empty-state-icon">⚔️</div>
+                <div class="empty-state-text">No matches played yet!</div>
+            </div>
+        </div>
+
         <!-- Back Button -->
         <div class="button-container">
             <a th:href="@{/highlowjack/setup}" class="back-button">
@@ -495,7 +583,7 @@
         function switchTab(tab) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
-            const tabMap = { players: 'playersTab', teams: 'teamsTab', awards: 'awardsTab' };
+            const tabMap = { players: 'playersTab', teams: 'teamsTab', awards: 'awardsTab', h2h: 'h2hTab' };
             const tabEl = document.getElementById(tabMap[tab]);
             if (tabEl) tabEl.classList.add('active');
             event.target.classList.add('active');

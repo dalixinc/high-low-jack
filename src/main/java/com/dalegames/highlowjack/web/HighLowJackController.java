@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,30 +21,28 @@ import com.dalegames.highlowjack.model.Deck;
 import com.dalegames.highlowjack.model.Game;
 import com.dalegames.highlowjack.model.GameSetup;
 import com.dalegames.highlowjack.model.Hand;
+import com.dalegames.highlowjack.model.Match;
+import com.dalegames.highlowjack.model.MatchResult;
 import com.dalegames.highlowjack.model.PlayerInfo;
 import com.dalegames.highlowjack.model.RoundResult;
 import com.dalegames.highlowjack.model.SetResult;
 import com.dalegames.highlowjack.model.Team;
 import com.dalegames.highlowjack.model.Trick;
-import com.dalegames.highlowjack.model.Match;
-import com.dalegames.highlowjack.model.MatchResult;
 import com.dalegames.highlowjack.persistence.entity.Player;
+import com.dalegames.highlowjack.persistence.entity.TeamStats;
+import com.dalegames.highlowjack.persistence.service.HeadToHeadService;
 import com.dalegames.highlowjack.persistence.service.PlayerService;
 import com.dalegames.highlowjack.persistence.service.TeamStatsService;
-import com.dalegames.highlowjack.persistence.entity.TeamStats;
 import com.dalegames.highlowjack.service.QuipDetector;
 import com.dalegames.highlowjack.service.RealtimeQuipDetector;
 
-
 import jakarta.servlet.http.HttpSession;
-
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Web controller for High Low Jack card game.
  * 
  * @author Dale &amp; Primus
- * @version 8.13 - Adding quip mechanism
+ * @version 8.14 - Head-to-head feature
  */
 @Controller
 @RequestMapping("/highlowjack")
@@ -54,7 +53,10 @@ public class HighLowJackController {
     
     @Autowired
     private TeamStatsService teamStatsService;
-    
+
+    @Autowired
+    private HeadToHeadService headToHeadService;
+
     @Autowired
     private QuipDetector quipDetector;
     
@@ -561,12 +563,20 @@ public class HighLowJackController {
                 .max(java.util.Comparator.comparingInt(Player::getTotalTwosCut))
                 .orElse(null);
 
+            // Head-to-head grid
+            List<String> playerNames = players.stream()
+                .map(Player::getName)
+                .collect(java.util.stream.Collectors.toList());
+            List<List<com.dalegames.highlowjack.model.H2HCell>> h2hGrid = headToHeadService.buildGrid(playerNames);
+
             model.addAttribute("players", players);
             model.addAttribute("teams", teams);
             model.addAttribute("totalMatches", totalMatches);
             model.addAttribute("totalPoints", totalPoints);
             model.addAttribute("topAceCutter", topAceCutter);
             model.addAttribute("topTwoCutter", topTwoCutter);
+            model.addAttribute("h2hGrid", h2hGrid);
+            model.addAttribute("playerNames", playerNames);
             
             return "highlowjack/stats";
         } catch (Exception e) {
@@ -578,6 +588,8 @@ public class HighLowJackController {
             model.addAttribute("totalPoints", 0);
             model.addAttribute("topAceCutter", null);
             model.addAttribute("topTwoCutter", null);
+            model.addAttribute("h2hGrid", new java.util.LinkedHashMap<>());
+            model.addAttribute("playerNames", new ArrayList<>());
             return "highlowjack/stats";
         }
     }
@@ -816,6 +828,32 @@ public class HighLowJackController {
                         }
                     } catch (Exception e) {
                         System.err.println("❌ Error updating player stats: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+
+                    // ═══════════════════════════════════════════════════════════════
+                    // UPDATE HEAD-TO-HEAD RECORDS
+                    // ═══════════════════════════════════════════════════════════════
+                    try {
+                        String matchWinner = matchResult.getWinner();
+                        if (game.isTeamMode()) {
+                            // Team vs team: one H2H record per match
+                            for (Team team : game.getTeams()) {
+                                if (!team.getName().equals(matchWinner)) {
+                                    headToHeadService.recordResult(matchWinner, team.getName());
+                                }
+                            }
+                        } else {
+                            // Individual: winner beat every other player
+                            for (String playerName : game.getPlayerNames()) {
+                                if (!playerName.equals(matchWinner)) {
+                                    headToHeadService.recordResult(matchWinner, playerName);
+                                }
+                            }
+                        }
+                        System.out.println("📊 Updated H2H records for match winner: " + matchWinner);
+                    } catch (Exception e) {
+                        System.err.println("❌ Error updating H2H stats: " + e.getMessage());
                         e.printStackTrace();
                     }
 

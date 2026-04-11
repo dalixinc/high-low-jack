@@ -407,15 +407,30 @@
         <!-- Victory fanfare synthesizer -->
     <script th:src="@{/js/victory-fanfare.js}"></script>
     
-    <script>
+    <script th:inline="javascript">
         // Play epic synthesized fanfare on load!
         window.addEventListener('load', function() {
-            // Small delay to ensure everything is loaded
             setTimeout(function() {
                 const fanfare = new VictoryFanfare();
                 fanfare.play();
             }, 300);
         });
+
+        // Non-controller: poll so we follow when the controller triggers a rematch.
+        // When the game resets (NOT_STARTED), navigate to the cut ceremony.
+        const isController = /*[[${isController}]]*/ true;
+        if (!isController) {
+            setInterval(function() {
+                fetch('/highlowjack/poll')
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.gameState === 'NOT_STARTED') {
+                            window.location.href = '/highlowjack/cut';
+                        }
+                    })
+                    .catch(function() {});
+            }, 1500);
+        }
     </script>
 </body>
 </html>

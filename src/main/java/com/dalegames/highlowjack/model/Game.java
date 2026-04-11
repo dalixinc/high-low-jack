@@ -70,6 +70,9 @@ public class Game implements Serializable{
     private Card cutCard2;
     private String cutWinner;
     private boolean cutTied;
+    private boolean cutPlayer1Revealed;   // Has cutter 1 clicked their flip button?
+    private boolean cutPlayer2Revealed;   // Has cutter 2 clicked their flip button?
+    private List<String> cutQuips;        // Stored on game so all sessions can display them
     private int lastCutter1Index = -1;  // For suggesting next-set cutter rotation
     private int lastCutter2Index = -1;
 
@@ -202,6 +205,9 @@ public class Game implements Serializable{
         this.cutCard2 = null;
         this.cutWinner = null;
         this.cutTied = false;
+        this.cutPlayer1Revealed = false;
+        this.cutPlayer2Revealed = false;
+        this.cutQuips = null;
         this.lastCutter1Index = -1;
         this.lastCutter2Index = -1;
         this.currentPlayerIndex = 0;
@@ -608,6 +614,51 @@ public class Game implements Serializable{
         cutTied = false;
     }
 
+    /**
+     * Resets this game object IN PLACE for a rematch with the same players and setup.
+     * Preserves the shared object reference so all multiplayer sessions stay in sync.
+     */
+    public void resetForRematch(Match newMatch) {
+        // Reset scores and set wins (all final maps — clear + refill)
+        setsWon.replaceAll((k, v) -> 0);
+        scores.replaceAll((k, v) -> 0);
+        if (teams != null) {
+            for (Team team : teams) {
+                team.resetScore();
+            }
+        }
+        // Reset hands (final map — replace values in place)
+        hands.replaceAll((k, v) -> new Hand(k));
+        // Reset trick tracking (tricks is final — clear contents)
+        tricks.clear();
+        currentTrick = null;
+        completedTrick = null;
+        deck = null;
+        trumpSuit = null;
+        // Reset round / set tracking
+        currentSetNumber = 1;
+        roundNumber = 0;
+        pitcherIndex = 0;
+        currentPlayerIndex = 0;
+        roundScoresApplied = false;
+        lastRoundScores = new HashMap<>();
+        // Reset game results / quips
+        matchResult = null;
+        lastSetResult = null;
+        pendingMatchQuips = null;
+        pendingRealtimeQuips = null;
+        realtimeQuipTimestamp = 0;
+        recentEvents = new ArrayList<>();
+        lastCutter1Index = -1;
+        lastCutter2Index = -1;
+        // Reset cut ceremony state
+        clearCutState();
+        // Set the new match (shared across sessions via this game reference)
+        currentMatch = newMatch;
+        // Ready for the cut ceremony
+        state = GameState.NOT_STARTED;
+    }
+
     // ── Cut ceremony state ──────────────────────────────────────────────────
 
     public String getCutPlayer1() { return cutPlayer1; }
@@ -634,6 +685,15 @@ public class Game implements Serializable{
     public int getLastCutter2Index() { return lastCutter2Index; }
     public void setLastCutter2Index(int idx) { this.lastCutter2Index = idx; }
 
+    public boolean isCutPlayer1Revealed() { return cutPlayer1Revealed; }
+    public void setCutPlayer1Revealed(boolean v) { this.cutPlayer1Revealed = v; }
+
+    public boolean isCutPlayer2Revealed() { return cutPlayer2Revealed; }
+    public void setCutPlayer2Revealed(boolean v) { this.cutPlayer2Revealed = v; }
+
+    public List<String> getCutQuips() { return cutQuips; }
+    public void setCutQuips(List<String> cutQuips) { this.cutQuips = cutQuips; }
+
     /** Clears cut ceremony card/result state (keeps last cutter indices for rotation). */
     public void clearCutState() {
         cutPlayer1 = null;
@@ -642,6 +702,9 @@ public class Game implements Serializable{
         cutCard2 = null;
         cutWinner = null;
         cutTied = false;
+        cutPlayer1Revealed = false;
+        cutPlayer2Revealed = false;
+        cutQuips = null;
     }
 
     /**

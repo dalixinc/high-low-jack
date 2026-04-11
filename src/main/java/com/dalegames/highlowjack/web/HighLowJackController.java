@@ -381,28 +381,34 @@ public class HighLowJackController {
      */
     @PostMapping("/rematch")
     public String rematch(HttpSession session) {
+        Game game = (Game) session.getAttribute("hlj_game");
         GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
         if (setup == null) {
             return "redirect:/highlowjack/setup";
         }
 
-        // Clear all old game state
-        session.removeAttribute("hlj_game");
-        session.removeAttribute("hlj_match");
+        // Create the new match
+        Match match = new Match(setup.getMatchType());
+
+        if (game != null) {
+            // Reset the EXISTING game object in place — preserves the shared reference
+            // that all multiplayer sessions hold, so every session automatically sees the reset.
+            game.resetForRematch(match);
+        } else {
+            // Fallback for single-player if game somehow disappeared
+            game = new Game(setup);
+            game.setCurrentMatch(match);
+            session.setAttribute("hlj_game", game);
+        }
+
+        // Clear per-round/per-set session remnants from this session
         session.removeAttribute("hlj_roundResult");
         session.removeAttribute("hlj_roundNumber");
         session.removeAttribute("hlj_setResult");
         session.removeAttribute("hlj_matchResult");
-        session.removeAttribute("hlj_cutQuips");
-        session.removeAttribute("hlj_matchQuips");
-
-        // Fresh match and game with the same setup
-        Match match = new Match(setup.getMatchType());
-        Game game = new Game(setup);
         session.setAttribute("hlj_match", match);
-        session.setAttribute("hlj_game", game);
 
-        System.out.println("🔄 Rematch started with setup: " + setup);
+        System.out.println("🔄 Rematch started");
         return "redirect:/highlowjack/cut";
     }
     
@@ -641,6 +647,10 @@ public class HighLowJackController {
             int trickSize = (game.getCurrentTrick() != null) ? game.getCurrentTrick().size() : 0;
             response.put("currentTrickSize", trickSize);
             response.put("completedTrickCount", game.getTricks().size());
+            // Cut ceremony state (for cross-session coordination)
+            response.put("cutCardsDrawn", game.getCutCard1() != null && !game.isCutTied());
+            response.put("cut1Revealed", game.isCutPlayer1Revealed());
+            response.put("cut2Revealed", game.isCutPlayer2Revealed());
         }
         response.put("humanPlayer", humanPlayer);
         return response;
@@ -968,6 +978,14 @@ public class HighLowJackController {
         model.addAttribute("matchResult", matchResult);
         model.addAttribute("game", game);
 
+        // isController: non-controller multiplayer players need to poll for rematch
+        String sessionPlayerName = (String) session.getAttribute("hlj_playerName");
+        GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
+        boolean isController = sessionPlayerName == null || (setup != null && setup.getPlayers().stream()
+            .filter(p -> p.getName().equals(sessionPlayerName))
+            .anyMatch(PlayerInfo::isController));
+        model.addAttribute("isController", isController);
+
         @SuppressWarnings("unchecked")
         List<String> matchQuips = (List<String>) session.getAttribute("hlj_matchQuips");
         if (matchQuips == null && game != null) {
@@ -1101,12 +1119,22 @@ public class HighLowJackController {
             model.addAttribute("cutCard2Label", cardLabel(game.getCutCard2()));
         }
 
-        // Read cut quips from session (set by POST /cut, consumed once here)
-        List<String> cutQuips = (List<String>) session.getAttribute("hlj_cutQuips");
-        if (cutQuips != null) {
-            model.addAttribute("cutQuips", cutQuips);
-            session.removeAttribute("hlj_cutQuips");
+        // Read cut quips from game object (accessible from all sessions)
+        if (game.getCutQuips() != null && !game.getCutQuips().isEmpty()) {
+            model.addAttribute("cutQuips", game.getCutQuips());
         }
+
+        // Determine if each cutter is human (for interactive flip mechanic)
+        boolean cutter1IsHuman = game.getCutPlayer1() != null && setup.isHumanPlayer(game.getCutPlayer1());
+        boolean cutter2IsHuman = game.getCutPlayer2() != null && setup.isHumanPlayer(game.getCutPlayer2());
+
+        // showFlipBtnN = this session owns the flip button for cutter N.
+        // Single-player (no sessionPlayerName): controller flips all human cards.
+        // Multiplayer: each player only flips their own card.
+        boolean showFlipBtn1 = cutter1IsHuman &&
+            (sessionPlayerName == null || sessionPlayerName.equals(game.getCutPlayer1()));
+        boolean showFlipBtn2 = cutter2IsHuman &&
+            (sessionPlayerName == null || sessionPlayerName.equals(game.getCutPlayer2()));
 
         model.addAttribute("game", game);
         model.addAttribute("setup", setup);
@@ -1116,6 +1144,10 @@ public class HighLowJackController {
         model.addAttribute("suggestedCutter1", suggestedCutter1);
         model.addAttribute("suggestedCutter2", suggestedCutter2);
         model.addAttribute("isTeamMode", setup.isTeamMode());
+        model.addAttribute("cutter1IsHuman", cutter1IsHuman);
+        model.addAttribute("cutter2IsHuman", cutter2IsHuman);
+        model.addAttribute("showFlipBtn1", showFlipBtn1);
+        model.addAttribute("showFlipBtn2", showFlipBtn2);
 
         return "highlowjack/cut-ceremony";
     }
@@ -1201,13 +1233,18 @@ public class HighLowJackController {
             recordCutStats(cutter2, card2, rank2 > rank1, setup);
         }
 
-        // Cut quips — store in session so GET /cut can display them once
+        // Reset reveal flags for the new cut (so old revealed state doesn't persist)
+        game.setCutPlayer1Revealed(false);
+        game.setCutPlayer2Revealed(false);
+        game.setCutQuips(null);
+
+        // Cut quips — store on game object so all sessions (including non-controller) can display them
         if (!game.isCutTied()) {
             try {
                 List<String> cutQuips = quipDetector.checkCutQuips(
                     cutter1, card1, cutter2, card2);
                 if (!cutQuips.isEmpty()) {
-                    session.setAttribute("hlj_cutQuips", cutQuips);
+                    game.setCutQuips(cutQuips);
                 }
             } catch (Exception e) {
                 System.err.println("❌ Error checking cut quips: " + e.getMessage());
@@ -1230,6 +1267,23 @@ public class HighLowJackController {
                 System.err.println("⚠️ Error recording cut stat for " + playerName + ": " + e.getMessage());
             }
         }
+    }
+
+    /**
+     * Called via AJAX when a human cutter clicks their flip button.
+     * Marks the cutter as revealed on the shared game object so other sessions
+     * can poll for it and auto-flip the matching card.
+     */
+    @PostMapping("/cut/player-revealed")
+    @ResponseBody
+    public Map<String, Object> markCutPlayerRevealed(@RequestParam int cutter, HttpSession session) {
+        Game game = (Game) session.getAttribute("hlj_game");
+        if (game == null) return Map.of("ok", false);
+        if (cutter == 1) game.setCutPlayer1Revealed(true);
+        else if (cutter == 2) game.setCutPlayer2Revealed(true);
+        session.setAttribute("hlj_game", game);
+        return Map.of("ok", true, "cut1Revealed", game.isCutPlayer1Revealed(),
+                                  "cut2Revealed", game.isCutPlayer2Revealed());
     }
 
     /**

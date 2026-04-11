@@ -254,9 +254,11 @@ public class Game implements Serializable{
         deck = new Deck();
         deck.shuffle();
 
-        // Deal 7 cards to each player
+        // Clear any leftover cards (e.g. from an early wrap-up that ended the round
+        // before all cards were played) then deal fresh hands.
         for (String playerName : playerNames) {
             Hand hand = hands.get(playerName);
+            hand.clear();
             hand.addCards(deck.dealHand(CARDS_PER_PLAYER));
         }
 

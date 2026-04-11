@@ -550,36 +550,39 @@ public class GameEngine {
             }
         }
 
-        // ── High lock ──────────────────────────────────────────────────────────
+        // ── High lock: no remaining trump can beat the current high ────────────
         int maxPlayed = playedTrumps.stream().mapToInt(c -> c.getRank().getValue()).max().orElse(0);
         boolean highLocked = remainingTrumps.stream().noneMatch(c -> c.getRank().getValue() > maxPlayed);
 
-        // ── Low lock ──────────────────────────────────────────────────────────
+        // ── Low lock: no remaining trump is below the current low ──────────────
         int minPlayed = playedTrumps.stream().mapToInt(c -> c.getRank().getValue()).min().orElse(Integer.MAX_VALUE);
         boolean lowLocked = remainingTrumps.stream().noneMatch(c -> c.getRank().getValue() < minPlayed);
 
-        if (!highLocked || !lowLocked) return null;
-
-        // ── Jack lock ──────────────────────────────────────────────────────────
+        // ── Jack lock: played in a completed trick, or never dealt ─────────────
         boolean jackInTricks = playedTrumps.stream().anyMatch(c -> c.getRank() == Card.Rank.JACK);
         boolean jackInHand   = remainingTrumps.stream().anyMatch(c -> c.getRank() == Card.Rank.JACK);
-        boolean jackAbsent   = !jackInTricks && !jackInHand; // Not dealt this round
+        boolean jackAbsent   = !jackInTricks && !jackInHand;
         boolean jackLocked   = jackInTricks || jackAbsent;
 
-        if (!jackLocked) return null;
+        // Need at least one locked point to proceed
+        if (!highLocked && !lowLocked && !jackLocked) return null;
 
-        // ── Determine winners (team names in team mode; player names otherwise) ──
-        String highWinner = findHighTrump(completedTricks, trump, game);
-        String lowWinner  = findLowTrump(completedTricks, trump, game);
-        String jackWinner = jackInTricks ? findJackWinner(completedTricks, trump, game) : null;
+        // ── Determine winners only for locked categories ───────────────────────
+        // Unlocked points (e.g. Jack still in a hand) are intentionally excluded:
+        // they will simply not be awarded if the set is claimed early.
+        String highWinner = highLocked ? findHighTrump(completedTricks, trump, game) : null;
+        String lowWinner  = lowLocked  ? findLowTrump(completedTricks, trump, game)  : null;
+        String jackWinner = (jackLocked && jackInTricks) ? findJackWinner(completedTricks, trump, game) : null;
 
-        // Locked points per entity
+        // Locked points per entity (only from guaranteed categories)
         Map<String, Integer> lockedPoints = new HashMap<>();
         if (highWinner != null) lockedPoints.merge(highWinner, 1, Integer::sum);
         if (lowWinner  != null) lockedPoints.merge(lowWinner,  1, Integer::sum);
         if (jackWinner != null) lockedPoints.merge(jackWinner, 1, Integer::sum);
 
-        // Is any entity guaranteed to reach 11?
+        if (lockedPoints.isEmpty()) return null;
+
+        // Is any entity guaranteed to reach 11 from locked points alone?
         String setWinner = null;
         for (Map.Entry<String, Integer> entry : lockedPoints.entrySet()) {
             int current = game.getScore(entry.getKey());
@@ -589,7 +592,7 @@ public class GameEngine {
             }
         }
 
-        if (setWinner == null) return null; // No early win possible
+        if (setWinner == null) return null; // Locked points not enough for any entity
 
         return new WrapUpInfo(highWinner, lowWinner, jackWinner, jackAbsent, lockedPoints, setWinner);
     }

@@ -106,8 +106,16 @@ public class Hand implements Serializable{
     }
 
     /**
+     * Removes all cards from this hand.
+     * Used before re-dealing (e.g. when a round ends early via wrap-up).
+     */
+    public void clear() {
+        cards.clear();
+    }
+
+    /**
      * Returns the number of cards in this hand.
-     * 
+     *
      * @return the hand size
      */
     public int size() {

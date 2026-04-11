@@ -226,7 +226,11 @@
                 fetch('/highlowjack/poll')
                     .then(r => r.json())
                     .then(data => {
-                        if (data.gameState === 'IN_PROGRESS') {
+                        if (data.gameState === 'NOT_STARTED') {
+                            // Controller has started the next set — cut ceremony is beginning
+                            clearInterval(setWinnerPoll);
+                            location.href = '/highlowjack/cut';
+                        } else if (data.gameState === 'IN_PROGRESS') {
                             clearInterval(setWinnerPoll);
                             location.href = '/highlowjack';
                         } else if (data.gameState === 'MATCH_COMPLETE') {

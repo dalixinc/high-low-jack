@@ -1151,6 +1151,28 @@
             }, 2000);
         }
 
+        // ── Non-controller: poll for controller's wrap-up decision ──────────
+        // The normal multiplayer poll only runs when !isMyTurn. But the wrap-up
+        // panel can appear on ANY turn — including the non-controller's own turn —
+        // so we need a dedicated poll that always fires when the panel is visible.
+        // It reloads on ROUND_COMPLETE (set claimed) or when wrapUpAvailable
+        // flips false (controller declined via Play On).
+        if (wrapUpAvailable && !isController && isMultiplayer) {
+            const ncWrapUpPoll = setInterval(() => {
+                fetch('/highlowjack/poll')
+                    .then(r => r.json())
+                    .then(data => {
+                        const roundOver = data.gameState && data.gameState !== 'IN_PROGRESS';
+                        const declinedByController = data.wrapUpAvailable === false;
+                        if (roundOver || declinedByController) {
+                            clearInterval(ncWrapUpPoll);
+                            location.reload();
+                        }
+                    })
+                    .catch(() => {});
+            }, 1500);
+        }
+
         // ── Wrap-up helpers ───────────────────────────────────────────────────
         function requestWrapUp() {
             fetch('/highlowjack/request-wrap-up', { method: 'POST' })

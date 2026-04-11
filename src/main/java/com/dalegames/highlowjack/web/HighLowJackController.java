@@ -201,7 +201,7 @@ public class HighLowJackController {
         model.addAttribute("game", game);
         model.addAttribute("setup", setup);
         model.addAttribute("humanPlayer", humanPlayer);
-        model.addAttribute("isController", true); // For now, always player 1
+        model.addAttribute("isController", setup.isController(humanPlayer));
         model.addAttribute("isAITurn", isAITurn);
         model.addAttribute("isMultiplayer", isMultiplayer);
         model.addAttribute("isMyTurn", isMyTurn);
@@ -1438,6 +1438,14 @@ public class HighLowJackController {
         Game game = (Game) session.getAttribute("hlj_game");
 
         if (game == null) return "redirect:/highlowjack/setup";
+
+        // Preserve cut quips so ALL sessions see them on the first game page load.
+        // Without this, a non-controller whose poll fires after the controller clicks
+        // "Start Game" navigates straight to IN_PROGRESS and never sees the cut page.
+        List<String> cutQuips = game.getCutQuips();
+        if (cutQuips != null && !cutQuips.isEmpty()) {
+            game.setPendingRealtimeQuips(cutQuips);   // TTL-backed, visible to all sessions
+        }
 
         game.dealCards();
         game.clearCutState();

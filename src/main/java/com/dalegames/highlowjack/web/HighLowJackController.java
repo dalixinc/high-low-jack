@@ -235,8 +235,39 @@ public class HighLowJackController {
         if (pendingQuips != null && !pendingQuips.isEmpty()) {
             model.addAttribute("eventQuips", pendingQuips);
         }
-        
+
+        // Trump tracker: compute which trump ranks have been played
+        model.addAttribute("trumpTrackerEnabled", game.isTrumpTrackerEnabled());
+        if (game.isTrumpTrackerEnabled() && game.getTrumpSuit() != null) {
+            model.addAttribute("trumpSuit", game.getTrumpSuit());
+            model.addAttribute("playedTrumpRanks", computePlayedTrumpRanks(game));
+        }
+
         return "highlowjack/game";
+    }
+
+    /** Returns the set of trump-card rank names (e.g. "ACE", "TEN") already on the table or in won tricks. */
+    private java.util.Set<String> computePlayedTrumpRanks(Game game) {
+        java.util.Set<String> played = new java.util.LinkedHashSet<>();
+        Card.Suit trump = game.getTrumpSuit();
+        if (trump == null) return played;
+        // Completed tricks
+        for (Trick trick : game.getTricks()) {
+            for (var play : trick.getPlays()) {
+                if (play.card.getSuit() == trump) {
+                    played.add(play.card.getRank().name());
+                }
+            }
+        }
+        // Current trick (cards already on the table this round)
+        if (game.getCurrentTrick() != null) {
+            for (var play : game.getCurrentTrick().getPlays()) {
+                if (play.card.getSuit() == trump) {
+                    played.add(play.card.getRank().name());
+                }
+            }
+        }
+        return played;
     }
     
     @GetMapping("/setup")
@@ -270,6 +301,7 @@ public class HighLowJackController {
             @RequestParam(required = false) String team1Name,
             @RequestParam(required = false) String team2Name,
             @RequestParam GameSetup.MatchType matchType,
+            @RequestParam(required = false, defaultValue = "false") boolean trumpTrackerEnabled,
             HttpSession session) {
         
         // Determine which mode and use appropriate parameters
@@ -311,16 +343,17 @@ public class HighLowJackController {
         GameSetup setup;
         if (isTeamMode) {
             // Use custom team names or defaults
-            String t1Name = (team1Name != null && !team1Name.trim().isEmpty()) 
+            String t1Name = (team1Name != null && !team1Name.trim().isEmpty())
                             ? team1Name.trim() : "North-South";
-            String t2Name = (team2Name != null && !team2Name.trim().isEmpty()) 
+            String t2Name = (team2Name != null && !team2Name.trim().isEmpty())
                             ? team2Name.trim() : "East-West";
-            
+
             System.out.println("🏆 Creating team mode with custom names: " + t1Name + " vs " + t2Name);
             setup = GameSetup.createTeam(players, matchType, t1Name, t2Name);
         } else {
             setup = GameSetup.createIndividual(players, matchType);
         }
+        setup.setTrumpTrackerEnabled(trumpTrackerEnabled);
         
         // Store in session and clear any existing game
         session.setAttribute("hlj_setup", setup);
@@ -338,6 +371,16 @@ public class HighLowJackController {
         return "redirect:/highlowjack/cut";
     }
     
+    /** Controller-only: toggle the trump tracker on/off mid-game. */
+    @PostMapping("/toggle-trump-tracker")
+    @ResponseBody
+    public Map<String, Object> toggleTrumpTracker(HttpSession session) {
+        Game game = (Game) session.getAttribute("hlj_game");
+        if (game == null) return Map.of("ok", false);
+        game.setTrumpTrackerEnabled(!game.isTrumpTrackerEnabled());
+        return Map.of("ok", true, "enabled", game.isTrumpTrackerEnabled());
+    }
+
     @PostMapping("/play")
     public String playCard(@RequestParam int cardIndex, HttpSession session) {
         Game game = (Game) session.getAttribute("hlj_game");

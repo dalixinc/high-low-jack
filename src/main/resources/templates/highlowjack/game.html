@@ -759,6 +759,65 @@
                         <div class="point-value" th:text="${pointStatus.get('Jack')}">Not yet played</div>
                     </div>
                 </div>
+
+                <!-- ═══════════════════════════════════════════════════ -->
+                <!-- TRUMP TRACKER                                       -->
+                <!-- ═══════════════════════════════════════════════════ -->
+                <div th:if="${trumpTrackerEnabled and game.trumpSuit != null}" id="trumpTrackerPanel"
+                     style="margin-top:14px; background:rgba(0,0,0,0.25); border-radius:12px; padding:12px 14px;">
+
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                        <div style="font-size:0.8rem; font-weight:bold; color:rgba(255,255,255,0.8); text-transform:uppercase; letter-spacing:0.5px;">
+                            <span th:switch="${game.trumpSuit.name()}">
+                                <span th:case="'HEARTS'">♥ Hearts</span>
+                                <span th:case="'DIAMONDS'">♦ Diamonds</span>
+                                <span th:case="'CLUBS'">♣ Clubs</span>
+                                <span th:case="'SPADES'">♠ Spades</span>
+                            </span>
+                            remaining
+                        </div>
+                        <!-- Controller-only toggle button -->
+                        <button th:if="${isController}" onclick="toggleTracker()" id="trackerToggleBtn"
+                                style="background:none; border:1px solid rgba(255,255,255,0.3); color:rgba(255,255,255,0.6);
+                                       border-radius:6px; padding:2px 8px; font-size:0.7rem; cursor:pointer;">hide</button>
+                    </div>
+
+                    <div id="trackerCards" style="display:flex; flex-wrap:wrap; gap:4px; justify-content:center;">
+                        <!-- Ranks high→low; dim if played -->
+                        <th:block th:each="rankName : ${ {'ACE','KING','QUEEN','JACK','TEN','NINE','EIGHT','SEVEN','SIX','FIVE','FOUR','THREE','TWO'} }">
+                            <span th:with="played=${playedTrumpRanks != null and playedTrumpRanks.contains(rankName)}"
+                                  th:style="${played} ?
+                                      'background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.18); text-decoration:line-through; border:1px solid rgba(255,255,255,0.08);' :
+                                      'background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.35);'"
+                                  style="display:inline-block; border-radius:5px; padding:3px 6px; font-size:0.75rem; font-weight:bold; min-width:28px; text-align:center;">
+                                <span th:switch="${rankName}">
+                                    <span th:case="'ACE'">A</span>
+                                    <span th:case="'KING'">K</span>
+                                    <span th:case="'QUEEN'">Q</span>
+                                    <span th:case="'JACK'">J</span>
+                                    <span th:case="'TEN'">10</span>
+                                    <span th:case="'NINE'">9</span>
+                                    <span th:case="'EIGHT'">8</span>
+                                    <span th:case="'SEVEN'">7</span>
+                                    <span th:case="'SIX'">6</span>
+                                    <span th:case="'FIVE'">5</span>
+                                    <span th:case="'FOUR'">4</span>
+                                    <span th:case="'THREE'">3</span>
+                                    <span th:case="'TWO'">2</span>
+                                </span>
+                            </span>
+                        </th:block>
+                    </div>
+                </div>
+
+                <!-- Show tracker toggle when tracker disabled mid-game (controller only) -->
+                <div th:if="${!trumpTrackerEnabled and isController}" style="margin-top:10px; text-align:center;">
+                    <button onclick="toggleTracker()" id="trackerToggleBtn"
+                            style="background:none; border:1px solid rgba(255,255,255,0.25); color:rgba(255,255,255,0.45);
+                                   border-radius:8px; padding:4px 12px; font-size:0.75rem; cursor:pointer;">
+                        show trump tracker
+                    </button>
+                </div>
             </div>
         </div>
         
@@ -782,6 +841,7 @@
     
     <script th:inline="javascript">
         /*<![CDATA[*/
+        const isController = /*[[${isController}]]*/ false;
         const isAITurn = /*[[${isAITurn}]]*/ false;
         const hasCompletedTrick = /*[[${completedTrick != null}]]*/ false;
         const currentPlayer = /*[[${game.currentPlayer}]]*/ 'Dale';
@@ -855,6 +915,25 @@
             if (event.target === modal) {
                 closeModal();
             }
+        }
+
+        // Trump tracker: controller can show/hide mid-game without a full reload
+        function toggleTracker() {
+            if (!isController) return;
+            fetch('/highlowjack/toggle-trump-tracker', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    const panel  = document.getElementById('trumpTrackerPanel');
+                    const togBtn = document.getElementById('trackerToggleBtn');
+                    if (data.enabled) {
+                        // Reload to get freshly-computed playedTrumpRanks from server
+                        location.reload();
+                    } else {
+                        if (panel)  panel.style.display  = 'none';
+                        if (togBtn) togBtn.textContent = 'show trump tracker';
+                    }
+                })
+                .catch(() => {});
         }
         /*]]>*/
     </script>

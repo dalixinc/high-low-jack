@@ -63,6 +63,8 @@ public class Game implements Serializable{
     private List<String> pendingRealtimeQuips;     // Realtime event quips; shown to all humans then cleared
     private long realtimeQuipTimestamp;            // Epoch ms when quips were set; cleared after 6s
 
+    private boolean trumpTrackerEnabled;  // Shared across sessions; controller can toggle mid-game
+
     // Cut ceremony state (shared across sessions; cleared once dealing begins)
     private String cutPlayer1;
     private String cutPlayer2;
@@ -211,6 +213,7 @@ public class Game implements Serializable{
         this.lastCutter1Index = -1;
         this.lastCutter2Index = -1;
         this.currentPlayerIndex = 0;
+        this.trumpTrackerEnabled = gameSetup.isTrumpTrackerEnabled();
         this.state = GameState.NOT_STARTED;
     }
 
@@ -655,6 +658,8 @@ public class Game implements Serializable{
         clearCutState();
         // Set the new match (shared across sessions via this game reference)
         currentMatch = newMatch;
+        // Restore tracker preference from setup
+        trumpTrackerEnabled = gameSetup.isTrumpTrackerEnabled();
         // Ready for the cut ceremony
         state = GameState.NOT_STARTED;
     }
@@ -684,6 +689,9 @@ public class Game implements Serializable{
 
     public int getLastCutter2Index() { return lastCutter2Index; }
     public void setLastCutter2Index(int idx) { this.lastCutter2Index = idx; }
+
+    public boolean isTrumpTrackerEnabled() { return trumpTrackerEnabled; }
+    public void setTrumpTrackerEnabled(boolean enabled) { this.trumpTrackerEnabled = enabled; }
 
     public boolean isCutPlayer1Revealed() { return cutPlayer1Revealed; }
     public void setCutPlayer1Revealed(boolean v) { this.cutPlayer1Revealed = v; }

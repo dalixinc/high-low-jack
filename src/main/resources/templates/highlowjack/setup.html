@@ -720,6 +720,36 @@
                 </div>
             </div>
             
+            <!-- TRUMP TRACKER TOGGLE -->
+            <div style="background: rgba(255,255,255,0.07); border-radius: 14px; padding: 20px 24px; margin: 16px 0; display: flex; align-items: center; gap: 18px;">
+                <label style="display:flex; align-items:center; gap:14px; cursor:pointer; width:100%;">
+                    <div style="position:relative; width:52px; height:28px; flex-shrink:0;">
+                        <input type="checkbox" name="trumpTrackerEnabled" value="true" id="trumpTracker"
+                               style="opacity:0; width:0; height:0; position:absolute;">
+                        <span id="trumpTrackerSlider"
+                              onclick="toggleTracker()"
+                              style="position:absolute; inset:0; background:#555; border-radius:28px; transition:background 0.3s; cursor:pointer;">
+                            <span id="trumpTrackerKnob"
+                                  style="position:absolute; left:4px; top:4px; width:20px; height:20px; background:white; border-radius:50%; transition:transform 0.3s;"></span>
+                        </span>
+                    </div>
+                    <div>
+                        <div style="font-weight:bold; font-size:1rem;">🃏 Trump Tracker</div>
+                        <div style="font-size:0.8rem; color:rgba(255,255,255,0.6); margin-top:2px;">
+                            Shows which trump cards remain in play — great for casual games, disable for serious competition
+                        </div>
+                    </div>
+                </label>
+            </div>
+            <script>
+                function toggleTracker() {
+                    const cb = document.getElementById('trumpTracker');
+                    cb.checked = !cb.checked;
+                    document.getElementById('trumpTrackerSlider').style.background = cb.checked ? '#667eea' : '#555';
+                    document.getElementById('trumpTrackerKnob').style.transform = cb.checked ? 'translateX(24px)' : 'translateX(0)';
+                }
+            </script>
+
 			<!-- GAME START OPTIONS -->
             <div class="button-group">
                 <button type="submit" class="start-button">🎮 Start Local Game</button>

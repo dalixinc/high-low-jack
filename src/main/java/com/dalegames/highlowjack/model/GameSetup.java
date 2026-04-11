@@ -48,6 +48,7 @@ public class GameSetup implements Serializable {
     private final List<PlayerInfo> players;
     private final MatchType matchType;
     private final List<Team> teams;  // null for INDIVIDUAL mode, 2 teams for TEAM mode
+    private boolean trumpTrackerEnabled = false;  // Casual aid — controller toggles on setup page
     
     /**
      * Creates a new GameSetup for individual mode.
@@ -244,6 +245,9 @@ public class GameSetup implements Serializable {
     public MatchType getMatchType() {
         return matchType;
     }
+
+    public boolean isTrumpTrackerEnabled() { return trumpTrackerEnabled; }
+    public void setTrumpTrackerEnabled(boolean enabled) { this.trumpTrackerEnabled = enabled; }
     
     /**
      * Gets the number of sets needed to win the match.

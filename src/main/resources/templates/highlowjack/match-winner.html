@@ -368,12 +368,19 @@
             </div>
         </div>
         
-        <!-- Play Again -->
-        <form th:action="@{/highlowjack/setup}" method="get">
-            <button type="submit" class="play-again-button">
-                🎮 Play Again
-            </button>
-        </form>
+        <!-- Rematch / Play Again -->
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; margin-top: 40px;">
+            <form th:action="@{/highlowjack/rematch}" method="post">
+                <button type="submit" class="play-again-button" style="background: linear-gradient(135deg, #f39c12 0%, #e74c3c 100%);">
+                    🔄 Rematch!
+                </button>
+            </form>
+            <form th:action="@{/highlowjack/setup}" method="get">
+                <button type="submit" class="play-again-button">
+                    🎮 New Game
+                </button>
+            </form>
+        </div>
         
         <div style="margin-top: 30px; color: rgba(255,255,255,0.7); font-size: 1.2rem;">
             🎉 CHAMPIONS! 🎉

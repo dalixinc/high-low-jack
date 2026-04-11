@@ -375,6 +375,36 @@ public class HighLowJackController {
         session.removeAttribute("hlj_clearTrick");
         return "redirect:/highlowjack/setup";
     }
+
+    /**
+     * Rematch: reuse the existing GameSetup to start a brand-new game immediately.
+     */
+    @PostMapping("/rematch")
+    public String rematch(HttpSession session) {
+        GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
+        if (setup == null) {
+            return "redirect:/highlowjack/setup";
+        }
+
+        // Clear all old game state
+        session.removeAttribute("hlj_game");
+        session.removeAttribute("hlj_match");
+        session.removeAttribute("hlj_roundResult");
+        session.removeAttribute("hlj_roundNumber");
+        session.removeAttribute("hlj_setResult");
+        session.removeAttribute("hlj_matchResult");
+        session.removeAttribute("hlj_cutQuips");
+        session.removeAttribute("hlj_matchQuips");
+
+        // Fresh match and game with the same setup
+        Match match = new Match(setup.getMatchType());
+        Game game = new Game(setup);
+        session.setAttribute("hlj_match", match);
+        session.setAttribute("hlj_game", game);
+
+        System.out.println("🔄 Rematch started with setup: " + setup);
+        return "redirect:/highlowjack/cut";
+    }
     
     @PostMapping("/sort-hand")
     public String sortHand(HttpSession session) {

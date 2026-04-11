@@ -64,6 +64,8 @@ public class Game implements Serializable{
     private long realtimeQuipTimestamp;            // Epoch ms when quips were set; cleared after 6s
 
     private boolean trumpTrackerEnabled;  // Shared across sessions; controller can toggle mid-game
+    private boolean wrapUpRequested;      // A non-controller has requested an early set wrap-up
+    private boolean wrapUpDeclined;       // Controller declined wrap-up this round; cleared on new round
 
     // Cut ceremony state (shared across sessions; cleared once dealing begins)
     private String cutPlayer1;
@@ -265,6 +267,8 @@ public class Game implements Serializable{
         completedTrick = null;
         tricks.clear();
         roundScoresApplied = false;
+        wrapUpRequested = false;
+        wrapUpDeclined = false;
         lastRoundScores = new HashMap<>();
         roundNumber++;
         state = GameState.IN_PROGRESS;
@@ -660,6 +664,8 @@ public class Game implements Serializable{
         currentMatch = newMatch;
         // Restore tracker preference from setup
         trumpTrackerEnabled = gameSetup.isTrumpTrackerEnabled();
+        wrapUpRequested = false;
+        wrapUpDeclined = false;
         // Ready for the cut ceremony
         state = GameState.NOT_STARTED;
     }
@@ -692,6 +698,12 @@ public class Game implements Serializable{
 
     public boolean isTrumpTrackerEnabled() { return trumpTrackerEnabled; }
     public void setTrumpTrackerEnabled(boolean enabled) { this.trumpTrackerEnabled = enabled; }
+
+    public boolean isWrapUpRequested() { return wrapUpRequested; }
+    public void setWrapUpRequested(boolean requested) { this.wrapUpRequested = requested; }
+
+    public boolean isWrapUpDeclined() { return wrapUpDeclined; }
+    public void setWrapUpDeclined(boolean declined) { this.wrapUpDeclined = declined; }
 
     public boolean isCutPlayer1Revealed() { return cutPlayer1Revealed; }
     public void setCutPlayer1Revealed(boolean v) { this.cutPlayer1Revealed = v; }

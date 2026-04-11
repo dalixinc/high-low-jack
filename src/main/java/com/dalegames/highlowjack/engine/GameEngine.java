@@ -10,6 +10,7 @@ import com.dalegames.highlowjack.model.Game;
 import com.dalegames.highlowjack.model.RoundResult;
 import com.dalegames.highlowjack.model.Team;
 import com.dalegames.highlowjack.model.Trick;
+import com.dalegames.highlowjack.model.WrapUpInfo;
 
 /**
  * Game engine for High Low Jack scoring and validation.
@@ -509,6 +510,90 @@ public class GameEngine {
         return tie ? null : gameWinner;
     }
     
+    /**
+     * Checks whether the current round can be wrapped up early.
+     *
+     * <p>A wrap-up is available when all three deterministic points (High, Low, Jack)
+     * are already locked — meaning the eventual winner of each is known regardless of
+     * remaining play — AND at least one player or team is guaranteed to reach 11.</p>
+     *
+     * <p>Only valid between tricks (not mid-trick). Returns {@code null} if wrap-up
+     * is not available.</p>
+     *
+     * @param game the current game (must be IN_PROGRESS)
+     * @return a {@link WrapUpInfo} describing the lock, or {@code null}
+     */
+    public static WrapUpInfo checkWrapUpLocked(Game game) {
+        if (game == null || game.getState() != Game.GameState.IN_PROGRESS) return null;
+        if (game.getTrumpSuit() == null) return null;
+        if (game.getTricks().isEmpty()) return null;
+        // Only check between tricks
+        if (game.getCurrentTrick() != null && game.getCurrentTrick().size() > 0) return null;
+
+        Card.Suit trump = game.getTrumpSuit();
+        List<Trick> completedTricks = game.getTricks();
+
+        // All trump cards that appear in completed tricks
+        List<Card> playedTrumps = new ArrayList<>();
+        for (Trick t : completedTricks) {
+            for (Trick.CardPlay play : t.getPlays()) {
+                if (play.card.getSuit() == trump) playedTrumps.add(play.card);
+            }
+        }
+        if (playedTrumps.isEmpty()) return null; // No trumps played yet — High/Low undefined
+
+        // All trump cards still in players' hands
+        List<Card> remainingTrumps = new ArrayList<>();
+        for (String p : game.getPlayerNames()) {
+            for (Card c : game.getHand(p).getCards()) {
+                if (c.getSuit() == trump) remainingTrumps.add(c);
+            }
+        }
+
+        // ── High lock ──────────────────────────────────────────────────────────
+        int maxPlayed = playedTrumps.stream().mapToInt(c -> c.getRank().getValue()).max().orElse(0);
+        boolean highLocked = remainingTrumps.stream().noneMatch(c -> c.getRank().getValue() > maxPlayed);
+
+        // ── Low lock ──────────────────────────────────────────────────────────
+        int minPlayed = playedTrumps.stream().mapToInt(c -> c.getRank().getValue()).min().orElse(Integer.MAX_VALUE);
+        boolean lowLocked = remainingTrumps.stream().noneMatch(c -> c.getRank().getValue() < minPlayed);
+
+        if (!highLocked || !lowLocked) return null;
+
+        // ── Jack lock ──────────────────────────────────────────────────────────
+        boolean jackInTricks = playedTrumps.stream().anyMatch(c -> c.getRank() == Card.Rank.JACK);
+        boolean jackInHand   = remainingTrumps.stream().anyMatch(c -> c.getRank() == Card.Rank.JACK);
+        boolean jackAbsent   = !jackInTricks && !jackInHand; // Not dealt this round
+        boolean jackLocked   = jackInTricks || jackAbsent;
+
+        if (!jackLocked) return null;
+
+        // ── Determine winners (team names in team mode; player names otherwise) ──
+        String highWinner = findHighTrump(completedTricks, trump, game);
+        String lowWinner  = findLowTrump(completedTricks, trump, game);
+        String jackWinner = jackInTricks ? findJackWinner(completedTricks, trump, game) : null;
+
+        // Locked points per entity
+        Map<String, Integer> lockedPoints = new HashMap<>();
+        if (highWinner != null) lockedPoints.merge(highWinner, 1, Integer::sum);
+        if (lowWinner  != null) lockedPoints.merge(lowWinner,  1, Integer::sum);
+        if (jackWinner != null) lockedPoints.merge(jackWinner, 1, Integer::sum);
+
+        // Is any entity guaranteed to reach 11?
+        String setWinner = null;
+        for (Map.Entry<String, Integer> entry : lockedPoints.entrySet()) {
+            int current = game.getScore(entry.getKey());
+            if (current + entry.getValue() >= 11) {
+                setWinner = entry.getKey();
+                break;
+            }
+        }
+
+        if (setWinner == null) return null; // No early win possible
+
+        return new WrapUpInfo(highWinner, lowWinner, jackWinner, jackAbsent, lockedPoints, setWinner);
+    }
+
     public static int getGamePoints(Card card) {
         if (card == null) {
             return 0;

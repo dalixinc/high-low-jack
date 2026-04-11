@@ -29,6 +29,7 @@ import com.dalegames.highlowjack.model.RoundResult;
 import com.dalegames.highlowjack.model.SetResult;
 import com.dalegames.highlowjack.model.Team;
 import com.dalegames.highlowjack.model.Trick;
+import com.dalegames.highlowjack.model.WrapUpInfo;
 import com.dalegames.highlowjack.persistence.entity.Player;
 import com.dalegames.highlowjack.persistence.entity.TeamStats;
 import com.dalegames.highlowjack.persistence.service.HeadToHeadService;
@@ -243,6 +244,20 @@ public class HighLowJackController {
             model.addAttribute("playedTrumpRanks", computePlayedTrumpRanks(game));
         }
 
+        // Early wrap-up: check if High/Low/Jack are locked and a set winner is guaranteed.
+        // Suppressed for this round if the controller already declined.
+        WrapUpInfo wrapUp = null;
+        if (game.getState() == Game.GameState.IN_PROGRESS && completedTrick == null
+                && !game.isWrapUpDeclined()) {
+            try {
+                wrapUp = GameEngine.checkWrapUpLocked(game);
+            } catch (Exception e) {
+                System.err.println("❌ Error checking wrap-up: " + e.getMessage());
+            }
+        }
+        model.addAttribute("wrapUpInfo", wrapUp);
+        model.addAttribute("wrapUpRequested", game.isWrapUpRequested());
+
         return "highlowjack/game";
     }
 
@@ -371,6 +386,77 @@ public class HighLowJackController {
         return "redirect:/highlowjack/cut";
     }
     
+    // ── Early wrap-up endpoints ──────────────────────────────────────────────
+
+    /**
+     * Controller claims the set early. Applies only the locked points (High/Low/Jack),
+     * marks the round as scored, and redirects to the scoring page.
+     */
+    @PostMapping("/claim-set")
+    public String claimSet(HttpSession session) {
+        Game game = (Game) session.getAttribute("hlj_game");
+        GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
+        if (game == null || setup == null) return "redirect:/highlowjack/setup";
+        if (game.getState() != Game.GameState.IN_PROGRESS) return "redirect:/highlowjack";
+
+        // Validate controller
+        String humanPlayer = (String) session.getAttribute("hlj_playerName");
+        if (humanPlayer == null) humanPlayer = getHumanPlayerName(setup);
+        if (!setup.isController(humanPlayer)) return "redirect:/highlowjack";
+
+        // Re-check wrap-up is still valid
+        WrapUpInfo wrapUp = GameEngine.checkWrapUpLocked(game);
+        if (wrapUp == null) return "redirect:/highlowjack"; // No longer valid
+
+        // Apply locked points (capped at 11 per entity)
+        Map<String, String> lockedResults = new HashMap<>();
+        applyLockedPoint(game, wrapUp.getHighWinner(), "High", lockedResults);
+        applyLockedPoint(game, wrapUp.getLowWinner(),  "Low",  lockedResults);
+        applyLockedPoint(game, wrapUp.getJackWinner(), "Jack", lockedResults);
+
+        // Mark scoring done (guard against double-scoring in scoring page)
+        game.setLastRoundScores(lockedResults);
+        game.setRoundScoresApplied(true);
+        game.setWrapUpRequested(false);
+        game.setState(Game.GameState.ROUND_COMPLETE);
+        session.setAttribute("hlj_game", game);
+
+        System.out.println("✂️ Early wrap-up claimed by " + humanPlayer + ": " + lockedResults);
+        return "redirect:/highlowjack/scoring";
+    }
+
+    /** Apply one locked point for an entity, capped so the score doesn't exceed 11. */
+    private void applyLockedPoint(Game game, String entity, String category,
+                                   Map<String, String> results) {
+        if (entity == null) return;
+        results.put(category, entity);   // Always record winner for display
+        if (game.getScore(entity) < 11) {
+            game.addScore(entity, 1);
+        }
+    }
+
+    /** Non-controller: flag a wrap-up request visible to the controller. */
+    @PostMapping("/request-wrap-up")
+    @ResponseBody
+    public Map<String, Object> requestWrapUp(HttpSession session) {
+        Game game = (Game) session.getAttribute("hlj_game");
+        if (game == null || game.getState() != Game.GameState.IN_PROGRESS)
+            return Map.of("ok", false);
+        game.setWrapUpRequested(true);
+        return Map.of("ok", true);
+    }
+
+    /** Controller: decline wrap-up for this round; panel hidden until next round. */
+    @PostMapping("/decline-wrap-up")
+    @ResponseBody
+    public Map<String, Object> declineWrapUp(HttpSession session) {
+        Game game = (Game) session.getAttribute("hlj_game");
+        if (game == null) return Map.of("ok", false);
+        game.setWrapUpDeclined(true);
+        game.setWrapUpRequested(false);
+        return Map.of("ok", true);
+    }
+
     /** Controller-only: toggle the trump tracker on/off mid-game. */
     @PostMapping("/toggle-trump-tracker")
     @ResponseBody
@@ -699,6 +785,15 @@ public class HighLowJackController {
             response.put("cutCardsDrawn", game.getCutCard1() != null && !game.isCutTied());
             response.put("cut1Revealed", game.isCutPlayer1Revealed());
             response.put("cut2Revealed", game.isCutPlayer2Revealed());
+            // Early wrap-up state
+            boolean wrapAvail = false;
+            if (!game.isWrapUpDeclined()) {
+                try {
+                    wrapAvail = GameEngine.checkWrapUpLocked(game) != null;
+                } catch (Exception ignored) {}
+            }
+            response.put("wrapUpAvailable", wrapAvail);
+            response.put("wrapUpRequested", game.isWrapUpRequested());
         }
         response.put("humanPlayer", humanPlayer);
         return response;

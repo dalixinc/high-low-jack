@@ -267,6 +267,51 @@
         .empty-state-text {
             font-size: 1.5rem;
         }
+
+        /* HEAD-TO-HEAD TABLE */
+        .h2h-table {
+            border-collapse: collapse;
+            font-size: 1rem;
+            min-width: 400px;
+        }
+        .h2h-table thead th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .h2h-table thead th:first-child {
+            border-radius: 10px 0 0 0;
+        }
+        .h2h-table thead th:last-child {
+            border-radius: 0 10px 0 0;
+        }
+        .h2h-row-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            font-weight: bold;
+            text-align: left;
+            white-space: nowrap;
+        }
+        .h2h-corner {
+            background: #4a3a7a !important;
+        }
+        .h2h-cell {
+            padding: 14px 20px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        .h2h-self   { background: #f0f0f0; }
+        .h2h-win    { background: #eafaf1; }
+        .h2h-loss   { background: #fdf0ef; }
+        .h2h-even   { background: #fefefe; }
+        .h2h-wins   { color: #27ae60; }
+        .h2h-losses { color: #e74c3c; }
+        .h2h-sep    { color: #999; margin: 0 4px; }
     </style>
 </head>
 <body>
@@ -302,6 +347,12 @@
             <button class="tab-button" onclick="switchTab('teams')">
                 🤝 Team Stats
             </button>
+            <button class="tab-button" onclick="switchTab('awards')">
+                🏅 Awards
+            </button>
+            <button class="tab-button" onclick="switchTab('h2h')">
+                ⚔️ Head-to-Head
+            </button>
         </div>
         
         <!-- PLAYER STATS TAB -->
@@ -320,11 +371,10 @@
                             <th style="text-align: center;" data-col="5" data-type="num" class="sortable">⬆️ High</th>
                             <th style="text-align: center;" data-col="6" data-type="num" class="sortable">⬇️ Low</th>
                             <th style="text-align: center;" data-col="7" data-type="num" class="sortable">💎 Jack</th>
-                            <th style="text-align: center;" data-col="8" data-type="num" class="sortable">🎯 Game</th>
-                            <th style="text-align: center;" data-col="9" data-type="num" class="sortable">🔥 Streak</th>
-                            <th style="text-align: center;" data-col="10" data-type="num" class="sortable">🂡 Aces Cut</th>
-                            <th style="text-align: center;" data-col="11" data-type="num" class="sortable">✂️ Cuts Won</th>
-                            <th style="text-align: center;" data-col="12" data-type="num" class="sortable">😬 2s Cut</th>
+                            <th style="text-align: center;" data-col="8" data-type="num" class="sortable">🔥 Streak</th>
+                            <th style="text-align: center;" data-col="9" data-type="num" class="sortable">🂡 Aces Cut</th>
+                            <th style="text-align: center;" data-col="10" data-type="num" class="sortable">✂️ Cuts Won</th>
+                            <th style="text-align: center;" data-col="11" data-type="num" class="sortable">😬 2s Cut</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -346,7 +396,6 @@
                             <td class="stat-value" th:text="${player.highsWon}">0</td>
                             <td class="stat-value" th:text="${player.lowsWon}">0</td>
                             <td class="stat-value" th:text="${player.jacksWon}">0</td>
-                            <td class="stat-value" th:text="${player.gamesWon}">0</td>
                             <td class="stat-value" th:attr="data-sort=${player.currentWinStreak}">
                                 <span th:if="${player.currentWinStreak > 0}"
                                       class="streak-badge"
@@ -393,16 +442,16 @@
                                 th:text="${iterStat.index + 1}">1</td>
                             <td>
                                 <div class="team-name" th:text="${team.name}">Team Name</div>
-                                <div class="team-members" th:text="${team.memberNames}">Members</div>
+                                <div class="team-members" th:text="${team.playerList}">Members</div>
                             </td>
-                            <td class="stat-value" th:text="${team.totalMatches}">0</td>
-                            <td class="stat-value" th:text="${team.totalWins}">0</td>
+                            <td class="stat-value" th:text="${team.matchesPlayed}">0</td>
+                            <td class="stat-value" th:text="${team.matchesWon}">0</td>
                             <td class="stat-value">
                                 <span class="win-percentage"
                                       th:classappend="${team.winPercentage >= 60} ? 'percentage-high' : (${team.winPercentage >= 40} ? 'percentage-mid' : 'percentage-low')"
                                       th:text="${#numbers.formatDecimal(team.winPercentage, 1, 1)} + '%'">0%</span>
                             </td>
-                            <td class="stat-value" th:text="${team.totalSetsWon}">0</td>
+                            <td class="stat-value" th:text="${team.setsWon}">0</td>
                             <td class="stat-value">
                                 <span th:if="${team.currentStreak > 0}" 
                                       class="streak-badge"
@@ -422,6 +471,93 @@
             </div>
         </div>
         
+        <!-- AWARDS TAB -->
+        <div id="awardsTab" class="tab-content">
+            <h2 style="font-size: 2rem; color: #2c3e50; margin-bottom: 30px;">🏅 Awards</h2>
+
+            <!-- Hall of Fame -->
+            <div style="margin-bottom: 50px;">
+                <h3 style="font-size: 1.6rem; color: #27ae60; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    🌟 Hall of Fame
+                </h3>
+                <div th:if="${topAceCutter != null}" style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); border-radius: 20px; padding: 30px; display: flex; align-items: center; gap: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-width: 600px;">
+                    <div style="font-size: 5rem;">🂡</div>
+                    <div>
+                        <div style="font-size: 0.9rem; color: rgba(0,0,0,0.6); text-transform: uppercase; font-weight: bold; letter-spacing: 2px; margin-bottom: 6px;">Most Aces Cut</div>
+                        <div style="font-size: 2rem; font-weight: bold; color: #2c3e50;" th:text="${topAceCutter.name}">Player</div>
+                        <div style="font-size: 1.2rem; color: #555; margin-top: 5px;">
+                            <span th:text="${topAceCutter.totalAcesCut}">0</span> aces cut
+                        </div>
+                    </div>
+                </div>
+                <div th:if="${topAceCutter == null}" class="empty-state" style="padding: 30px;">
+                    <div class="empty-state-icon" style="font-size: 3rem;">🂡</div>
+                    <div class="empty-state-text" style="font-size: 1.2rem;">No aces cut yet!</div>
+                </div>
+            </div>
+
+            <!-- Hall of Shame -->
+            <div>
+                <h3 style="font-size: 1.6rem; color: #e74c3c; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    😬 Hall of Shame
+                </h3>
+                <div th:if="${topTwoCutter != null}" style="background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); border-radius: 20px; padding: 30px; display: flex; align-items: center; gap: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-width: 600px;">
+                    <div style="font-size: 5rem;">2️⃣</div>
+                    <div>
+                        <div style="font-size: 0.9rem; color: rgba(0,0,0,0.6); text-transform: uppercase; font-weight: bold; letter-spacing: 2px; margin-bottom: 6px;">Most Twos Cut</div>
+                        <div style="font-size: 2rem; font-weight: bold; color: #2c3e50;" th:text="${topTwoCutter.name}">Player</div>
+                        <div style="font-size: 1.2rem; color: #555; margin-top: 5px;">
+                            <span th:text="${topTwoCutter.totalTwosCut}">0</span> twos cut
+                        </div>
+                    </div>
+                </div>
+                <div th:if="${topTwoCutter == null}" class="empty-state" style="padding: 30px;">
+                    <div class="empty-state-icon" style="font-size: 3rem;">2️⃣</div>
+                    <div class="empty-state-text" style="font-size: 1.2rem;">No twos cut yet!</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HEAD-TO-HEAD TAB -->
+        <div id="h2hTab" class="tab-content">
+            <h2 style="font-size: 2rem; color: #2c3e50; margin-bottom: 10px;">⚔️ Head-to-Head Records</h2>
+            <p style="color: #666; margin-bottom: 30px;">Individual match wins against each opponent.</p>
+
+            <div th:if="${!playerNames.isEmpty()}" style="overflow-x: auto;">
+                <table class="h2h-table">
+                    <thead>
+                        <tr>
+                            <th class="h2h-corner">vs</th>
+                            <th th:each="col : ${playerNames}" th:text="${col}">Opponent</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="rowCells, rowStat : ${h2hGrid}">
+                            <th class="h2h-row-header" th:text="${playerNames[rowStat.index]}">Player</th>
+                            <td th:each="cell : ${rowCells}"
+                                th:class="${cell.cssClass}">
+                                <span th:if="${!cell.self}">
+                                    <span class="h2h-wins" th:text="${cell.wins}">0</span>
+                                    <span class="h2h-sep">–</span>
+                                    <span class="h2h-losses" th:text="${cell.losses}">0</span>
+                                </span>
+                                <span th:if="${cell.self}" style="color: #ccc;">—</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p style="font-size: 0.85rem; color: #999; margin-top: 15px; text-align: center;">
+                    Read across a row: <strong>wins – losses</strong> against each column player.
+                    Green = winning record, red = losing record.
+                </p>
+            </div>
+
+            <div th:if="${playerNames.isEmpty()}" class="empty-state">
+                <div class="empty-state-icon">⚔️</div>
+                <div class="empty-state-text">No matches played yet!</div>
+            </div>
+        </div>
+
         <!-- Back Button -->
         <div class="button-container">
             <a th:href="@{/highlowjack/setup}" class="back-button">
@@ -447,13 +583,10 @@
         function switchTab(tab) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
-            if (tab === 'players') {
-                document.getElementById('playersTab').classList.add('active');
-                event.target.classList.add('active');
-            } else if (tab === 'teams') {
-                document.getElementById('teamsTab').classList.add('active');
-                event.target.classList.add('active');
-            }
+            const tabMap = { players: 'playersTab', teams: 'teamsTab', awards: 'awardsTab', h2h: 'h2hTab' };
+            const tabEl = document.getElementById(tabMap[tab]);
+            if (tabEl) tabEl.classList.add('active');
+            event.target.classList.add('active');
         }
 
         // ── Sortable table ──────────────────────────────────────────────────

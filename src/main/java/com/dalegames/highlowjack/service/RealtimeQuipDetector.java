@@ -35,41 +35,29 @@ public class RealtimeQuipDetector {
         List<GameEvent> events = game.getRecentEvents();
         
         for (GameEvent event : events) {
+            String playerName = event.getPlayerName();
+            String quip = null;
+
             switch (event.getType()) {
                 case TWO_PITCHED:
-                    // Preezbob cutting a 2!
-                    if ("Preezbob".equals(event.getPlayerName())) {
-                        String quip = getPreezbobTwoQuip(event.getCurrentScore());
-                        if (quip != null) quips.add(quip);
-                    }
+                    QuipTrigger twoTrigger = (event.getCurrentScore() < 5)
+                        ? QuipTrigger.CUT_TWO_LOSING
+                        : QuipTrigger.CUT_TWO_WINNING;
+                    quip = personalityService.getQuip(twoTrigger, playerName);
                     break;
-                    
+
                 case ACE_SPADES_PLAYED:
-                    // Preezbob plays Ace of Spades!
-                    if ("Preezbob".equals(event.getPlayerName())) {
-                        String quip = personalityService.getQuip(
-                            QuipTrigger.PLAY_ACE_SPADES, "Preezbob");
-                        if (quip != null) quips.add("♠️ " + quip);
-                    }
+                    quip = personalityService.getQuip(QuipTrigger.PLAY_ACE_SPADES, playerName);
+                    if (quip != null) quip = "♠️ " + quip;
                     break;
-                    
+
                 default:
-                    // Other events don't trigger quips yet
                     break;
             }
+
+            if (quip != null) quips.add(quip);
         }
-        
+
         return quips;
-    }
-    
-    /**
-     * Gets appropriate quip for Preezbob cutting a 2 based on his score.
-     */
-    private String getPreezbobTwoQuip(int score) {
-        QuipTrigger trigger = (score < 5) ? 
-            QuipTrigger.CUT_TWO_LOSING : 
-            QuipTrigger.CUT_TWO_WINNING;
-        
-        return personalityService.getQuip(trigger, "Preezbob");
     }
 }

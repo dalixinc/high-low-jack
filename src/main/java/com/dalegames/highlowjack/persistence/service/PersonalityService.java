@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
 
@@ -50,18 +52,47 @@ public class PersonalityService {
     public String getQuip(String triggerContext, String playerName) {
         List<PersonalityQuip> quips = quipRepository.findApplicableQuips(
             triggerContext, playerName);
-        
+
         if (quips.isEmpty()) {
             return null;
         }
-        
-        // Pick a random quip
-        PersonalityQuip selected = quips.get(random.nextInt(quips.size()));
-        
-        // Record usage
+
+        // Weighted selection: prefer less-used and less-recently-used quips
+        double[] weights = new double[quips.size()];
+        double totalWeight = 0;
+        LocalDateTime now = LocalDateTime.now();
+
+        for (int i = 0; i < quips.size(); i++) {
+            PersonalityQuip q = quips.get(i);
+            // Base weight inversely proportional to usage count
+            double weight = 1.0 / (q.getTimesUsed() + 1);
+            // Penalise recency: used in last 30 min = 10%, last 2 hours = 50%
+            if (q.getLastUsed() != null) {
+                long minutes = Duration.between(q.getLastUsed(), now).toMinutes();
+                if (minutes < 30) {
+                    weight *= 0.1;
+                } else if (minutes < 120) {
+                    weight *= 0.5;
+                }
+            }
+            weights[i] = weight;
+            totalWeight += weight;
+        }
+
+        // Weighted random pick
+        double rand = random.nextDouble() * totalWeight;
+        double cumulative = 0;
+        PersonalityQuip selected = quips.get(quips.size() - 1);
+        for (int i = 0; i < quips.size(); i++) {
+            cumulative += weights[i];
+            if (rand <= cumulative) {
+                selected = quips.get(i);
+                break;
+            }
+        }
+
         selected.recordUsage();
         quipRepository.save(selected);
-        
         return selected.getQuipText();
     }
     

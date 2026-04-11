@@ -7,12 +7,18 @@ package com.dalegames.highlowjack.model;
  * @version 1.0
  */
 public enum QuipTrigger {
-    // PREEZBOB SPECIALS
-    CUT_TWO_LOSING("Preezbob cuts a 2 while losing"),
-    CUT_TWO_WINNING("Preezbob cuts a 2 while winning"),
-    PLAY_ACE_SPADES("Preezbob plays Ace of Spades"),
-    WIN_WITH_ACE_SPADES("Preezbob wins with Ace of Spades"),
-    
+    // PLAYER SPECIALS (player_name in DB controls who triggers these)
+    CUT_TWO_LOSING("Player cuts a 2 while losing"),
+    CUT_TWO_WINNING("Player cuts a 2 while winning"),
+    PLAY_ACE_SPADES("Player plays Ace of Spades"),
+    WIN_WITH_ACE_SPADES("Player wins with Ace of Spades"),
+
+    // CUT CEREMONY
+    CUT_ACE("Player cuts an Ace"),
+    CUT_TWO("Player cuts a Two"),
+    CUT_HIGH_CARD("Player cuts a high card (10, J, Q, K)"),
+    CUT_LOW_CARD("Player cuts a low card (3-5)"),
+
     // ROUND EVENTS
     TIEBREAKER_WIN("Won on tiebreaker (precedence rules)"),
     SWEEP_ALL_FOUR("Won all 4 points in a round"),

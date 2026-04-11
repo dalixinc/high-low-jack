@@ -1,6 +1,7 @@
 package com.dalegames.highlowjack.service;
 
 import com.dalegames.highlowjack.model.*;
+import com.dalegames.highlowjack.model.Card;
 import com.dalegames.highlowjack.persistence.service.PersonalityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 /**
  * Detects quip opportunities during gameplay.
@@ -20,50 +22,56 @@ import java.util.Map;
 public class QuipDetector {
     
     private final PersonalityService personalityService;
-    
+    private final Random random = new Random();
+
     @Autowired
     public QuipDetector(PersonalityService personalityService) {
         this.personalityService = personalityService;
     }
     
     /**
-     * Check for real-time event quips.
+     * Check for quips triggered by the cut ceremony.
+     * Fires for both cutters based on their card rank.
      */
-    public List<String> checkGameEvents(Game game) {
+    public List<String> checkCutQuips(String cutter1, Card card1, String cutter2, Card card2) {
         List<String> quips = new ArrayList<>();
-        
-        for (GameEvent event : game.getRecentEvents()) {
-            String quip = null;
-            
-            switch (event.getType()) {
-                case TWO_PITCHED:
-                    if ("Preezbob".equals(event.getPlayerName())) {
-                        if (event.getCurrentScore() < 5) {
-                            quip = personalityService.getQuip(
-                                QuipTrigger.CUT_TWO_LOSING, "Preezbob");
-                        } else {
-                            quip = personalityService.getQuip(
-                                QuipTrigger.CUT_TWO_WINNING, "Preezbob");
-                        }
-                    }
-                    break;
-                    
-                case ACE_SPADES_PLAYED:
-                    if ("Preezbob".equals(event.getPlayerName())) {
-                        quip = personalityService.getQuip(
-                            QuipTrigger.PLAY_ACE_SPADES, "Preezbob");
-                    }
-                    break;
-            }
-            
-            if (quip != null) {
-                quips.add(quip);
-            }
-        }
-        
+        addCutCardQuip(quips, cutter1, card1);
+        addCutCardQuip(quips, cutter2, card2);
         return quips;
     }
-    
+
+    private void addCutCardQuip(List<String> quips, String playerName, Card card) {
+        if (playerName == null || card == null) return;
+        int value = card.getRank().getValue();
+        QuipTrigger trigger;
+        if (card.getRank() == Card.Rank.ACE) {
+            trigger = QuipTrigger.CUT_ACE;
+        } else if (card.getRank() == Card.Rank.TWO) {
+            trigger = QuipTrigger.CUT_TWO;
+        } else if (value >= 10) {
+            trigger = QuipTrigger.CUT_HIGH_CARD;
+        } else if (value <= 5) {
+            trigger = QuipTrigger.CUT_LOW_CARD;
+        } else {
+            return; // 6-9: no quip
+        }
+        addQuip(quips, trigger, playerName, "");
+    }
+
+    /** Always fire a quip (if one exists in DB). */
+    private void addQuip(List<String> quips, QuipTrigger trigger, String playerName, String prefix) {
+        String quip = personalityService.getQuip(trigger, playerName);
+        if (quip != null) quips.add(prefix + quip);
+    }
+
+    /** Fire a quip with a given probability (weighted selection still applies within DB). */
+    private void addQuipChance(List<String> quips, QuipTrigger trigger, String playerName, String prefix, double chance) {
+        if (random.nextDouble() < chance) {
+            addQuip(quips, trigger, playerName, prefix);
+        }
+    }
+
+
     /**
      * Check for quips after a round completes.
      * 
@@ -81,47 +89,31 @@ public class QuipDetector {
      */
     public List<String> checkRoundQuips(Game game, RoundResult roundResult) {
         List<String> quips = new ArrayList<>();
-        
-        // Check for sweep (all 4 points won by same player/team)
+
         String highWinner = roundResult.getRoundPointWinner("High");
-        String lowWinner = roundResult.getRoundPointWinner("Low");
+        String lowWinner  = roundResult.getRoundPointWinner("Low");
         String jackWinner = roundResult.getRoundPointWinner("Jack");
         String gameWinner = roundResult.getRoundPointWinner("Game");
-        
-        if (highWinner != null && 
+
+        // Sweep: all 4 points to same player/team
+        if (highWinner != null &&
             highWinner.equals(lowWinner) &&
             highWinner.equals(jackWinner) &&
             highWinner.equals(gameWinner)) {
-            
-            String quip = personalityService.getQuip(
-                QuipTrigger.SWEEP_ALL_FOUR, highWinner);
-            if (quip != null) quips.add("🎯 " + quip);
+            addQuip(quips, QuipTrigger.SWEEP_ALL_FOUR, highWinner, "🎯 ");
         }
-        
-        // Check for individual players winning points (for player-specific quips)
+
+        // Individual point winners — any player can have DB entries for these
         String highPlayer = roundResult.getRoundPointPlayer("High");
-        String lowPlayer = roundResult.getRoundPointPlayer("Low");
+        String lowPlayer  = roundResult.getRoundPointPlayer("Low");
         String jackPlayer = roundResult.getRoundPointPlayer("Jack");
         String gamePlayer = roundResult.getRoundPointPlayer("Game");
-        
-        // Dale's strategic wins
-        if ("Dale".equals(highPlayer) || "Dale".equals(gamePlayer)) {
-            String quip = personalityService.getQuip(
-                QuipTrigger.WON_WITH_HIGH, "Dale");
-            if (quip != null && Math.random() < 0.3) { // 30% chance
-                quips.add(quip);
-            }
-        }
-        
-        // Kreep's shadow strikes
-        if ("Kreep".equals(jackPlayer)) {
-            String quip = personalityService.getQuip(
-                QuipTrigger.WON_WITH_JACK, "Kreep");
-            if (quip != null && Math.random() < 0.3) {
-                quips.add(quip);
-            }
-        }
-        
+
+        if (highPlayer != null)  addQuipChance(quips, QuipTrigger.WON_WITH_HIGH, highPlayer, "", 0.4);
+        if (lowPlayer != null)   addQuipChance(quips, QuipTrigger.WON_WITH_LOW,  lowPlayer,  "", 0.4);
+        if (jackPlayer != null)  addQuipChance(quips, QuipTrigger.WON_WITH_JACK, jackPlayer, "", 0.4);
+        if (gamePlayer != null)  addQuipChance(quips, QuipTrigger.WON_WITH_GAME, gamePlayer, "", 0.4);
+
         return quips;
     }
     
@@ -176,11 +168,7 @@ public class QuipDetector {
         
         // Generic set win
         else {
-            String quip = personalityService.getQuip(
-                QuipTrigger.FIRST_SET_WIN, winner);
-            if (quip != null && Math.random() < 0.3) {
-                quips.add(quip);
-            }
+            addQuipChance(quips, QuipTrigger.FIRST_SET_WIN, winner, "", 0.5);
         }
         
         return quips;

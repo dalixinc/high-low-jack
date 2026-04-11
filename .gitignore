@@ -15,3 +15,6 @@ target/
 
 # Logs
 *.log
+
+# Claude settings
+.claude/

@@ -21,7 +21,9 @@ public class CardImageHelper {
             return "/images/cards/back.png";
         }
         
-        String suit = card.getSuit().name().toLowerCase();
+        // Enum names are plural (HEARTS, DIAMONDS, etc.) but filenames are singular
+        String suitRaw = card.getSuit().name().toLowerCase();
+        String suit = suitRaw.endsWith("s") ? suitRaw.substring(0, suitRaw.length() - 1) : suitRaw;
         String rank = getRankNumber(card.getRank());
         
         return "/images/cards/" + suit + "_" + rank + ".png";

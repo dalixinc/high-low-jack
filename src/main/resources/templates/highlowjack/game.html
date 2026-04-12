@@ -916,6 +916,12 @@
             </div>
             
   <div class="scoreboard-sidebar">
+    <!-- Match type badge -->
+    <div th:if="${setup != null}" style="text-align:center; font-size:0.72rem; font-weight:bold;
+                text-transform:uppercase; letter-spacing:0.5px; opacity:0.65; margin-bottom:8px;">
+        <span th:text="${setup.matchType.displayName}">Just One Set</span>
+    </div>
+
     <!-- TEAM MODE SCOREBOARD -->
     <div th:if="${game.isTeamMode()}">
         <div class="scoreboard-title">📊 Team Score</div>
@@ -1074,7 +1080,8 @@
 
         // BUG #1 FIX: Longer pause for completed tricks, especially the last one
         if (hasCompletedTrick && !isRoundComplete) {
-            const quipBuffer = hasEventQuips ? 1000 : 0;
+            // quipBuffer must push total past the 6 s server-side TTL so quips don't double-show
+            const quipBuffer = hasEventQuips ? 2500 : 0;
             if (currentPlayer === humanPlayer) {
                 setTimeout(() => { location.reload(); }, 5000 + quipBuffer);
             } else {
@@ -1084,11 +1091,19 @@
         // AI auto-advance: pause if wrap-up panel is showing (controller must decide first)
         else if (isAITurn && !(wrapUpAvailable && isController)) {
             const baseDelay = 1000 + Math.random() * 2000;
-            const delay = hasEventQuips ? Math.max(baseDelay, 3000) : baseDelay;
+            // 7 s minimum when quips are showing — must exceed the 6 s server TTL
+            const delay = hasEventQuips ? Math.max(baseDelay, 8000) : baseDelay;
             setTimeout(() => {
                 location.reload();
             }, delay);
         }
+        // When quips are showing and it's the human's turn, no auto-reload exists — add one
+        // so the layout resets after the animation ends (quip div stays in DOM at opacity:0 otherwise).
+        // 7 s pushes past the 6 s server TTL so quips won't re-appear on this reload.
+        else if (hasEventQuips && isMyTurn && !isAITurn && !hasCompletedTrick) {
+            setTimeout(() => location.reload(), 7000);
+        }
+
         else if (isMultiplayer && !isMyTurn && !isRoundComplete) {
             // Multiplayer: poll for any game state change so all players see cards in real-time
             let lastTrickSize = -1;

@@ -253,14 +253,15 @@ public class GameEngine {
         }
         
         String jackWinner = null;
+        String jackPlayer = null;
         for (Trick trick : allTricks) {
             for (Trick.CardPlay play : trick.getPlays()) {
                 if (play.card.getSuit() == trump && play.card.getRank() == Card.Rank.JACK) {
-                    // Only get winner if trick is complete (4 cards)
+                    jackPlayer = play.playerName;
                     if (trick.isComplete()) {
                         jackWinner = trick.getWinner();
                     } else {
-                        // For incomplete trick, show who played the Jack
+                        // Incomplete trick — show who played it (no winner yet)
                         jackWinner = play.playerName;
                     }
                     break;
@@ -268,9 +269,13 @@ public class GameEngine {
             }
             if (jackWinner != null) break;
         }
-        
+
         if (jackWinner != null) {
-            status.put("Jack", "J" + trump.getSymbol() + " - " + jackWinner);
+            String jackLabel = "J" + trump.getSymbol() + " - " + jackWinner;
+            if (jackPlayer != null && !jackPlayer.equals(jackWinner)) {
+                jackLabel += " (played by " + jackPlayer + ")";
+            }
+            status.put("Jack", jackLabel);
         }
         
         return status;

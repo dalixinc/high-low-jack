@@ -100,8 +100,18 @@ public class HighLowJackController {
 
         // Check if we should show final trick before scoring
         Boolean showFinalTrick = (Boolean) session.getAttribute("hlj_showFinalTrick");
-        ////System.out.println("🔍 showGame() - showFinalTrick flag: " + showFinalTrick);
-        ////System.out.println("🔍 showGame() - game state: " + game.getState());
+
+        // ── Stale-flag guard (multiplayer race condition) ────────────────────
+        // In multiplayer the controller can advance past ROUND_COMPLETE before
+        // this session's second request arrives, which means the removal at
+        // line 110 below never runs and hlj_showFinalTrick persists into the
+        // next round.  If the game is no longer ROUND_COMPLETE, the flag is
+        // stale — clear it now so it never blocks completedTrick clearing.
+        if (Boolean.TRUE.equals(showFinalTrick)
+                && game.getState() != Game.GameState.ROUND_COMPLETE) {
+            session.removeAttribute("hlj_showFinalTrick");
+            showFinalTrick = null;
+        }
 
         if (game.getState() == Game.GameState.ROUND_COMPLETE) {
             if (showFinalTrick != null && showFinalTrick) {
@@ -164,21 +174,49 @@ public class HighLowJackController {
         
         else if (game.getState() == Game.GameState.IN_PROGRESS &&
                  !isCurrentPlayerHuman(game, setup)) {
-            playAITurn(game);
-            
-            completedTrick = game.getCompletedTrick();
-            if (completedTrick != null) {
-                session.setAttribute("hlj_clearTrick", true);
+
+            // ── Issue 2 fix: check wrap-up BEFORE playing AI card ───────────
+            // When most/all players are AI the completed trick is cleared and AI
+            // plays immediately, leaving no window for checkWrapUpLocked (which
+            // guards against currentTrick.size() > 0). Pause here if a wrap-up
+            // is already available so the controller can see the panel.
+            boolean wrapUpPending = false;
+            if (!game.isWrapUpDeclined()) {
+                try {
+                    wrapUpPending = GameEngine.checkWrapUpLocked(game) != null;
+                } catch (Exception ignored) {}
             }
-            
-            if (game.getState() == Game.GameState.ROUND_COMPLETE) {
-                // Set flag for final trick display
-                System.out.println("🎯 AI completed round - setting showFinalTrick flag");
-                session.setAttribute("hlj_showFinalTrick", true);
-                session.setAttribute("hlj_game", game);
-                return "redirect:/highlowjack";
+
+            if (!wrapUpPending) {
+                playAITurn(game);
+
+                completedTrick = game.getCompletedTrick();
+                if (completedTrick != null) {
+                    session.setAttribute("hlj_clearTrick", true);
+
+                    // ── Issue 1 fix: check realtime events when trick completes via AI
+                    // The top-level completedTrick block (above) is bypassed when the
+                    // trick completes inside playAITurn, so we mirror the check here.
+                    try {
+                        List<String> eventQuips = realtimeQuipDetector.checkRealtimeEvents(game);
+                        if (!eventQuips.isEmpty()) {
+                            game.setPendingRealtimeQuips(eventQuips);
+                            System.out.println("⚡ REALTIME EVENT QUIPS (AI trick): " + eventQuips);
+                        }
+                        game.clearRecentEvents();
+                    } catch (Exception e) {
+                        System.err.println("❌ Error checking realtime quips (AI trick): " + e.getMessage());
+                    }
+                }
+
+                if (game.getState() == Game.GameState.ROUND_COMPLETE) {
+                    System.out.println("🎯 AI completed round - setting showFinalTrick flag");
+                    session.setAttribute("hlj_showFinalTrick", true);
+                    session.setAttribute("hlj_game", game);
+                    return "redirect:/highlowjack";
+                }
             }
-            
+
             session.setAttribute("hlj_game", game);
         }
         

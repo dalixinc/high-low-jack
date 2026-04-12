@@ -51,6 +51,11 @@ public class RealtimeQuipDetector {
                     if (quip != null) quip = "♠️ " + quip;
                     break;
 
+                case NINE_DIAMONDS_PLAYED:
+                    quip = personalityService.getQuip(QuipTrigger.CURSE_OF_SCOTLAND, playerName);
+                    if (quip != null) quip = "♦️ " + quip;
+                    break;
+
                 default:
                     break;
             }

@@ -12,6 +12,7 @@ public enum QuipTrigger {
     CUT_TWO_WINNING("Player cuts a 2 while winning"),
     PLAY_ACE_SPADES("Player plays Ace of Spades"),
     WIN_WITH_ACE_SPADES("Player wins with Ace of Spades"),
+    CURSE_OF_SCOTLAND("Player plays the 9 of Diamonds"),
 
     // CUT CEREMONY
     CUT_ACE("Player cuts an Ace"),

@@ -242,6 +242,7 @@ public class HighLowJackController {
         if (game.isTrumpTrackerEnabled() && game.getTrumpSuit() != null) {
             model.addAttribute("trumpSuit", game.getTrumpSuit());
             model.addAttribute("playedTrumpRanks", computePlayedTrumpRanks(game));
+            model.addAttribute("playedTrumpInfo", computePlayedTrumpInfo(game));
         }
 
         // Early wrap-up: check if High/Low/Jack are locked and a set winner is guaranteed.
@@ -283,6 +284,30 @@ public class HighLowJackController {
             }
         }
         return played;
+    }
+
+    /** Returns a map of trump rank name → "Played by [playerName]" for tooltip display. */
+    private java.util.Map<String, String> computePlayedTrumpInfo(Game game) {
+        java.util.Map<String, String> info = new java.util.LinkedHashMap<>();
+        Card.Suit trump = game.getTrumpSuit();
+        if (trump == null) return info;
+        // Completed tricks
+        for (Trick trick : game.getTricks()) {
+            for (var play : trick.getPlays()) {
+                if (play.card.getSuit() == trump) {
+                    info.put(play.card.getRank().name(), "Played by " + play.playerName);
+                }
+            }
+        }
+        // Current trick
+        if (game.getCurrentTrick() != null) {
+            for (var play : game.getCurrentTrick().getPlays()) {
+                if (play.card.getSuit() == trump) {
+                    info.put(play.card.getRank().name(), "Played by " + play.playerName);
+                }
+            }
+        }
+        return info;
     }
     
     @GetMapping("/setup")

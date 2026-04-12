@@ -25,6 +25,9 @@ public class GameEvent implements Serializable {
         
         /** Ace of Spades was played */
         ACE_SPADES_PLAYED,
+
+        /** Nine of Diamonds (Curse of Scotland) was played */
+        NINE_DIAMONDS_PLAYED,
         
         /** Jack of trump was won in a trick */
         JACK_WON,

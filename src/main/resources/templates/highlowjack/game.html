@@ -134,13 +134,33 @@
         .toggle-wrap input:checked + .toggle-slider { background: #27ae60; }
         .toggle-wrap input:checked + .toggle-slider::after { left: 18px; }
 
+        /* Trump tracker rank-pill tooltip */
+        .trump-rank-pill { position: relative; cursor: default; }
+        .trump-rank-pill[data-tooltip]:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20,20,30,0.93);
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: normal;
+            white-space: nowrap;
+            padding: 4px 8px;
+            border-radius: 6px;
+            pointer-events: none;
+            z-index: 999;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        }
+
         /* Auto-play glow on the lone card */
         @keyframes autoPlayPulse {
             0%, 100% { box-shadow: 0 0 0 0 rgba(255,215,0,0.5); }
             50%       { box-shadow: 0 0 18px 8px rgba(255,215,0,0.8); }
         }
         .auto-play-glow {
-            animation: autoPlayPulse 0.6s ease-in-out 2 !important;
+            animation: autoPlayPulse 0.6s ease-in-out 4 !important;
             border: 2px solid gold !important;
             border-radius: 8px;
         }
@@ -982,7 +1002,10 @@
                     <div id="trackerCards" style="display:flex; flex-wrap:wrap; gap:4px; justify-content:center;">
                         <!-- Ranks high→low; dim if played -->
                         <th:block th:each="rankName : ${ {'ACE','KING','QUEEN','JACK','TEN','NINE','EIGHT','SEVEN','SIX','FIVE','FOUR','THREE','TWO'} }">
-                            <span th:with="played=${playedTrumpRanks != null and playedTrumpRanks.contains(rankName)}"
+                            <span th:with="played=${playedTrumpRanks != null and playedTrumpRanks.contains(rankName)},
+                                          tooltip=${played and playedTrumpInfo != null and playedTrumpInfo.containsKey(rankName)} ? ${playedTrumpInfo.get(rankName)} : null"
+                                  th:class="${'trump-rank-pill'}"
+                                  th:attr="data-tooltip=${tooltip}"
                                   th:style="${played} ?
                                       'background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.18); text-decoration:line-through; border:1px solid rgba(255,255,255,0.08);' :
                                       'background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.35);'"

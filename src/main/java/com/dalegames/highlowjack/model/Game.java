@@ -407,9 +407,20 @@ public class Game implements Serializable{
         if (card.getRank() == Card.Rank.ACE && card.getSuit() == Card.Suit.SPADES) {
             int playerScore = getScore(currentPlayer);
             recentEvents.add(new GameEvent(
-                GameEvent.EventType.ACE_SPADES_PLAYED, 
-                currentPlayer, 
-                card, 
+                GameEvent.EventType.ACE_SPADES_PLAYED,
+                currentPlayer,
+                card,
+                playerScore
+            ));
+        }
+
+        // DETECT: Nine of Diamonds played (Curse of Scotland)
+        if (card.getRank() == Card.Rank.NINE && card.getSuit() == Card.Suit.DIAMONDS) {
+            int playerScore = getScore(currentPlayer);
+            recentEvents.add(new GameEvent(
+                GameEvent.EventType.NINE_DIAMONDS_PLAYED,
+                currentPlayer,
+                card,
                 playerScore
             ));
         }

@@ -134,13 +134,33 @@
         .toggle-wrap input:checked + .toggle-slider { background: #27ae60; }
         .toggle-wrap input:checked + .toggle-slider::after { left: 18px; }
 
+        /* Trump tracker rank-pill tooltip */
+        .trump-rank-pill { position: relative; cursor: default; }
+        .trump-rank-pill[data-tooltip]:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20,20,30,0.93);
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: normal;
+            white-space: nowrap;
+            padding: 4px 8px;
+            border-radius: 6px;
+            pointer-events: none;
+            z-index: 999;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        }
+
         /* Auto-play glow on the lone card */
         @keyframes autoPlayPulse {
             0%, 100% { box-shadow: 0 0 0 0 rgba(255,215,0,0.5); }
             50%       { box-shadow: 0 0 18px 8px rgba(255,215,0,0.8); }
         }
         .auto-play-glow {
-            animation: autoPlayPulse 0.6s ease-in-out 2 !important;
+            animation: autoPlayPulse 0.6s ease-in-out 4 !important;
             border: 2px solid gold !important;
             border-radius: 8px;
         }
@@ -896,6 +916,12 @@
             </div>
             
   <div class="scoreboard-sidebar">
+    <!-- Match type badge -->
+    <div th:if="${setup != null}" style="text-align:center; font-size:0.72rem; font-weight:bold;
+                text-transform:uppercase; letter-spacing:0.5px; opacity:0.65; margin-bottom:8px;">
+        <span th:text="${setup.matchType.displayName}">Just One Set</span>
+    </div>
+
     <!-- TEAM MODE SCOREBOARD -->
     <div th:if="${game.isTeamMode()}">
         <div class="scoreboard-title">📊 Team Score</div>
@@ -982,7 +1008,10 @@
                     <div id="trackerCards" style="display:flex; flex-wrap:wrap; gap:4px; justify-content:center;">
                         <!-- Ranks high→low; dim if played -->
                         <th:block th:each="rankName : ${ {'ACE','KING','QUEEN','JACK','TEN','NINE','EIGHT','SEVEN','SIX','FIVE','FOUR','THREE','TWO'} }">
-                            <span th:with="played=${playedTrumpRanks != null and playedTrumpRanks.contains(rankName)}"
+                            <span th:with="played=${playedTrumpRanks != null and playedTrumpRanks.contains(rankName)},
+                                          tooltip=${played and playedTrumpInfo != null and playedTrumpInfo.containsKey(rankName)} ? ${playedTrumpInfo.get(rankName)} : null"
+                                  th:class="${'trump-rank-pill'}"
+                                  th:attr="data-tooltip=${tooltip}"
                                   th:style="${played} ?
                                       'background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.18); text-decoration:line-through; border:1px solid rgba(255,255,255,0.08);' :
                                       'background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.35);'"
@@ -1051,7 +1080,8 @@
 
         // BUG #1 FIX: Longer pause for completed tricks, especially the last one
         if (hasCompletedTrick && !isRoundComplete) {
-            const quipBuffer = hasEventQuips ? 1000 : 0;
+            // quipBuffer must push total past the 6 s server-side TTL so quips don't double-show
+            const quipBuffer = hasEventQuips ? 2500 : 0;
             if (currentPlayer === humanPlayer) {
                 setTimeout(() => { location.reload(); }, 5000 + quipBuffer);
             } else {
@@ -1061,11 +1091,19 @@
         // AI auto-advance: pause if wrap-up panel is showing (controller must decide first)
         else if (isAITurn && !(wrapUpAvailable && isController)) {
             const baseDelay = 1000 + Math.random() * 2000;
-            const delay = hasEventQuips ? Math.max(baseDelay, 3000) : baseDelay;
+            // 7 s minimum when quips are showing — must exceed the 6 s server TTL
+            const delay = hasEventQuips ? Math.max(baseDelay, 8000) : baseDelay;
             setTimeout(() => {
                 location.reload();
             }, delay);
         }
+        // When quips are showing and it's the human's turn, no auto-reload exists — add one
+        // so the layout resets after the animation ends (quip div stays in DOM at opacity:0 otherwise).
+        // 7 s pushes past the 6 s server TTL so quips won't re-appear on this reload.
+        else if (hasEventQuips && isMyTurn && !isAITurn && !hasCompletedTrick) {
+            setTimeout(() => location.reload(), 7000);
+        }
+
         else if (isMultiplayer && !isMyTurn && !isRoundComplete) {
             // Multiplayer: poll for any game state change so all players see cards in real-time
             let lastTrickSize = -1;

@@ -23,8 +23,8 @@ public class Team implements Serializable {
     private static final long serialVersionUID = 1L;
     
     private final String name;
-    private final String player1Name;  // North or East
-    private final String player2Name;  // South or West
+    private String player1Name;  // North or East
+    private String player2Name;  // South or West
     private int score;
     private int setsWon;
     
@@ -156,6 +156,18 @@ public class Team implements Serializable {
         return null;
     }
     
+    /**
+     * Updates a player's name within this team (called when a multiplayer join uses a
+     * different name than the setup slot, so getTeamForPlayer() keeps working).
+     *
+     * @param oldName the current name stored in this team
+     * @param newName the new name
+     */
+    public void renamePlayer(String oldName, String newName) {
+        if (player1Name.equals(oldName)) player1Name = newName;
+        else if (player2Name.equals(oldName)) player2Name = newName;
+    }
+
     /**
      * Resets the team score to zero (used when starting a new set).
      */

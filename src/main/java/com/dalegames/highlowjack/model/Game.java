@@ -482,6 +482,15 @@ public class Game implements Serializable{
             if (score != null) scores.put(newName, score);
             Integer sw = setsWon.remove(oldName);
             if (sw != null) setsWon.put(newName, sw);
+        } else {
+            // Team mode: keep Team's player name list in sync so getTeamForPlayer()
+            // continues to work after a multiplayer join with a different name.
+            for (Team team : teams) {
+                if (team.hasPlayer(oldName)) {
+                    team.renamePlayer(oldName, newName);
+                    break;
+                }
+            }
         }
 
         gameSetup.getPlayers().get(position).setName(newName);

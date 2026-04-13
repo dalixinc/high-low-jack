@@ -285,9 +285,13 @@ public class HighLowJackController {
 
         // Early wrap-up: check if High/Low/Jack are locked and a set winner is guaranteed.
         // Suppressed for this round if the controller already declined.
+        // NOTE: We intentionally do NOT gate this on completedTrick==null — the panel
+        // should also appear while the just-completed trick is still being displayed,
+        // so fast-clicking controllers don't miss the window (especially in multiplayer).
+        // checkWrapUpLocked() has its own guard that returns null when a trick is mid-flight
+        // (currentTrick.size() > 0), so it is safe to call here unconditionally.
         WrapUpInfo wrapUp = null;
-        if (game.getState() == Game.GameState.IN_PROGRESS && completedTrick == null
-                && !game.isWrapUpDeclined()) {
+        if (game.getState() == Game.GameState.IN_PROGRESS && !game.isWrapUpDeclined()) {
             try {
                 wrapUp = GameEngine.checkWrapUpLocked(game);
             } catch (Exception e) {

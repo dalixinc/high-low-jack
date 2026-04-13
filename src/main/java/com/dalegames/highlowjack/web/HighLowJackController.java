@@ -786,7 +786,7 @@ public class HighLowJackController {
             // Get team stats
             List<TeamStats> teams = teamStatsService.getLeaderboard();
 
-            // Awards: Hall of Fame (most aces cut) and Hall of Shame (most twos cut)
+            // Awards: Hall of Fame / Hall of Shame + four new medals
             Player topAceCutter = players.stream()
                 .filter(p -> p.getTotalAcesCut() > 0)
                 .max(java.util.Comparator.comparingInt(Player::getTotalAcesCut))
@@ -794,6 +794,22 @@ public class HighLowJackController {
             Player topTwoCutter = players.stream()
                 .filter(p -> p.getTotalTwosCut() > 0)
                 .max(java.util.Comparator.comparingInt(Player::getTotalTwosCut))
+                .orElse(null);
+            Player topSweeper = players.stream()
+                .filter(p -> p.getSweepsWon() > 0)
+                .max(java.util.Comparator.comparingInt(Player::getSweepsWon))
+                .orElse(null);
+            Player topCloser = players.stream()
+                .filter(p -> p.getCloseSetWins() > 0)
+                .max(java.util.Comparator.comparingInt(Player::getCloseSetWins))
+                .orElse(null);
+            Player topChoker = players.stream()
+                .filter(p -> p.getFailedFrom10() > 0)
+                .max(java.util.Comparator.comparingInt(Player::getFailedFrom10))
+                .orElse(null);
+            Player ironMan = players.stream()
+                .filter(p -> !p.isTeam() && p.getTotalMatchesPlayed() > 0)
+                .max(java.util.Comparator.comparingInt(Player::getTotalMatchesPlayed))
                 .orElse(null);
 
             // Head-to-head grid
@@ -808,6 +824,10 @@ public class HighLowJackController {
             model.addAttribute("totalPoints", totalPoints);
             model.addAttribute("topAceCutter", topAceCutter);
             model.addAttribute("topTwoCutter", topTwoCutter);
+            model.addAttribute("topSweeper", topSweeper);
+            model.addAttribute("topCloser", topCloser);
+            model.addAttribute("topChoker", topChoker);
+            model.addAttribute("ironMan", ironMan);
             model.addAttribute("h2hGrid", h2hGrid);
             model.addAttribute("playerNames", playerNames);
             
@@ -821,6 +841,10 @@ public class HighLowJackController {
             model.addAttribute("totalPoints", 0);
             model.addAttribute("topAceCutter", null);
             model.addAttribute("topTwoCutter", null);
+            model.addAttribute("topSweeper", null);
+            model.addAttribute("topCloser", null);
+            model.addAttribute("topChoker", null);
+            model.addAttribute("ironMan", null);
             model.addAttribute("h2hGrid", new java.util.LinkedHashMap<>());
             model.addAttribute("playerNames", new ArrayList<>());
             return "highlowjack/stats";
@@ -976,7 +1000,37 @@ public class HighLowJackController {
                     scoresBefore.put(player, currentScore - roundPoints);
                 }
             }
-            
+
+            // ═══════════════════════════════════════════════════════════════
+            // AWARDS: The Sweeper — all four points won by same entity
+            // ═══════════════════════════════════════════════════════════════
+            try {
+                String[] sweepCats = {"High", "Low", "Jack", "Game"};
+                String sweepWinner = results.getRoundPointWinner("High");
+                boolean isSweep = sweepWinner != null;
+                for (String cat : sweepCats) {
+                    String w = results.getRoundPointWinner(cat);
+                    if (w == null || !w.equals(sweepWinner)) { isSweep = false; break; }
+                }
+                if (isSweep) {
+                    if (game.isTeamMode()) {
+                        for (Team team : game.getTeams()) {
+                            if (team.getName().equals(sweepWinner)) {
+                                for (String pn : team.getPlayerNames()) {
+                                    playerService.recordSweep(pn);
+                                }
+                                break;
+                            }
+                        }
+                    } else {
+                        playerService.recordSweep(sweepWinner);
+                    }
+                    System.out.println("🧹 SWEEP recorded for: " + sweepWinner);
+                }
+            } catch (Exception e) {
+                System.err.println("❌ Error recording sweep: " + e.getMessage());
+            }
+
             SetResult setResult = SetResult.determineWinner(scoresBefore, results.getRoundPointWinners());
             
             // ═══════════════════════════════════════════════════════════════
@@ -1014,6 +1068,55 @@ public class HighLowJackController {
 
                 // Update game's own setsWon so game.html scoreboard reflects the new count
                 game.recordSetWin(setResult.getWinner());
+
+                // ═══════════════════════════════════════════════════════════════
+                // AWARDS: The Closer + The Choker — based on loser's final score
+                // ═══════════════════════════════════════════════════════════════
+                try {
+                    Map<String, Integer> finalScores = setResult.getFinalScores();
+                    String setWinner = setResult.getWinner();
+                    for (Map.Entry<String, Integer> entry : finalScores.entrySet()) {
+                        String entity = entry.getKey();
+                        int score = entry.getValue();
+                        if (!entity.equals(setWinner)) {
+                            // This is the loser
+                            if (score >= 9) {
+                                // Closer: winner won a tight set
+                                if (game.isTeamMode()) {
+                                    for (Team team : game.getTeams()) {
+                                        if (team.getName().equals(setWinner)) {
+                                            for (String pn : team.getPlayerNames()) {
+                                                playerService.recordCloseSetWin(pn);
+                                            }
+                                            break;
+                                        }
+                                    }
+                                } else {
+                                    playerService.recordCloseSetWin(setWinner);
+                                }
+                                System.out.println("🎯 CLOSE SET WIN recorded for: " + setWinner + " (loser had " + score + ")");
+                            }
+                            if (score >= 10) {
+                                // Choker: loser had 10 points and still lost
+                                if (game.isTeamMode()) {
+                                    for (Team team : game.getTeams()) {
+                                        if (team.getName().equals(entity)) {
+                                            for (String pn : team.getPlayerNames()) {
+                                                playerService.recordFailedFrom10(pn);
+                                            }
+                                            break;
+                                        }
+                                    }
+                                } else {
+                                    playerService.recordFailedFrom10(entity);
+                                }
+                                System.out.println("😬 CHOKE recorded for: " + entity + " (had " + score + " and lost)");
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("❌ Error recording closer/choker: " + e.getMessage());
+                }
 
                 if (matchWon) {
                     // ═══════════════════════════════════════════════════════════

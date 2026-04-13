@@ -166,6 +166,27 @@ public class PlayerService {
         }
     }
 
+    /** Records a round where the player won all four points (The Sweeper). */
+    public void recordSweep(String playerName) {
+        Player player = getOrCreatePlayer(playerName);
+        player.recordSweep();
+        playerRepository.save(player);
+    }
+
+    /** Records a set win where the loser had 9 or 10 points (The Closer). */
+    public void recordCloseSetWin(String playerName) {
+        Player player = getOrCreatePlayer(playerName);
+        player.recordCloseSetWin();
+        playerRepository.save(player);
+    }
+
+    /** Records a set loss where the player/team finished with 10 points (The Choker). */
+    public void recordFailedFrom10(String playerName) {
+        Player player = getOrCreatePlayer(playerName);
+        player.recordFailedFrom10();
+        playerRepository.save(player);
+    }
+
     /**
      * Records Ace of Spades being played.
      */
@@ -198,6 +219,9 @@ public class PlayerService {
             player.setTotalAceSpadesPlayed(0);
             player.setTotalAcesCut(0);
             player.setTotalCutsWon(0);
+            player.setSweepsWon(0);
+            player.setCloseSetWins(0);
+            player.setFailedFrom10(0);
 
             playerRepository.save(player);
         }

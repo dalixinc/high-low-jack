@@ -497,7 +497,7 @@
             </div>
 
             <!-- Hall of Shame -->
-            <div>
+            <div style="margin-bottom: 50px;">
                 <h3 style="font-size: 1.6rem; color: #e74c3c; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
                     😬 Hall of Shame
                 </h3>
@@ -514,6 +514,90 @@
                 <div th:if="${topTwoCutter == null}" class="empty-state" style="padding: 30px;">
                     <div class="empty-state-icon" style="font-size: 3rem;">2️⃣</div>
                     <div class="empty-state-text" style="font-size: 1.2rem;">No twos cut yet!</div>
+                </div>
+            </div>
+
+            <!-- The Sweeper -->
+            <div style="margin-bottom: 50px;">
+                <h3 style="font-size: 1.6rem; color: #16a085; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    🏆 The Sweeper
+                </h3>
+                <div th:if="${topSweeper != null}" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 20px; padding: 30px; display: flex; align-items: center; gap: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-width: 600px;">
+                    <div style="font-size: 5rem;">🧹</div>
+                    <div>
+                        <div style="font-size: 0.9rem; color: rgba(0,0,0,0.6); text-transform: uppercase; font-weight: bold; letter-spacing: 2px; margin-bottom: 6px;">Most Sweep-All-Four Rounds</div>
+                        <div style="font-size: 2rem; font-weight: bold; color: #2c3e50;" th:text="${topSweeper.name}">Player</div>
+                        <div style="font-size: 1.2rem; color: #555; margin-top: 5px;">
+                            <span th:text="${topSweeper.sweepsWon}">0</span> sweeps
+                        </div>
+                    </div>
+                </div>
+                <div th:if="${topSweeper == null}" class="empty-state" style="padding: 30px;">
+                    <div class="empty-state-icon" style="font-size: 3rem;">🧹</div>
+                    <div class="empty-state-text" style="font-size: 1.2rem;">No sweeps yet!</div>
+                </div>
+            </div>
+
+            <!-- The Closer -->
+            <div style="margin-bottom: 50px;">
+                <h3 style="font-size: 1.6rem; color: #2980b9; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    🏆 The Closer
+                </h3>
+                <div th:if="${topCloser != null}" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 20px; padding: 30px; display: flex; align-items: center; gap: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-width: 600px;">
+                    <div style="font-size: 5rem;">🎯</div>
+                    <div>
+                        <div style="font-size: 0.9rem; color: rgba(0,0,0,0.6); text-transform: uppercase; font-weight: bold; letter-spacing: 2px; margin-bottom: 6px;">Most 11–9 / 11–10 Set Wins</div>
+                        <div style="font-size: 2rem; font-weight: bold; color: #2c3e50;" th:text="${topCloser.name}">Player</div>
+                        <div style="font-size: 1.2rem; color: #555; margin-top: 5px;">
+                            <span th:text="${topCloser.closeSetWins}">0</span> close set wins
+                        </div>
+                    </div>
+                </div>
+                <div th:if="${topCloser == null}" class="empty-state" style="padding: 30px;">
+                    <div class="empty-state-icon" style="font-size: 3rem;">🎯</div>
+                    <div class="empty-state-text" style="font-size: 1.2rem;">No close set wins yet!</div>
+                </div>
+            </div>
+
+            <!-- The Choker (Hall of Shame) -->
+            <div style="margin-bottom: 50px;">
+                <h3 style="font-size: 1.6rem; color: #e74c3c; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    😬 The Choker
+                </h3>
+                <div th:if="${topChoker != null}" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 20px; padding: 30px; display: flex; align-items: center; gap: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-width: 600px;">
+                    <div style="font-size: 5rem;">😰</div>
+                    <div>
+                        <div style="font-size: 0.9rem; color: rgba(0,0,0,0.6); text-transform: uppercase; font-weight: bold; letter-spacing: 2px; margin-bottom: 6px;">Most Set Losses From 10 Points</div>
+                        <div style="font-size: 2rem; font-weight: bold; color: #2c3e50;" th:text="${topChoker.name}">Player</div>
+                        <div style="font-size: 1.2rem; color: #555; margin-top: 5px;">
+                            <span th:text="${topChoker.failedFrom10}">0</span> times choked from 10
+                        </div>
+                    </div>
+                </div>
+                <div th:if="${topChoker == null}" class="empty-state" style="padding: 30px;">
+                    <div class="empty-state-icon" style="font-size: 3rem;">😰</div>
+                    <div class="empty-state-text" style="font-size: 1.2rem;">No chokes recorded yet!</div>
+                </div>
+            </div>
+
+            <!-- Iron Man -->
+            <div>
+                <h3 style="font-size: 1.6rem; color: #8e44ad; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    🏆 Iron Man
+                </h3>
+                <div th:if="${ironMan != null}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; padding: 30px; display: flex; align-items: center; gap: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-width: 600px;">
+                    <div style="font-size: 5rem;">💪</div>
+                    <div>
+                        <div style="font-size: 0.9rem; color: rgba(255,255,255,0.7); text-transform: uppercase; font-weight: bold; letter-spacing: 2px; margin-bottom: 6px;">Most Matches Played</div>
+                        <div style="font-size: 2rem; font-weight: bold; color: #fff;" th:text="${ironMan.name}">Player</div>
+                        <div style="font-size: 1.2rem; color: rgba(255,255,255,0.85); margin-top: 5px;">
+                            <span th:text="${ironMan.totalMatchesPlayed}">0</span> matches played
+                        </div>
+                    </div>
+                </div>
+                <div th:if="${ironMan == null}" class="empty-state" style="padding: 30px;">
+                    <div class="empty-state-icon" style="font-size: 3rem;">💪</div>
+                    <div class="empty-state-text" style="font-size: 1.2rem;">No matches played yet!</div>
                 </div>
             </div>
         </div>

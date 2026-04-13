@@ -88,6 +88,16 @@ public class Player {
     @Column(name = "total_cuts_won")
     private int totalCutsWon = 0;
 
+    // Special Awards
+    @Column(name = "sweeps_won")
+    private int sweepsWon = 0;
+
+    @Column(name = "close_set_wins")
+    private int closeSetWins = 0;
+
+    @Column(name = "failed_from_10")
+    private int failedFrom10 = 0;
+
     // Metadata
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -176,6 +186,21 @@ public class Player {
         if (won) this.totalCutsWon++;
     }
     
+    /** Records a round where this player/team won all four points. */
+    public void recordSweep() {
+        this.sweepsWon++;
+    }
+
+    /** Records a set win where the loser had 9 or 10 points (close win). */
+    public void recordCloseSetWin() {
+        this.closeSetWins++;
+    }
+
+    /** Records a set loss where this player/team finished with 10 points. */
+    public void recordFailedFrom10() {
+        this.failedFrom10++;
+    }
+
     /**
      * Calculates win percentage.
      */
@@ -349,7 +374,31 @@ public class Player {
     public void setTotalCutsWon(int totalCutsWon) {
         this.totalCutsWon = totalCutsWon;
     }
-    
+
+    public int getSweepsWon() {
+        return sweepsWon;
+    }
+
+    public void setSweepsWon(int sweepsWon) {
+        this.sweepsWon = sweepsWon;
+    }
+
+    public int getCloseSetWins() {
+        return closeSetWins;
+    }
+
+    public void setCloseSetWins(int closeSetWins) {
+        this.closeSetWins = closeSetWins;
+    }
+
+    public int getFailedFrom10() {
+        return failedFrom10;
+    }
+
+    public void setFailedFrom10(int failedFrom10) {
+        this.failedFrom10 = failedFrom10;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }

@@ -80,6 +80,10 @@ public class Game implements Serializable{
     private int lastCutter1Index = -1;  // For suggesting next-set cutter rotation
     private int lastCutter2Index = -1;
 
+    // Chat (multiplayer only)
+    private final List<ChatMessage> chatLog = new ArrayList<>();
+    private static final int MAX_CHAT_HISTORY = 50;
+
     /**
      * Constructs a new game with the specified game setup.
      * 
@@ -1030,6 +1034,25 @@ public class Game implements Serializable{
         return sb.toString();
     }
     
+    // ── Chat (multiplayer) ─────────────────────────────────────────────────────
+
+    public synchronized void addChatMessage(ChatMessage msg) {
+        chatLog.add(msg);
+        while (chatLog.size() > MAX_CHAT_HISTORY) chatLog.remove(0);
+    }
+
+    /** Returns all messages added after {@code fromIndex} (exclusive). */
+    public synchronized List<ChatMessage> getChatSince(int fromIndex) {
+        int size = chatLog.size();
+        if (fromIndex >= size) return new ArrayList<>();
+        return new ArrayList<>(chatLog.subList(Math.max(0, fromIndex), size));
+    }
+
+    /** Returns the current chat log size — use as a lightweight version counter. */
+    public synchronized int getChatVersion() {
+        return chatLog.size();
+    }
+
     /**
      * Enumeration of possible game states.
      */

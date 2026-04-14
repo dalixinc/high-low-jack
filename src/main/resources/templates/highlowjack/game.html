@@ -229,6 +229,66 @@
                        padding: 10px 24px; font-size: 1rem; cursor: pointer; }
         .btn-request:hover { background: #1f618d; }
         
+        /* ── Chat panel ─────────────────────────────── */
+        .chat-panel {
+            margin-top: 14px;
+            background: rgba(0,0,0,0.25);
+            border-radius: 12px;
+            padding: 10px 12px;
+        }
+        .chat-panel-title {
+            font-size: 0.78rem; font-weight: bold; color: rgba(255,255,255,0.7);
+            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+        }
+        .chat-log {
+            height: 130px; overflow-y: auto; margin-bottom: 8px;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .chat-log::-webkit-scrollbar { width: 4px; }
+        .chat-log::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+        .chat-msg {
+            font-size: 0.8rem; line-height: 1.35;
+            background: rgba(255,255,255,0.07); border-radius: 8px; padding: 4px 8px;
+            word-break: break-word;
+        }
+        .chat-msg .chat-sender { font-weight: bold; color: #ffd700; margin-right: 4px; }
+        .chat-msg.chat-reaction { background: rgba(255,255,255,0.04); font-size: 1.1rem; text-align: center; }
+        .chat-reactions {
+            display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px;
+        }
+        .chat-reaction-btn {
+            background: rgba(255,255,255,0.1); border: none; border-radius: 8px;
+            padding: 3px 7px; font-size: 1rem; cursor: pointer; color: white;
+            transition: background 0.15s;
+        }
+        .chat-reaction-btn:hover { background: rgba(255,255,255,0.25); }
+        .chat-presets {
+            display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px;
+        }
+        .chat-preset-btn {
+            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px; padding: 2px 8px; font-size: 0.72rem; cursor: pointer;
+            color: rgba(255,255,255,0.85); transition: background 0.15s;
+        }
+        .chat-preset-btn:hover { background: rgba(255,255,255,0.2); }
+        .chat-input-row {
+            display: flex; gap: 5px;
+        }
+        .chat-text-input {
+            flex: 1; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px; color: white; font-size: 0.8rem; padding: 4px 8px;
+            outline: none;
+        }
+        .chat-text-input::placeholder { color: rgba(255,255,255,0.4); }
+        .chat-text-input:focus { border-color: rgba(255,215,0,0.5); }
+        .chat-send-btn {
+            background: rgba(255,215,0,0.2); border: 1px solid rgba(255,215,0,0.4);
+            border-radius: 8px; color: #ffd700; font-size: 0.8rem; padding: 4px 10px;
+            cursor: pointer; transition: background 0.15s; white-space: nowrap;
+        }
+        .chat-send-btn:hover { background: rgba(255,215,0,0.35); }
+        .chat-empty { font-size: 0.75rem; color: rgba(255,255,255,0.3); text-align: center; padding: 8px 0; }
+
         .player-name {
             font-weight: bold;
             font-size: 1.1rem;
@@ -1044,6 +1104,48 @@
                         show trump tracker
                     </button>
                 </div>
+
+                <!-- ═══════════════════════════════════════ -->
+                <!-- MULTIPLAYER CHAT PANEL                  -->
+                <!-- ═══════════════════════════════════════ -->
+                <div th:if="${isMultiplayer}" class="chat-panel" id="chatPanel">
+                    <div class="chat-panel-title">💬 Chat</div>
+
+                    <!-- Message log -->
+                    <div class="chat-log" id="chatLog">
+                        <div class="chat-empty" id="chatEmpty">No messages yet</div>
+                    </div>
+
+                    <!-- Emoji reactions -->
+                    <div class="chat-reactions">
+                        <button class="chat-reaction-btn" onclick="sendReaction('👍')">👍</button>
+                        <button class="chat-reaction-btn" onclick="sendReaction('😂')">😂</button>
+                        <button class="chat-reaction-btn" onclick="sendReaction('😮')">😮</button>
+                        <button class="chat-reaction-btn" onclick="sendReaction('😤')">😤</button>
+                        <button class="chat-reaction-btn" onclick="sendReaction('🎉')">🎉</button>
+                        <button class="chat-reaction-btn" onclick="sendReaction('💎')">💎</button>
+                        <button class="chat-reaction-btn" onclick="sendReaction('🃏')">🃏</button>
+                        <button class="chat-reaction-btn" onclick="sendReaction('🤞')">🤞</button>
+                    </div>
+
+                    <!-- Preset quips -->
+                    <div class="chat-presets">
+                        <button class="chat-preset-btn" onclick="sendPreset('Good game!')">Good game!</button>
+                        <button class="chat-preset-btn" onclick="sendPreset('Lucky!')">Lucky!</button>
+                        <button class="chat-preset-btn" onclick="sendPreset('Nice play')">Nice play</button>
+                        <button class="chat-preset-btn" onclick="sendPreset('Ouch!')">Ouch!</button>
+                        <button class="chat-preset-btn" onclick="sendPreset('Watch the Jack')">Watch the Jack</button>
+                    </div>
+
+                    <!-- Free text -->
+                    <div class="chat-input-row">
+                        <input type="text" class="chat-text-input" id="chatInput"
+                               th:attr="maxlength=${chatMaxLength}"
+                               placeholder="Say something..." />
+                        <button class="chat-send-btn" onclick="sendChatText()">Send</button>
+                    </div>
+                </div>
+
             </div>
         </div>
         
@@ -1277,6 +1379,70 @@
                 })
                 .catch(() => {});
         }
+        // ── Multiplayer Chat ─────────────────────────────────────────────────
+        (function initChat() {
+            if (!isMultiplayer) return;
+
+            const log     = document.getElementById('chatLog');
+            const empty   = document.getElementById('chatEmpty');
+            const input   = document.getElementById('chatInput');
+            let chatVer   = 0;  // tracks chatVersion (= chatLog.size())
+
+            function appendMessage(msg) {
+                if (empty) empty.style.display = 'none';
+                const div = document.createElement('div');
+                div.className = 'chat-msg' + (msg.type === 'REACTION' ? ' chat-reaction' : '');
+                if (msg.type === 'REACTION') {
+                    div.innerHTML = '<span class="chat-sender">' + escHtml(msg.player) + '</span>' + escHtml(msg.text);
+                } else {
+                    div.innerHTML = '<span class="chat-sender">' + escHtml(msg.player) + ':</span>' + escHtml(msg.text);
+                }
+                log.appendChild(div);
+                log.scrollTop = log.scrollHeight;
+            }
+
+            function escHtml(s) {
+                return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            }
+
+            function sendMsg(text, type) {
+                if (!text) return;
+                const body = new URLSearchParams({ text, type });
+                fetch('/highlowjack/chat', { method: 'POST', body })
+                    .then(r => r.json())
+                    .then(d => { if (d.chatVersion !== undefined) chatVer = d.chatVersion; })
+                    .catch(() => {});
+            }
+
+            window.sendReaction = function(emoji) { sendMsg(emoji, 'REACTION'); };
+            window.sendPreset   = function(text)  { sendMsg(text, 'PRESET'); };
+            window.sendChatText = function() {
+                if (!input) return;
+                const t = input.value.trim();
+                if (t) { sendMsg(t, 'TEXT'); input.value = ''; }
+            };
+
+            // Allow Enter key to send
+            if (input) {
+                input.addEventListener('keydown', e => {
+                    if (e.key === 'Enter') { e.preventDefault(); window.sendChatText(); }
+                });
+            }
+
+            // Independent 2 s poll loop — always runs in multiplayer regardless of whose turn it is
+            setInterval(() => {
+                fetch('/highlowjack/poll?lastChat=' + chatVer)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.chatMessages && data.chatMessages.length > 0) {
+                            data.chatMessages.forEach(appendMessage);
+                        }
+                        if (data.chatVersion !== undefined) chatVer = data.chatVersion;
+                    })
+                    .catch(() => {});
+            }, 2000);
+        })();
+
         /*]]>*/
     </script>
 

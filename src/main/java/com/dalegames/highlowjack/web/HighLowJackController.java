@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import com.dalegames.highlowjack.SimpleAI;
 import com.dalegames.highlowjack.engine.GameEngine;
 import com.dalegames.highlowjack.model.Card;
+import com.dalegames.highlowjack.model.ChatMessage;
 import com.dalegames.highlowjack.model.Deck;
 import com.dalegames.highlowjack.model.Game;
 import com.dalegames.highlowjack.model.GameSetup;
@@ -52,6 +53,8 @@ public class HighLowJackController {
 	
     @Value("${app.version:unknown}")
     private String appVersion;
+
+    private static final int MAX_CHAT_LENGTH = 40;
 
     @Autowired
     private PlayerService playerService;
@@ -242,6 +245,7 @@ public class HighLowJackController {
         model.addAttribute("isController", setup.isController(humanPlayer));
         model.addAttribute("isAITurn", isAITurn);
         model.addAttribute("isMultiplayer", isMultiplayer);
+        model.addAttribute("chatMaxLength", MAX_CHAT_LENGTH);
         model.addAttribute("isMyTurn", isMyTurn);
         model.addAttribute("completedTrick", completedTrick);
         model.addAttribute("validCards", validCards);
@@ -925,7 +929,9 @@ public class HighLowJackController {
      */
     @GetMapping("/poll")
     @ResponseBody
-    public Map<String, Object> pollGameState(HttpSession session) {
+    public Map<String, Object> pollGameState(
+            @RequestParam(defaultValue = "0") int lastChat,
+            HttpSession session) {
         Game game = (Game) session.getAttribute("hlj_game");
         String humanPlayer = (String) session.getAttribute("hlj_playerName");
         Map<String, Object> response = new HashMap<>();
@@ -949,8 +955,51 @@ public class HighLowJackController {
             }
             response.put("wrapUpAvailable", wrapAvail);
             response.put("wrapUpRequested", game.isWrapUpRequested());
+            // Chat — return new messages since lastChat index
+            List<ChatMessage> newMsgs = game.getChatSince(lastChat);
+            List<Map<String, Object>> chatPayload = new ArrayList<>();
+            for (ChatMessage msg : newMsgs) chatPayload.add(msg.toMap());
+            response.put("chatMessages", chatPayload);
+            response.put("chatVersion", game.getChatVersion());
         }
         response.put("humanPlayer", humanPlayer);
+        return response;
+    }
+
+    @PostMapping("/chat")
+    @ResponseBody
+    public Map<String, Object> sendChatMessage(
+            @RequestParam String text,
+            @RequestParam(defaultValue = "TEXT") String type,
+            HttpSession session) {
+        Map<String, Object> response = new HashMap<>();
+        Game game = (Game) session.getAttribute("hlj_game");
+        String playerName = (String) session.getAttribute("hlj_playerName");
+        if (game == null || playerName == null) {
+            response.put("ok", false);
+            response.put("error", "No active multiplayer game");
+            return response;
+        }
+        // Sanitise
+        if (text == null || text.isBlank()) {
+            response.put("ok", false);
+            response.put("error", "Empty message");
+            return response;
+        }
+        ChatMessage.Type msgType;
+        try {
+            msgType = ChatMessage.Type.valueOf(type.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            msgType = ChatMessage.Type.TEXT;
+        }
+        // Enforce length limit for TEXT messages only
+        String trimmed = text.trim();
+        if (msgType == ChatMessage.Type.TEXT && trimmed.length() > MAX_CHAT_LENGTH) {
+            trimmed = trimmed.substring(0, MAX_CHAT_LENGTH);
+        }
+        game.addChatMessage(new ChatMessage(playerName, trimmed, msgType));
+        response.put("ok", true);
+        response.put("chatVersion", game.getChatVersion());
         return response;
     }
 

@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>High Low Jack - Card Game</title>
+    <!-- Apply deal-anim before body renders so cards start invisible immediately -->
+    <script>if(localStorage.getItem('hlj_dealAnim')!=='false'){document.documentElement.classList.add('deal-anim');}</script>
     <style>
         * {
             margin: 0;
@@ -360,6 +362,22 @@
             border-radius: 10px;
         }
         
+        /* ── Animated card deal ──────────────────────── */
+        @keyframes dealIn {
+            from {
+                transform: translateY(-220px) translateX(30px) rotate(12deg) scale(0.6);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0) translateX(0) rotate(0deg) scale(1);
+                opacity: 1;
+            }
+        }
+        html.deal-anim .hand-cards form > div {
+            animation: dealIn 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) backwards;
+            animation-delay: calc(var(--deal-index, 0) * 80ms);
+        }
+
         .trick-area {
             min-height: 180px;
             background: rgba(0, 0, 0, 0.2);
@@ -938,9 +956,10 @@
                         
                         <div class="hand-cards">
                             <form th:action="@{/highlowjack/play}" method="post" style="display: contents;">
-                                <div th:each="card, iterStat : ${game.getHand(humanPlayer).cards}">
-                                    <button type="submit" 
-                                            name="cardIndex" 
+                                <div th:each="card, iterStat : ${game.getHand(humanPlayer).cards}"
+                                     th:style="'--deal-index:' + ${iterStat.index}">
+                                    <button type="submit"
+                                            name="cardIndex"
                                             th:value="${iterStat.index}"
                                             th:disabled="${game.currentPlayer != humanPlayer}"
                                             th:classappend="${!validCards.contains(card)} ? 'invalid-card'">
@@ -1270,6 +1289,20 @@
         const isMyTurn = /*[[${isMyTurn}]]*/ true;
         const hasEventQuips = /*[[${eventQuips != null and !eventQuips.empty}]]*/ false;
         const wrapUpAvailable = /*[[${wrapUpInfo != null}]]*/ false;
+
+        // ── Deal animation: only fire on the first page load of each new round ──
+        (function() {
+            const animRoundKey = /*[[${game.currentSetNumber + '-' + game.roundNumber}]]*/ '0-0';
+            const ANIM_KEY = 'hlj_animRound';
+            const alreadyPlayed = sessionStorage.getItem(ANIM_KEY) === animRoundKey;
+            if (alreadyPlayed) {
+                // Subsequent load within the same round — suppress animation
+                document.documentElement.classList.remove('deal-anim');
+            } else {
+                // First load of this round — record it and let animation run
+                sessionStorage.setItem(ANIM_KEY, animRoundKey);
+            }
+        })();
 
         // BUG #1 FIX: Longer pause for completed tricks, especially the last one
         if (hasCompletedTrick && !isRoundComplete) {

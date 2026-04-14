@@ -1,6 +1,7 @@
 package com.dalegames.highlowjack.web;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -367,7 +368,86 @@ public class HighLowJackController {
     @GetMapping("/setup")
     public String showSetup(Model model) {
         model.addAttribute("appVersion", appVersion);
+        model.addAttribute("buzzMessages", generateBuzzMessages());
         return "highlowjack/setup";
+    }
+
+    /**
+     * Generates a list of fun, stat-driven buzz messages for the setup screen.
+     * Falls back to generic welcome messages when there is no history yet.
+     */
+    private List<String> generateBuzzMessages() {
+        List<String> msgs = new ArrayList<>();
+        try {
+            List<com.dalegames.highlowjack.persistence.entity.Player> all =
+                    playerService.getAllPlayers();
+            List<com.dalegames.highlowjack.persistence.entity.Player> players =
+                    all.stream().filter(p -> !p.isTeam()).collect(Collectors.toList());
+
+            for (com.dalegames.highlowjack.persistence.entity.Player p : players) {
+                int streak = p.getCurrentWinStreak();
+                if (streak >= 6)
+                    msgs.add("🔥🔥🔥 " + p.getName() + " is ABSOLUTELY ON FIRE — " + streak + " wins in a row!");
+                else if (streak >= 4)
+                    msgs.add("🔥🔥 " + p.getName() + " is cooking with gas — " + streak + "-match win streak!");
+                else if (streak >= 2)
+                    msgs.add("🔥 " + p.getName() + " is on a roll — " + streak + " wins in a row!");
+
+                if (p.getTotalTwosCut() >= 4)
+                    msgs.add("✂️ " + p.getName() + " keeps cutting twos — " + p.getTotalTwosCut() + " times and counting!");
+                else if (p.getTotalTwosCut() >= 2)
+                    msgs.add("✂️ " + p.getName() + " is on a two-cutting binge — " + p.getTotalTwosCut() + " twos cut!");
+
+                if (p.getTotalAcesCut() >= 3)
+                    msgs.add("🃏 " + p.getName() + " keeps cutting Aces — lucky star or dark art?");
+
+                if (p.getTotalMatchesPlayed() >= 5 && p.getWinPercentage() >= 70)
+                    msgs.add("👑 " + p.getName() + " dominates at "
+                            + String.format("%.0f", p.getWinPercentage()) + "% — who can stop them?");
+
+                if (p.getSweepsWon() >= 3)
+                    msgs.add("🧹 " + p.getName() + " has swept the board " + p.getSweepsWon() + " times — ruthless!");
+
+                if (p.getCloseSetWins() >= 3)
+                    msgs.add("🎯 " + p.getName() + " is ice-cold in the clutch — " + p.getCloseSetWins() + " close-set wins!");
+
+                if (p.getFailedFrom10() >= 3)
+                    msgs.add("😰 " + p.getName() + " keeps blowing leads from 10... will today be different?");
+
+                if (p.getTotalAceSpadesPlayed() >= 3)
+                    msgs.add("♠️ " + p.getName() + " loves dropping the Ace of Spades — " + p.getTotalAceSpadesPlayed() + " times!");
+            }
+
+            // Single "leader" shout-out if not already mentioned
+            players.stream()
+                    .filter(p -> p.getTotalMatchesPlayed() >= 5)
+                    .max(Comparator.comparingInt(
+                            com.dalegames.highlowjack.persistence.entity.Player::getTotalMatchesWon))
+                    .ifPresent(p -> {
+                        boolean alreadyCovered = msgs.stream().anyMatch(m -> m.contains(p.getName()));
+                        if (!alreadyCovered)
+                            msgs.add("👑 " + p.getName() + " leads the all-time table with "
+                                    + p.getTotalMatchesWon() + " match wins!");
+                    });
+
+            // Iron Man
+            players.stream()
+                    .filter(p -> p.getTotalMatchesPlayed() >= 10)
+                    .max(Comparator.comparingInt(
+                            com.dalegames.highlowjack.persistence.entity.Player::getTotalMatchesPlayed))
+                    .ifPresent(p -> msgs.add("💪 " + p.getName() + " — Iron Man! "
+                            + p.getTotalMatchesPlayed() + " matches played and still standing!"));
+
+        } catch (Exception e) {
+            // DB not available or empty — fall through to defaults below
+        }
+
+        if (msgs.isEmpty()) {
+            msgs.add("🃏 New game, new glory — who will rise to the top?");
+            msgs.add("⚡ High Low Jack — where legends are made!");
+            msgs.add("♠️ Shuffle up and deal — let the cards decide!");
+        }
+        return msgs;
     }
     
     @PostMapping("/setup")

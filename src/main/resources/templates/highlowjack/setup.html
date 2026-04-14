@@ -43,8 +43,55 @@
             text-align: center;
             font-size: 1.1rem;
             color: rgba(255, 255, 255, 0.8);
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
         }
+
+        /* ── Buzz banner ──────────────────────────────────────── */
+        .buzz-banner {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            min-height: 2.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .buzz-text {
+            display: inline-block;
+            background: linear-gradient(135deg, rgba(255,215,0,0.18) 0%, rgba(255,140,0,0.12) 100%);
+            border: 1px solid rgba(255,215,0,0.35);
+            border-radius: 20px;
+            padding: 6px 22px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #ffd700;
+            letter-spacing: 0.2px;
+            transition: opacity 0.4s ease;
+        }
+
+        /* ── Card animation toggle ────────────────────────────── */
+        .anim-toggle-row {
+            display: flex; align-items: center; gap: 10px;
+            margin-top: 14px;
+        }
+        .anim-toggle-label {
+            font-size: 0.9rem; color: rgba(255,255,255,0.8);
+        }
+        .anim-toggle-switch {
+            position: relative; display: inline-block; width: 42px; height: 22px;
+        }
+        .anim-toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .anim-toggle-slider {
+            position: absolute; cursor: pointer; inset: 0;
+            background: rgba(255,255,255,0.2); border-radius: 22px;
+            transition: background 0.2s;
+        }
+        .anim-toggle-slider:before {
+            content: ''; position: absolute;
+            width: 16px; height: 16px; border-radius: 50%;
+            background: white; left: 3px; bottom: 3px; transition: transform 0.2s;
+        }
+        .anim-toggle-switch input:checked + .anim-toggle-slider { background: rgba(255,215,0,0.6); }
+        .anim-toggle-switch input:checked + .anim-toggle-slider:before { transform: translateX(20px); }
         
         .setup-section {
             background: rgba(255, 255, 255, 0.15);
@@ -424,7 +471,13 @@
     <div class="setup-container">
         <h1>🃏 High Low Jack 🃏</h1>
         <p class="subtitle">Configure Your Match</p>
-		
+
+        <!-- ── Buzz banner ── -->
+        <div class="buzz-banner" th:if="${buzzMessages != null and !buzzMessages.isEmpty()}">
+            <span class="buzz-text" id="buzzText"
+                  th:text="${buzzMessages[0]}">Loading...</span>
+        </div>
+
 		<!-- STATS BUTTON -->
 		<div style="text-align: right; margin-bottom: 20px;">
 		    <a th:href="@{/highlowjack/stats}" 
@@ -750,6 +803,22 @@
                 }
             </script>
 
+            <!-- CARD ANIMATION TOGGLE (client-side localStorage preference) -->
+            <div style="background: rgba(255,255,255,0.07); border-radius: 14px; padding: 20px 24px; margin: 16px 0; display: flex; align-items: center; gap: 18px;">
+                <div style="display:flex; align-items:center; gap:14px; width:100%;">
+                    <label class="anim-toggle-switch" for="cardAnimToggle" style="flex-shrink:0;">
+                        <input type="checkbox" id="cardAnimToggle" checked>
+                        <span class="anim-toggle-slider"></span>
+                    </label>
+                    <div>
+                        <div style="font-weight:bold; font-size:1rem;">✨ Animated Card Deal</div>
+                        <div style="font-size:0.8rem; color:rgba(255,255,255,0.6); margin-top:2px;">
+                            Cards fly in when your hand is dealt — toggle off for instant display
+                        </div>
+                    </div>
+                </div>
+            </div>
+
 			<!-- GAME START OPTIONS -->
             <div class="button-group">
                 <button type="submit" class="start-button">🎮 Start Local Game</button>
@@ -838,6 +907,42 @@
                 return;
             }
         });
+    </script>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+
+        // ── Buzz banner rotation ─────────────────────────────────────────────
+        (function() {
+            const messages = /*[[${buzzMessages}]]*/ [];
+            if (!messages || messages.length === 0) return;
+            const el = document.getElementById('buzzText');
+            if (!el) return;
+            let idx = 0;
+            if (messages.length === 1) return; // nothing to rotate
+            setInterval(() => {
+                el.style.opacity = '0';
+                setTimeout(() => {
+                    idx = (idx + 1) % messages.length;
+                    el.textContent = messages[idx];
+                    el.style.opacity = '1';
+                }, 420);
+            }, 3800);
+        })();
+
+        // ── Card animation toggle (localStorage) ─────────────────────────────
+        (function() {
+            const toggle = document.getElementById('cardAnimToggle');
+            if (!toggle) return;
+            const ANIM_KEY = 'hlj_dealAnim';
+            // Load saved preference (default on)
+            toggle.checked = localStorage.getItem(ANIM_KEY) !== 'false';
+            toggle.addEventListener('change', () => {
+                localStorage.setItem(ANIM_KEY, toggle.checked ? 'true' : 'false');
+            });
+        })();
+
+        /*]]>*/
     </script>
 
     <!-- Version badge -->

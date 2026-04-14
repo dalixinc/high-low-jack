@@ -766,7 +766,71 @@ public class HighLowJackController {
         model.addAttribute("winningScore", 11);
         
         session.setAttribute("hlj_game", game);
-        
+
+        // ── Trick log: pre-process all 7 tricks for the summary display ──────────
+        List<Map<String, Object>> trickSummary = new ArrayList<>();
+        Card.Suit trumpSuit = game.getTrumpSuit();
+        Card highCard = (trumpSuit != null) ? GameEngine.findHighTrumpCard(game.getTricks(), trumpSuit) : null;
+        Card lowCard  = (trumpSuit != null) ? GameEngine.findLowTrumpCard (game.getTricks(), trumpSuit) : null;
+
+        int trickNum = 1;
+        for (Trick trick : game.getTricks()) {
+            Map<String, Object> td = new HashMap<>();
+            String trickWinner = trick.getWinner();
+            td.put("number", trickNum++);
+            td.put("winner", trickWinner);
+            if (game.isTeamMode()) {
+                try { td.put("winnerTeam", game.getTeamForPlayer(trickWinner).getName()); }
+                catch (Exception ignored) {}
+            }
+            boolean tHasJack = false, tHasHigh = false, tHasLow = false;
+            List<Map<String, Object>> plays = new ArrayList<>();
+            for (Trick.CardPlay play : trick.getPlays()) {
+                Map<String, Object> pd = new HashMap<>();
+                pd.put("player", play.playerName);
+                pd.put("cardImage", CardImageHelper.getCardImage(play.card));
+                boolean isTrump = trumpSuit != null && play.card.getSuit() == trumpSuit;
+                boolean isJack  = isTrump && play.card.getRank() == Card.Rank.JACK;
+                boolean isHigh  = isTrump && highCard != null && play.card.getRank() == highCard.getRank();
+                boolean isLow   = isTrump && lowCard  != null && play.card.getRank() == lowCard.getRank();
+                boolean isWin   = play.playerName.equals(trickWinner);
+                pd.put("isTrump", isTrump);
+                pd.put("isJack",  isJack);
+                pd.put("isHigh",  isHigh);
+                pd.put("isLow",   isLow);
+                pd.put("isWinner", isWin);
+                pd.put("label",   play.card.getRank().name() + play.card.getSuit().getSymbol());
+                if (isJack) tHasJack = true;
+                if (isHigh) tHasHigh = true;
+                if (isLow)  tHasLow  = true;
+                plays.add(pd);
+            }
+            td.put("plays", plays);
+            td.put("hasJack", tHasJack);
+            td.put("hasHigh", tHasHigh);
+            td.put("hasLow",  tHasLow);
+            trickSummary.add(td);
+        }
+        model.addAttribute("trickSummary", trickSummary);
+
+        // ── Round points this round per entity (for the bold result banner) ──────
+        Map<String, Integer> roundPointsEarned = new java.util.LinkedHashMap<>();
+        for (String category : new String[]{"High", "Low", "Jack", "Game"}) {
+            String w = results.getRoundPointWinner(category);
+            if (w != null) roundPointsEarned.merge(w, 1, Integer::sum);
+        }
+        // Ensure every scoring entity appears (with 0 if needed) for the banner
+        if (game.isTeamMode()) {
+            for (Team t : game.getTeams()) {
+                roundPointsEarned.putIfAbsent(t.getName(), 0);
+            }
+        } else {
+            for (String pn : game.getPlayerNames()) {
+                roundPointsEarned.putIfAbsent(pn, 0);
+            }
+        }
+        model.addAttribute("roundPointsEarned", roundPointsEarned);
+
         return "highlowjack/scoring";
     }
     

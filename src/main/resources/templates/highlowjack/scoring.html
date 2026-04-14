@@ -316,6 +316,153 @@
             color: #95a5a6;
             font-style: italic;
         }
+
+        /* ── Round Result Banner ─────────────────────────────────────── */
+        .round-result-banner {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            padding: 22px 30px;
+            text-align: center;
+        }
+        .round-result-label {
+            font-size: 0.8rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.65);
+            margin-bottom: 10px;
+        }
+        .round-result-scores {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 18px;
+            flex-wrap: wrap;
+        }
+        .round-result-entity {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .round-result-pts {
+            font-size: 3.2rem;
+            font-weight: 900;
+            line-height: 1;
+            color: #fff;
+        }
+        .round-result-pts.zero { opacity: 0.35; }
+        .round-result-pts.winner { color: #ffd700; text-shadow: 0 0 20px rgba(255,215,0,0.6); }
+        .round-result-name {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.8);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .round-result-sep {
+            font-size: 2rem;
+            color: rgba(255,255,255,0.3);
+            margin: 0 4px;
+        }
+
+        /* ── Trick Log ───────────────────────────────────────────────── */
+        .trick-log {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .trick-row {
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+        .trick-row.has-jack { border-left-color: #f39c12; background: #fefbf3; }
+        .trick-row.has-high { border-left-color: #e74c3c; }
+        .trick-row.has-low  { border-left-color: #27ae60; }
+        .trick-meta {
+            min-width: 70px;
+            flex-shrink: 0;
+        }
+        .trick-num {
+            font-size: 0.72rem;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .trick-winner-name {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-top: 2px;
+        }
+        .trick-winner-team {
+            font-size: 0.72rem;
+            color: #7f8c8d;
+        }
+        .trick-badges {
+            display: flex;
+            gap: 4px;
+            margin-top: 4px;
+            flex-wrap: wrap;
+        }
+        .trick-badge {
+            font-size: 0.65rem;
+            padding: 1px 6px;
+            border-radius: 8px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .badge-jack  { background: #f39c12; color: #fff; }
+        .badge-high  { background: #e74c3c; color: #fff; }
+        .badge-low   { background: #27ae60; color: #fff; }
+        .trick-plays {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            flex: 1;
+        }
+        .trick-play {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+        }
+        .trick-play-card {
+            position: relative;
+        }
+        .trick-play-card img {
+            height: 58px;
+            width: auto;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+            border: 2px solid transparent;
+        }
+        .trick-play-card.is-trump img   { border-color: #3498db; }
+        .trick-play-card.is-jack img    { border-color: #f39c12; box-shadow: 0 0 8px rgba(243,156,18,0.6); }
+        .trick-play-card.is-high img    { border-color: #e74c3c; box-shadow: 0 0 8px rgba(231,76,60,0.5); }
+        .trick-play-card.is-low img     { border-color: #27ae60; box-shadow: 0 0 8px rgba(39,174,96,0.5); }
+        .trick-play-card.is-winner img  { box-shadow: 0 0 0 3px #ffd700, 0 4px 10px rgba(0,0,0,0.2); }
+        .card-win-mark {
+            position: absolute;
+            top: -8px;
+            right: -6px;
+            font-size: 0.85rem;
+            line-height: 1;
+        }
+        .trick-play-player {
+            font-size: 0.65rem;
+            color: #555;
+            text-align: center;
+            max-width: 62px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .trick-play-player.is-winner { font-weight: bold; color: #2c3e50; }
     </style>
 </head>
 <body>
@@ -358,7 +505,33 @@
             </div>
         </div>
 
+        <!-- ROUND RESULT BANNER -->
+        <div th:if="${roundPointsEarned != null}" class="round-result-banner">
+            <div class="round-result-label">Points scored this round</div>
+            <div class="round-result-scores">
+                <th:block th:each="entry, iterStat : ${roundPointsEarned}">
+                    <div class="round-result-entity">
+                        <div th:classappend="${entry.value == 0} ? 'zero' : (${entry.value >= 3} ? 'winner' : '')"
+                             class="round-result-pts"
+                             th:text="${entry.value}">0</div>
+                        <div class="round-result-name" th:text="${entry.key}">Entity</div>
+                    </div>
+                    <div th:if="${!iterStat.last}" class="round-result-sep">—</div>
+                </th:block>
+            </div>
+        </div>
+
         <div class="scoring-content">
+            <!-- QUICK CONTINUE (controller only, top of page) -->
+            <form th:if="${isController}" th:action="@{/highlowjack/continue}" method="post"
+                  style="text-align:center; margin-bottom: 24px;">
+                <button type="submit" class="continue-button" style="margin: 0 auto; font-size: 1rem; padding: 10px 24px; opacity: 0.8;">
+                    <span th:if="${setResult != null}"
+                          th:text="${setResult != null && setsWon.get(setResult.winner) >= setup.setsToWin} ? '🎊 Match Complete!' : '▶️ Start Next Set'">Continue</span>
+                    <span th:unless="${setResult != null}">▶️ Skip to Next Round</span>
+                </button>
+            </form>
+
             <!-- GAME POINTS (Card Values Captured) -->
             <div class="section">
                 <div class="section-title">📊 Game Points (Card Values)</div>
@@ -387,6 +560,43 @@
                         <div class="progress-bar-container">
                             <div class="progress-bar-fill" 
                                  th:style="'width: ' + (${tricksWon.get(player)} * 100.0 / 7) + '%'">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TRICK LOG -->
+            <div class="section" th:if="${trickSummary != null and !#lists.isEmpty(trickSummary)}">
+                <div class="section-title">🃏 Trick-by-Trick</div>
+                <div class="trick-log">
+                    <div th:each="trick : ${trickSummary}"
+                         th:classappend="${trick.hasJack} ? 'has-jack' : (${trick.hasHigh} ? 'has-high' : (${trick.hasLow} ? 'has-low' : ''))"
+                         class="trick-row">
+
+                        <!-- Left: trick number, winner, badges -->
+                        <div class="trick-meta">
+                            <div class="trick-num">Trick <span th:text="${trick.number}">1</span></div>
+                            <div class="trick-winner-name" th:text="${trick.winner}">Player</div>
+                            <div th:if="${trick.winnerTeam != null}" class="trick-winner-team" th:text="${trick.winnerTeam}">Team</div>
+                            <div class="trick-badges">
+                                <span th:if="${trick.hasJack}" class="trick-badge badge-jack">💎 Jack</span>
+                                <span th:if="${trick.hasHigh and !trick.hasJack}" class="trick-badge badge-high">⬆ High</span>
+                                <span th:if="${trick.hasLow}"  class="trick-badge badge-low">⬇ Low</span>
+                            </div>
+                        </div>
+
+                        <!-- Right: 4 cards -->
+                        <div class="trick-plays">
+                            <div th:each="play : ${trick.plays}" class="trick-play">
+                                <div th:classappend="${play.isJack} ? 'is-jack' : (${play.isHigh} ? 'is-high' : (${play.isLow} ? 'is-low' : (${play.isTrump} ? 'is-trump' : '')))"
+                                     th:class="${play.isWinner} ? 'trick-play-card is-winner' : 'trick-play-card'">
+                                    <img th:src="@{${play.cardImage}}" th:alt="${play.label}">
+                                    <span th:if="${play.isWinner}" class="card-win-mark">✓</span>
+                                </div>
+                                <div th:classappend="${play.isWinner} ? 'is-winner' : ''"
+                                     class="trick-play-player"
+                                     th:text="${play.player}">Player</div>
                             </div>
                         </div>
                     </div>

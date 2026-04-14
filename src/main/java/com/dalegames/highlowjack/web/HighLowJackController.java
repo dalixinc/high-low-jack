@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -246,6 +247,13 @@ public class HighLowJackController {
         model.addAttribute("isAITurn", isAITurn);
         model.addAttribute("isMultiplayer", isMultiplayer);
         model.addAttribute("chatMaxLength", MAX_CHAT_LENGTH);
+        model.addAttribute("chatLocked", game.isChatLocked());
+        // Human player names for the targeted-message recipient picker
+        List<String> humanPlayerNames = setup.getPlayers().stream()
+                .filter(p -> p.getType() == PlayerInfo.PlayerType.HUMAN)
+                .map(PlayerInfo::getName)
+                .collect(Collectors.toList());
+        model.addAttribute("humanPlayerNames", humanPlayerNames);
         model.addAttribute("isMyTurn", isMyTurn);
         model.addAttribute("completedTrick", completedTrick);
         model.addAttribute("validCards", validCards);
@@ -955,12 +963,20 @@ public class HighLowJackController {
             }
             response.put("wrapUpAvailable", wrapAvail);
             response.put("wrapUpRequested", game.isWrapUpRequested());
-            // Chat — return new messages since lastChat index
+            // Chat — return new messages visible to this player
             List<ChatMessage> newMsgs = game.getChatSince(lastChat);
             List<Map<String, Object>> chatPayload = new ArrayList<>();
-            for (ChatMessage msg : newMsgs) chatPayload.add(msg.toMap());
+            final String hp = humanPlayer;
+            for (ChatMessage msg : newMsgs) {
+                // Show: broadcasts, messages sent by me, messages targeted at me
+                boolean visible = msg.getRecipient() == null
+                        || (hp != null && hp.equals(msg.getRecipient()))
+                        || (hp != null && hp.equals(msg.getPlayerName()));
+                if (visible) chatPayload.add(msg.toMap());
+            }
             response.put("chatMessages", chatPayload);
             response.put("chatVersion", game.getChatVersion());
+            response.put("chatLocked", game.isChatLocked());
         }
         response.put("humanPlayer", humanPlayer);
         return response;
@@ -971,6 +987,7 @@ public class HighLowJackController {
     public Map<String, Object> sendChatMessage(
             @RequestParam String text,
             @RequestParam(defaultValue = "TEXT") String type,
+            @RequestParam(defaultValue = "ALL") String target,
             HttpSession session) {
         Map<String, Object> response = new HashMap<>();
         Game game = (Game) session.getAttribute("hlj_game");
@@ -980,7 +997,11 @@ public class HighLowJackController {
             response.put("error", "No active multiplayer game");
             return response;
         }
-        // Sanitise
+        if (game.isChatLocked()) {
+            response.put("ok", false);
+            response.put("error", "Chat is locked");
+            return response;
+        }
         if (text == null || text.isBlank()) {
             response.put("ok", false);
             response.put("error", "Empty message");
@@ -992,14 +1013,33 @@ public class HighLowJackController {
         } catch (IllegalArgumentException e) {
             msgType = ChatMessage.Type.TEXT;
         }
-        // Enforce length limit for TEXT messages only
         String trimmed = text.trim();
         if (msgType == ChatMessage.Type.TEXT && trimmed.length() > MAX_CHAT_LENGTH) {
             trimmed = trimmed.substring(0, MAX_CHAT_LENGTH);
         }
-        game.addChatMessage(new ChatMessage(playerName, trimmed, msgType));
+        String recipient = "ALL".equalsIgnoreCase(target) ? null : target;
+        game.addChatMessage(new ChatMessage(playerName, trimmed, msgType, recipient));
         response.put("ok", true);
         response.put("chatVersion", game.getChatVersion());
+        return response;
+    }
+
+    @PostMapping("/chat/lock")
+    @ResponseBody
+    public Map<String, Object> toggleChatLock(HttpSession session) {
+        Map<String, Object> response = new HashMap<>();
+        Game game = (Game) session.getAttribute("hlj_game");
+        GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
+        String playerName = (String) session.getAttribute("hlj_playerName");
+        if (playerName == null) playerName = getHumanPlayerName(setup);
+        if (game == null || setup == null || !setup.isController(playerName)) {
+            response.put("ok", false);
+            response.put("error", "Not authorised");
+            return response;
+        }
+        game.setChatLocked(!game.isChatLocked());
+        response.put("ok", true);
+        response.put("chatLocked", game.isChatLocked());
         return response;
     }
 

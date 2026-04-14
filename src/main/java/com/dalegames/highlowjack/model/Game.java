@@ -83,6 +83,7 @@ public class Game implements Serializable{
     // Chat (multiplayer only)
     private final List<ChatMessage> chatLog = new ArrayList<>();
     private static final int MAX_CHAT_HISTORY = 50;
+    private boolean chatLocked = false;   // Controller can lock to prevent all chat
 
     /**
      * Constructs a new game with the specified game setup.
@@ -1052,6 +1053,9 @@ public class Game implements Serializable{
     public synchronized int getChatVersion() {
         return chatLog.size();
     }
+
+    public boolean isChatLocked() { return chatLocked; }
+    public void setChatLocked(boolean locked) { this.chatLocked = locked; }
 
     /**
      * Enumeration of possible game states.

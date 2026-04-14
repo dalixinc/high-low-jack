@@ -229,19 +229,43 @@
                        padding: 10px 24px; font-size: 1rem; cursor: pointer; }
         .btn-request:hover { background: #1f618d; }
         
-        /* ── Chat panel ─────────────────────────────── */
-        .chat-panel {
-            margin-top: 14px;
-            background: rgba(0,0,0,0.25);
-            border-radius: 12px;
-            padding: 10px 12px;
+        /* ── Chat sidebar (third column) ────────────── */
+        .chat-sidebar {
+            width: 210px;
+            flex-shrink: 0;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 16px;
+            align-self: flex-start;
+            position: sticky;
+            top: 20px;
+        }
+        .chat-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 8px;
         }
         .chat-panel-title {
             font-size: 0.78rem; font-weight: bold; color: rgba(255,255,255,0.7);
-            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .chat-header-btns { display: flex; gap: 4px; }
+        .chat-icon-btn {
+            background: none; border: none; cursor: pointer;
+            font-size: 0.85rem; padding: 2px 4px; border-radius: 5px;
+            color: rgba(255,255,255,0.5); transition: color 0.15s, background 0.15s;
+            line-height: 1;
+        }
+        .chat-icon-btn:hover { color: white; background: rgba(255,255,255,0.15); }
+        .chat-icon-btn.active { color: #ff6b6b; }
+        .chat-body { }
+        .chat-body.collapsed { display: none; }
+        .chat-locked-notice {
+            font-size: 0.75rem; color: rgba(255,100,100,0.8); text-align: center;
+            padding: 6px 0; display: none;
         }
         .chat-log {
-            height: 130px; overflow-y: auto; margin-bottom: 8px;
+            height: 200px; overflow-y: auto; margin-bottom: 8px;
             display: flex; flex-direction: column; gap: 4px;
         }
         .chat-log::-webkit-scrollbar { width: 4px; }
@@ -251,8 +275,28 @@
             background: rgba(255,255,255,0.07); border-radius: 8px; padding: 4px 8px;
             word-break: break-word;
         }
-        .chat-msg .chat-sender { font-weight: bold; color: #ffd700; margin-right: 4px; }
+        .chat-msg .chat-sender { font-weight: bold; color: #ffd700; margin-right: 3px; }
+        .chat-msg .chat-target-badge {
+            font-size: 0.68rem; color: rgba(255,180,100,0.85);
+            background: rgba(255,150,50,0.15); border-radius: 4px;
+            padding: 0 4px; margin-right: 3px;
+        }
         .chat-msg.chat-reaction { background: rgba(255,255,255,0.04); font-size: 1.1rem; text-align: center; }
+        .chat-msg.chat-whisper { background: rgba(255,150,50,0.1); border-left: 2px solid rgba(255,150,50,0.5); }
+        /* Target row */
+        .chat-target-row {
+            display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 6px; align-items: center;
+        }
+        .chat-target-label { font-size: 0.68rem; color: rgba(255,255,255,0.45); margin-right: 2px; }
+        .chat-target-pill {
+            font-size: 0.68rem; padding: 2px 7px; border-radius: 10px; cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.07);
+            color: rgba(255,255,255,0.7); transition: all 0.15s;
+        }
+        .chat-target-pill:hover { background: rgba(255,255,255,0.18); }
+        .chat-target-pill.selected {
+            background: rgba(255,215,0,0.25); border-color: rgba(255,215,0,0.6); color: #ffd700;
+        }
         .chat-reactions {
             display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px;
         }
@@ -272,22 +316,29 @@
         }
         .chat-preset-btn:hover { background: rgba(255,255,255,0.2); }
         .chat-input-row {
-            display: flex; gap: 5px;
+            display: flex; flex-direction: column; gap: 4px;
         }
         .chat-text-input {
-            flex: 1; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+            width: 100%; box-sizing: border-box;
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
             border-radius: 8px; color: white; font-size: 0.8rem; padding: 4px 8px;
             outline: none;
         }
         .chat-text-input::placeholder { color: rgba(255,255,255,0.4); }
         .chat-text-input:focus { border-color: rgba(255,215,0,0.5); }
         .chat-send-btn {
+            align-self: flex-end;
             background: rgba(255,215,0,0.2); border: 1px solid rgba(255,215,0,0.4);
-            border-radius: 8px; color: #ffd700; font-size: 0.8rem; padding: 4px 10px;
+            border-radius: 8px; color: #ffd700; font-size: 0.8rem; padding: 4px 14px;
             cursor: pointer; transition: background 0.15s; white-space: nowrap;
         }
         .chat-send-btn:hover { background: rgba(255,215,0,0.35); }
         .chat-empty { font-size: 0.75rem; color: rgba(255,255,255,0.3); text-align: center; padding: 8px 0; }
+        /* Disabled state when chat locked for non-controllers */
+        .chat-inputs-disabled .chat-reaction-btn,
+        .chat-inputs-disabled .chat-preset-btn,
+        .chat-inputs-disabled .chat-send-btn,
+        .chat-inputs-disabled .chat-text-input { opacity: 0.35; pointer-events: none; }
 
         .player-name {
             font-weight: bold;
@@ -672,8 +723,13 @@
             .game-layout {
                 flex-direction: column;
             }
-            
+
             .scoreboard-sidebar {
+                width: 100%;
+                position: static;
+            }
+
+            .chat-sidebar {
                 width: 100%;
                 position: static;
             }
@@ -1105,50 +1161,85 @@
                     </button>
                 </div>
 
-                <!-- ═══════════════════════════════════════ -->
-                <!-- MULTIPLAYER CHAT PANEL                  -->
-                <!-- ═══════════════════════════════════════ -->
-                <div th:if="${isMultiplayer}" class="chat-panel" id="chatPanel">
-                    <div class="chat-panel-title">💬 Chat</div>
+            </div>
 
-                    <!-- Message log -->
-                    <div class="chat-log" id="chatLog">
-                        <div class="chat-empty" id="chatEmpty">No messages yet</div>
-                    </div>
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- CHAT SIDEBAR — third column in game-layout flex row         -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div th:if="${isMultiplayer}" class="chat-sidebar" id="chatPanel">
+            <!-- Chat header: title + collapse + lock (controller only) -->
+            <div class="chat-header">
+                <span class="chat-panel-title">💬 Chat</span>
+                <div class="chat-header-btns">
+                    <button class="chat-icon-btn" id="chatLockBtn"
+                            th:if="${isController}"
+                            title="Lock / unlock chat for all players"
+                            onclick="toggleChatLock()">🔒</button>
+                    <button class="chat-icon-btn" id="chatCollapseBtn"
+                            title="Collapse chat"
+                            onclick="toggleChatCollapse()">▼</button>
+                </div>
+            </div>
 
-                    <!-- Emoji reactions -->
-                    <div class="chat-reactions">
-                        <button class="chat-reaction-btn" onclick="sendReaction('👍')">👍</button>
-                        <button class="chat-reaction-btn" onclick="sendReaction('😂')">😂</button>
-                        <button class="chat-reaction-btn" onclick="sendReaction('😮')">😮</button>
-                        <button class="chat-reaction-btn" onclick="sendReaction('😤')">😤</button>
-                        <button class="chat-reaction-btn" onclick="sendReaction('🎉')">🎉</button>
-                        <button class="chat-reaction-btn" onclick="sendReaction('💎')">💎</button>
-                        <button class="chat-reaction-btn" onclick="sendReaction('🃏')">🃏</button>
-                        <button class="chat-reaction-btn" onclick="sendReaction('🤞')">🤞</button>
-                    </div>
+            <!-- Collapsible body -->
+            <div class="chat-body" id="chatBody">
 
-                    <!-- Preset quips -->
-                    <div class="chat-presets">
-                        <button class="chat-preset-btn" onclick="sendPreset('Good game!')">Good game!</button>
-                        <button class="chat-preset-btn" onclick="sendPreset('Lucky!')">Lucky!</button>
-                        <button class="chat-preset-btn" onclick="sendPreset('Nice play')">Nice play</button>
-                        <button class="chat-preset-btn" onclick="sendPreset('Ouch!')">Ouch!</button>
-                        <button class="chat-preset-btn" onclick="sendPreset('Watch the Jack')">Watch the Jack</button>
-                    </div>
+                <!-- Lock notice (shown to non-controllers when locked) -->
+                <div class="chat-locked-notice" id="chatLockedNotice">🔒 Chat locked by host</div>
 
-                    <!-- Free text -->
-                    <div class="chat-input-row">
-                        <input type="text" class="chat-text-input" id="chatInput"
-                               th:attr="maxlength=${chatMaxLength}"
-                               placeholder="Say something..." />
-                        <button class="chat-send-btn" onclick="sendChatText()">Send</button>
-                    </div>
+                <!-- Message log -->
+                <div class="chat-log" id="chatLog">
+                    <div class="chat-empty" id="chatEmpty">No messages yet</div>
                 </div>
 
-            </div>
-        </div>
-        
+                <!-- Recipient target row -->
+                <div class="chat-target-row" id="chatTargetRow">
+                    <span class="chat-target-label">To:</span>
+                    <button class="chat-target-pill selected" id="target-ALL"
+                            onclick="selectTarget('ALL')">All</button>
+                    <!-- One pill per other human player; self is excluded in JS -->
+                    <th:block th:each="hp : ${humanPlayerNames}">
+                        <button class="chat-target-pill"
+                                th:id="'target-' + ${hp}"
+                                th:text="${hp}"
+                                th:attr="onclick='selectTarget(' + '&quot;' + ${hp} + '&quot;' + ')'"
+                                th:if="${hp != humanPlayer}">Player</button>
+                    </th:block>
+                </div>
+
+                <!-- Emoji reactions -->
+                <div class="chat-reactions">
+                    <button class="chat-reaction-btn" title="Nice one!" onclick="sendReaction('👍')">👍</button>
+                    <button class="chat-reaction-btn" title="Ha!" onclick="sendReaction('😂')">😂</button>
+                    <button class="chat-reaction-btn" title="Wow!" onclick="sendReaction('😮')">😮</button>
+                    <button class="chat-reaction-btn" title="Grr!" onclick="sendReaction('😤')">😤</button>
+                    <button class="chat-reaction-btn" title="Celebrate!" onclick="sendReaction('🎉')">🎉</button>
+                    <button class="chat-reaction-btn" title="Jack of trumps!" onclick="sendReaction('💎')">💎</button>
+                    <button class="chat-reaction-btn" title="Wild card!" onclick="sendReaction('🃏')">🃏</button>
+                    <button class="chat-reaction-btn" title="Fingers crossed!" onclick="sendReaction('🤞')">🤞</button>
+                </div>
+
+                <!-- Preset quips -->
+                <div class="chat-presets">
+                    <button class="chat-preset-btn" onclick="sendPreset('Good game!')">Good game!</button>
+                    <button class="chat-preset-btn" onclick="sendPreset('Lucky!')">Lucky!</button>
+                    <button class="chat-preset-btn" onclick="sendPreset('Nice play')">Nice play</button>
+                    <button class="chat-preset-btn" onclick="sendPreset('Ouch!')">Ouch!</button>
+                    <button class="chat-preset-btn" onclick="sendPreset('Watch the Jack')">Watch the Jack</button>
+                </div>
+
+                <!-- Free text input -->
+                <div class="chat-input-row">
+                    <input type="text" class="chat-text-input" id="chatInput"
+                           th:attr="maxlength=${chatMaxLength}"
+                           placeholder="Say something..." />
+                    <button class="chat-send-btn" onclick="sendChatText()">Send</button>
+                </div>
+
+            </div><!-- end chat-body -->
+        </div>  <!-- closes chat-sidebar -->
+        </div>  <!-- closes game-layout -->
+
         <footer>
             Card graphics from <a href="https://github.com/htdebeer/SVG-cards" target="_blank">SVG-cards</a> 
             by David Bellot (LGPL-2.1)
@@ -1383,31 +1474,95 @@
         (function initChat() {
             if (!isMultiplayer) return;
 
-            const log     = document.getElementById('chatLog');
-            const empty   = document.getElementById('chatEmpty');
-            const input   = document.getElementById('chatInput');
-            let chatVer   = 0;  // tracks chatVersion (= chatLog.size())
+            const log         = document.getElementById('chatLog');
+            const empty       = document.getElementById('chatEmpty');
+            const input       = document.getElementById('chatInput');
+            const body        = document.getElementById('chatBody');
+            const collapseBtn = document.getElementById('chatCollapseBtn');
+            const lockBtn     = document.getElementById('chatLockBtn');
+            const lockedNotice= document.getElementById('chatLockedNotice');
+            const chatBodyEl  = document.getElementById('chatBody');
+            let chatVer       = 0;
+            let chatTarget    = 'ALL';
+            const myName      = /*[[${humanPlayer}]]*/ '';
+            let chatIsLocked  = /*[[${chatLocked}]]*/ false;
+            const iAmController = /*[[${isController}]]*/ false;
 
-            function appendMessage(msg) {
-                if (empty) empty.style.display = 'none';
-                const div = document.createElement('div');
-                div.className = 'chat-msg' + (msg.type === 'REACTION' ? ' chat-reaction' : '');
-                if (msg.type === 'REACTION') {
-                    div.innerHTML = '<span class="chat-sender">' + escHtml(msg.player) + '</span>' + escHtml(msg.text);
-                } else {
-                    div.innerHTML = '<span class="chat-sender">' + escHtml(msg.player) + ':</span>' + escHtml(msg.text);
-                }
-                log.appendChild(div);
-                log.scrollTop = log.scrollHeight;
+            // ── Collapse ──────────────────────────────────────────────────────
+            const COLLAPSE_KEY = 'hlj_chatCollapsed';
+            function applyCollapse(collapsed) {
+                if (!body) return;
+                body.classList.toggle('collapsed', collapsed);
+                if (collapseBtn) collapseBtn.textContent = collapsed ? '▶' : '▼';
             }
+            applyCollapse(localStorage.getItem(COLLAPSE_KEY) === 'true');
 
+            window.toggleChatCollapse = function() {
+                const nowCollapsed = !body.classList.contains('collapsed');
+                localStorage.setItem(COLLAPSE_KEY, nowCollapsed);
+                applyCollapse(nowCollapsed);
+            };
+
+            // ── Lock (controller only) ────────────────────────────────────────
+            function applyLockState(locked) {
+                chatIsLocked = locked;
+                if (lockBtn) lockBtn.classList.toggle('active', locked);
+                if (lockBtn) lockBtn.title = locked ? 'Unlock chat' : 'Lock chat for all players';
+                if (lockedNotice) lockedNotice.style.display = (!iAmController && locked) ? 'block' : 'none';
+                if (chatBodyEl) chatBodyEl.classList.toggle('chat-inputs-disabled', !iAmController && locked);
+            }
+            applyLockState(chatIsLocked);
+
+            window.toggleChatLock = function() {
+                fetch('/highlowjack/chat/lock', { method: 'POST' })
+                    .then(r => r.json())
+                    .then(d => { if (d.ok) applyLockState(d.chatLocked); })
+                    .catch(() => {});
+            };
+
+            // ── Target pills ─────────────────────────────────────────────────
+            window.selectTarget = function(name) {
+                chatTarget = name;
+                document.querySelectorAll('.chat-target-pill').forEach(btn => {
+                    btn.classList.toggle('selected', btn.id === 'target-' + name);
+                });
+            };
+
+            // ── Message rendering ─────────────────────────────────────────────
             function escHtml(s) {
                 return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
             }
 
+            function appendMessage(msg) {
+                if (empty) empty.style.display = 'none';
+                const isWhisper = msg.recipient != null;
+                const iMine = msg.player === myName;
+
+                const div = document.createElement('div');
+                let cls = 'chat-msg';
+                if (msg.type === 'REACTION') cls += ' chat-reaction';
+                if (isWhisper) cls += ' chat-whisper';
+                div.className = cls;
+
+                let inner = '';
+                if (isWhisper) {
+                    const toLabel = iMine
+                        ? '→ ' + escHtml(msg.recipient)
+                        : '→ you';
+                    inner += '<span class="chat-target-badge">' + toLabel + '</span>';
+                }
+                inner += '<span class="chat-sender">' + escHtml(msg.player) + (msg.type === 'REACTION' ? '' : ':') + '</span>';
+                inner += ' ' + escHtml(msg.text);
+                div.innerHTML = inner;
+
+                log.appendChild(div);
+                log.scrollTop = log.scrollHeight;
+            }
+
+            // ── Sending ───────────────────────────────────────────────────────
             function sendMsg(text, type) {
-                if (!text) return;
-                const body = new URLSearchParams({ text, type });
+                if (!text || chatIsLocked) return;
+                const body = new URLSearchParams({ text, type, target: chatTarget });
                 fetch('/highlowjack/chat', { method: 'POST', body })
                     .then(r => r.json())
                     .then(d => { if (d.chatVersion !== undefined) chatVer = d.chatVersion; })
@@ -1422,14 +1577,13 @@
                 if (t) { sendMsg(t, 'TEXT'); input.value = ''; }
             };
 
-            // Allow Enter key to send
             if (input) {
                 input.addEventListener('keydown', e => {
                     if (e.key === 'Enter') { e.preventDefault(); window.sendChatText(); }
                 });
             }
 
-            // Independent 2 s poll loop — always runs in multiplayer regardless of whose turn it is
+            // ── Poll loop (independent, always-on in multiplayer) ─────────────
             setInterval(() => {
                 fetch('/highlowjack/poll?lastChat=' + chatVer)
                     .then(r => r.json())
@@ -1438,6 +1592,7 @@
                             data.chatMessages.forEach(appendMessage);
                         }
                         if (data.chatVersion !== undefined) chatVer = data.chatVersion;
+                        if (data.chatLocked !== undefined) applyLockState(data.chatLocked);
                     })
                     .catch(() => {});
             }, 2000);

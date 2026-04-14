@@ -27,11 +27,19 @@ public class ChatMessage implements Serializable {
     private final String text;
     private final Type   type;
     private final long   epochSecond;   // seconds since epoch, for lightweight timestamp display
+    private final String recipient;     // null = broadcast to all; player name = DM
 
+    /** Broadcast constructor (recipient = all). */
     public ChatMessage(String playerName, String text, Type type) {
+        this(playerName, text, type, null);
+    }
+
+    /** Targeted constructor. */
+    public ChatMessage(String playerName, String text, Type type, String recipient) {
         this.playerName  = playerName;
         this.text        = text;
         this.type        = type;
+        this.recipient   = recipient;
         this.epochSecond = Instant.now().getEpochSecond();
     }
 
@@ -39,6 +47,7 @@ public class ChatMessage implements Serializable {
     public String getText()       { return text; }
     public Type   getType()       { return type; }
     public long   getEpochSecond(){ return epochSecond; }
+    public String getRecipient()  { return recipient; }
 
     /**
      * Returns a plain Map representation suitable for JSON serialisation in the poll response.
@@ -46,10 +55,11 @@ public class ChatMessage implements Serializable {
      */
     public Map<String, Object> toMap() {
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("player",  playerName);
-        m.put("text",    text);
-        m.put("type",    type.name());
-        m.put("ts",      epochSecond);
+        m.put("player",    playerName);
+        m.put("text",      text);
+        m.put("type",      type.name());
+        m.put("ts",        epochSecond);
+        m.put("recipient", recipient);   // null serialises as JSON null
         return m;
     }
 }

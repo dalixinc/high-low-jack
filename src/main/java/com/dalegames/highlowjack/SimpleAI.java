@@ -1,5 +1,6 @@
 package com.dalegames.highlowjack;
 
+import com.dalegames.highlowjack.ai.AIStrategyFactory;
 import com.dalegames.highlowjack.engine.GameEngine;
 import com.dalegames.highlowjack.model.*;
 
@@ -32,26 +33,20 @@ public class SimpleAI {
      * @param hand the AI player's hand
      * @return the chosen card
      */
-    public static Card chooseCard(Game game, String playerName, Hand hand) {
-        List<Card> cards = hand.getCards();
-        
-        // Get all valid cards
-        List<Card> validCards = cards.stream()
+    /**
+     * Entry point used by the controller — delegates to the difficulty-appropriate strategy.
+     */
+    public static Card chooseCard(Game game, String playerName, Hand hand, AIDifficulty difficulty) {
+        List<Card> validCards = hand.getCards().stream()
             .filter(card -> GameEngine.isValidPlay(game, playerName, card))
             .toList();
-        
-        if (validCards.isEmpty()) {
-            return cards.get(0);  // Shouldn't happen
-        }
-        
-        // Check if we're leading (first card of trick)
-        boolean isLeading = game.getCurrentTrick() == null || game.getCurrentTrick().size() == 0;
-        
-        if (isLeading) {
-            return chooseLeadCard(validCards, game);
-        } else {
-            return chooseFollowCard(validCards, game);
-        }
+        if (validCards.isEmpty()) return hand.getCards().get(0);
+        return AIStrategyFactory.select(difficulty).chooseCard(game, playerName, validCards);
+    }
+
+    /** Backwards-compatible overload — defaults to MEDIUM. */
+    public static Card chooseCard(Game game, String playerName, Hand hand) {
+        return chooseCard(game, playerName, hand, AIDifficulty.MEDIUM);
     }
     
     /**

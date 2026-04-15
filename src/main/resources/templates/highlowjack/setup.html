@@ -118,6 +118,28 @@
             border-radius: 2px;
         }
         
+        /* AI difficulty picker */
+        .difficulty-select {
+            display: none;
+            gap: 6px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+        .difficulty-select.visible { display: flex; }
+        .diff-btn {
+            flex: 1; text-align: center; padding: 5px 8px;
+            border-radius: 8px; cursor: pointer; font-size: 0.8rem;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.18);
+            color: rgba(255,255,255,0.75); transition: all 0.15s;
+            user-select: none;
+        }
+        .diff-btn input[type="radio"] { display: none; }
+        .diff-btn:hover { background: rgba(255,255,255,0.18); }
+        .diff-btn.active.easy   { background: rgba(80,200,80,0.25);  border-color: #5c5; color: #9f9; }
+        .diff-btn.active.medium { background: rgba(255,190,0,0.25);  border-color: #fa0; color: #fd9; }
+        .diff-btn.active.hard   { background: rgba(220,60,60,0.25);  border-color: #e55; color: #faa; }
+
         /* GAME MODE SELECTOR */
         .game-mode-grid {
             display: grid;
@@ -542,11 +564,16 @@
                                 🤖 Computer
                             </label>
                         </div>
+                        <div class="difficulty-select" id="diff-1">
+                            <label class="diff-btn easy"><input type="radio" name="player1Difficulty" value="EASY"> 🎲 Easy</label>
+                            <label class="diff-btn medium active"><input type="radio" name="player1Difficulty" value="MEDIUM" checked> 🤔 Medium</label>
+                            <label class="diff-btn hard"><input type="radio" name="player1Difficulty" value="HARD"> 🧠 Hard</label>
+                        </div>
                     </div>
-                    
+
                     <div class="player-row">
                         <div class="player-label">Player 2</div>
-                        <input type="text" name="player2Name" value="Kreep" required 
+                        <input type="text" name="player2Name" value="Kreep" required
                                placeholder="Enter player name" maxlength="20">
                         <div class="player-type-select">
                             <label class="type-button">
@@ -558,11 +585,16 @@
                                 🤖 Computer
                             </label>
                         </div>
+                        <div class="difficulty-select visible" id="diff-2">
+                            <label class="diff-btn easy"><input type="radio" name="player2Difficulty" value="EASY"> 🎲 Easy</label>
+                            <label class="diff-btn medium active"><input type="radio" name="player2Difficulty" value="MEDIUM" checked> 🤔 Medium</label>
+                            <label class="diff-btn hard"><input type="radio" name="player2Difficulty" value="HARD"> 🧠 Hard</label>
+                        </div>
                     </div>
-                    
+
                     <div class="player-row">
                         <div class="player-label">Player 3</div>
-                        <input type="text" name="player3Name" value="Carryn" required 
+                        <input type="text" name="player3Name" value="Carryn" required
                                placeholder="Enter player name" maxlength="20">
                         <div class="player-type-select">
                             <label class="type-button">
@@ -574,11 +606,16 @@
                                 🤖 Computer
                             </label>
                         </div>
+                        <div class="difficulty-select visible" id="diff-3">
+                            <label class="diff-btn easy"><input type="radio" name="player3Difficulty" value="EASY"> 🎲 Easy</label>
+                            <label class="diff-btn medium active"><input type="radio" name="player3Difficulty" value="MEDIUM" checked> 🤔 Medium</label>
+                            <label class="diff-btn hard"><input type="radio" name="player3Difficulty" value="HARD"> 🧠 Hard</label>
+                        </div>
                     </div>
-                    
+
                     <div class="player-row">
                         <div class="player-label">Player 4</div>
-                        <input type="text" name="player4Name" value="Primus" required 
+                        <input type="text" name="player4Name" value="Primus" required
                                placeholder="Enter player name" maxlength="20">
                         <div class="player-type-select">
                             <label class="type-button">
@@ -589,6 +626,11 @@
                                 <input type="radio" name="player4Type" value="COMPUTER" checked>
                                 🤖 Computer
                             </label>
+                        </div>
+                        <div class="difficulty-select visible" id="diff-4">
+                            <label class="diff-btn easy"><input type="radio" name="player4Difficulty" value="EASY"> 🎲 Easy</label>
+                            <label class="diff-btn medium active"><input type="radio" name="player4Difficulty" value="MEDIUM" checked> 🤔 Medium</label>
+                            <label class="diff-btn hard"><input type="radio" name="player4Difficulty" value="HARD"> 🧠 Hard</label>
                         </div>
                     </div>
                 </div>
@@ -658,8 +700,13 @@
                                         🤖 Computer
                                     </label>
                                 </div>
+                                <div class="difficulty-select" id="diff-1t">
+                                    <label class="diff-btn easy"><input type="radio" name="player1DifficultyTeam" value="EASY"> 🎲 Easy</label>
+                                    <label class="diff-btn medium active"><input type="radio" name="player1DifficultyTeam" value="MEDIUM" checked> 🤔 Medium</label>
+                                    <label class="diff-btn hard"><input type="radio" name="player1DifficultyTeam" value="HARD"> 🧠 Hard</label>
+                                </div>
                             </div>
-                            
+
                             <div class="team-player">
                                 <div class="team-player-position">South</div>
                                 <div class="team-player-name">
@@ -676,13 +723,18 @@
                                         🤖 Computer
                                     </label>
                                 </div>
+                                <div class="difficulty-select visible" id="diff-3t">
+                                    <label class="diff-btn easy"><input type="radio" name="player3DifficultyTeam" value="EASY"> 🎲 Easy</label>
+                                    <label class="diff-btn medium active"><input type="radio" name="player3DifficultyTeam" value="MEDIUM" checked> 🤔 Medium</label>
+                                    <label class="diff-btn hard"><input type="radio" name="player3DifficultyTeam" value="HARD"> 🧠 Hard</label>
+                                </div>
                             </div>
                         </div>
-                        
+
                         <!-- Team 2: East-West -->
                         <div class="team-box team2">
                             <div class="team-header">🔴 Team 2 (East-West)</div>
-                            
+
                             <div class="team-player">
                                 <div class="team-player-position">East</div>
                                 <div class="team-player-name">
@@ -699,8 +751,13 @@
                                         🤖 Computer
                                     </label>
                                 </div>
+                                <div class="difficulty-select visible" id="diff-2t">
+                                    <label class="diff-btn easy"><input type="radio" name="player2DifficultyTeam" value="EASY"> 🎲 Easy</label>
+                                    <label class="diff-btn medium active"><input type="radio" name="player2DifficultyTeam" value="MEDIUM" checked> 🤔 Medium</label>
+                                    <label class="diff-btn hard"><input type="radio" name="player2DifficultyTeam" value="HARD"> 🧠 Hard</label>
+                                </div>
                             </div>
-                            
+
                             <div class="team-player">
                                 <div class="team-player-position">West</div>
                                 <div class="team-player-name">
@@ -716,6 +773,11 @@
                                         <input type="radio" name="player4TypeTeam" value="COMPUTER" checked>
                                         🤖 Computer
                                     </label>
+                                </div>
+                                <div class="difficulty-select visible" id="diff-4t">
+                                    <label class="diff-btn easy"><input type="radio" name="player4DifficultyTeam" value="EASY"> 🎲 Easy</label>
+                                    <label class="diff-btn medium active"><input type="radio" name="player4DifficultyTeam" value="MEDIUM" checked> 🤔 Medium</label>
+                                    <label class="diff-btn hard"><input type="radio" name="player4DifficultyTeam" value="HARD"> 🧠 Hard</label>
                                 </div>
                             </div>
                         </div>
@@ -857,17 +919,32 @@
         individualRadio.addEventListener('change', updateLayout);
         teamRadio.addEventListener('change', updateLayout);
         
-        // Handle player type button styling
+        // Handle player type button styling + difficulty picker visibility
         document.querySelectorAll('.player-type-select').forEach(container => {
             const buttons = container.querySelectorAll('.type-button');
             const radios = container.querySelectorAll('input[type="radio"]');
-            
+
             buttons.forEach((button, index) => {
                 button.addEventListener('click', () => {
                     buttons.forEach(b => b.classList.remove('active'));
                     button.classList.add('active');
                     radios[index].checked = true;
+
+                    // Show/hide the adjacent difficulty picker
+                    const diffPicker = container.nextElementSibling;
+                    if (diffPicker && diffPicker.classList.contains('difficulty-select')) {
+                        diffPicker.classList.toggle('visible', radios[index].value === 'COMPUTER');
+                    }
                 });
+            });
+        });
+
+        // Handle difficulty button active state
+        document.querySelectorAll('.diff-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const group = btn.closest('.difficulty-select');
+                group.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
             });
         });
         

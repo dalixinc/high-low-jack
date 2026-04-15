@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.dalegames.highlowjack.SimpleAI;
 import com.dalegames.highlowjack.engine.GameEngine;
+import com.dalegames.highlowjack.model.AIDifficulty;
 import com.dalegames.highlowjack.model.Card;
 import com.dalegames.highlowjack.model.ChatMessage;
 import com.dalegames.highlowjack.model.Deck;
@@ -193,7 +194,7 @@ public class HighLowJackController {
             }
 
             if (!wrapUpPending) {
-                playAITurn(game);
+                playAITurn(game, setup);
 
                 completedTrick = game.getCompletedTrick();
                 if (completedTrick != null) {
@@ -462,6 +463,10 @@ public class HighLowJackController {
             @RequestParam(required = false) PlayerInfo.PlayerType player2Type,
             @RequestParam(required = false) PlayerInfo.PlayerType player3Type,
             @RequestParam(required = false) PlayerInfo.PlayerType player4Type,
+            @RequestParam(required = false) AIDifficulty player1Difficulty,
+            @RequestParam(required = false) AIDifficulty player2Difficulty,
+            @RequestParam(required = false) AIDifficulty player3Difficulty,
+            @RequestParam(required = false) AIDifficulty player4Difficulty,
             // Team mode parameters
             @RequestParam(required = false) String player1NameTeam,
             @RequestParam(required = false) String player2NameTeam,
@@ -471,6 +476,10 @@ public class HighLowJackController {
             @RequestParam(required = false) PlayerInfo.PlayerType player2TypeTeam,
             @RequestParam(required = false) PlayerInfo.PlayerType player3TypeTeam,
             @RequestParam(required = false) PlayerInfo.PlayerType player4TypeTeam,
+            @RequestParam(required = false) AIDifficulty player1DifficultyTeam,
+            @RequestParam(required = false) AIDifficulty player2DifficultyTeam,
+            @RequestParam(required = false) AIDifficulty player3DifficultyTeam,
+            @RequestParam(required = false) AIDifficulty player4DifficultyTeam,
             // Team name parameters
             @RequestParam(required = false) String team1Name,
             @RequestParam(required = false) String team2Name,
@@ -483,35 +492,30 @@ public class HighLowJackController {
         
         String p1Name, p2Name, p3Name, p4Name;
         PlayerInfo.PlayerType p1Type, p2Type, p3Type, p4Type;
-        
+        AIDifficulty p1Diff, p2Diff, p3Diff, p4Diff;
+
         if (isTeamMode) {
-            // Use team mode parameters
-            p1Name = player1NameTeam;
-            p2Name = player2NameTeam;
-            p3Name = player3NameTeam;
-            p4Name = player4NameTeam;
-            p1Type = player1TypeTeam;
-            p2Type = player2TypeTeam;
-            p3Type = player3TypeTeam;
-            p4Type = player4TypeTeam;
+            p1Name = player1NameTeam;   p2Name = player2NameTeam;
+            p3Name = player3NameTeam;   p4Name = player4NameTeam;
+            p1Type = player1TypeTeam;   p2Type = player2TypeTeam;
+            p3Type = player3TypeTeam;   p4Type = player4TypeTeam;
+            p1Diff = player1DifficultyTeam; p2Diff = player2DifficultyTeam;
+            p3Diff = player3DifficultyTeam; p4Diff = player4DifficultyTeam;
         } else {
-            // Use individual mode parameters
-            p1Name = player1Name;
-            p2Name = player2Name;
-            p3Name = player3Name;
-            p4Name = player4Name;
-            p1Type = player1Type;
-            p2Type = player2Type;
-            p3Type = player3Type;
-            p4Type = player4Type;
+            p1Name = player1Name;   p2Name = player2Name;
+            p3Name = player3Name;   p4Name = player4Name;
+            p1Type = player1Type;   p2Type = player2Type;
+            p3Type = player3Type;   p4Type = player4Type;
+            p1Diff = player1Difficulty; p2Diff = player2Difficulty;
+            p3Diff = player3Difficulty; p4Diff = player4Difficulty;
         }
-        
+
         // Create player info list (same for both modes)
         List<PlayerInfo> players = new ArrayList<>();
-        players.add(new PlayerInfo(p1Name, p1Type, true));  // Player 1 is controller
-        players.add(new PlayerInfo(p2Name, p2Type, false));
-        players.add(new PlayerInfo(p3Name, p3Type, false));
-        players.add(new PlayerInfo(p4Name, p4Type, false));
+        players.add(new PlayerInfo(p1Name, p1Type, true,  orMedium(p1Diff)));
+        players.add(new PlayerInfo(p2Name, p2Type, false, orMedium(p2Diff)));
+        players.add(new PlayerInfo(p3Name, p3Type, false, orMedium(p3Diff)));
+        players.add(new PlayerInfo(p4Name, p4Type, false, orMedium(p4Diff)));
         
         // Create game setup based on mode
         GameSetup setup;
@@ -1898,15 +1902,21 @@ public class HighLowJackController {
         return validCards;
     }
     
-    private void playAITurn(Game game) {
+    private static AIDifficulty orMedium(AIDifficulty d) {
+        return d != null ? d : AIDifficulty.MEDIUM;
+    }
+
+    private void playAITurn(Game game, GameSetup setup) {
         String currentPlayer = game.getCurrentPlayer();
         Hand hand = game.getHand(currentPlayer);
-        
         if (hand != null && !hand.isEmpty()) {
-            Card card = SimpleAI.chooseCard(game, currentPlayer, hand);
-            if (card != null) {
-                game.playCard(card);
-            }
+            AIDifficulty difficulty = setup.getPlayers().stream()
+                .filter(p -> p.getName().equals(currentPlayer))
+                .map(PlayerInfo::getDifficulty)
+                .findFirst()
+                .orElse(AIDifficulty.MEDIUM);
+            Card card = SimpleAI.chooseCard(game, currentPlayer, hand, difficulty);
+            if (card != null) game.playCard(card);
         }
     }
 }

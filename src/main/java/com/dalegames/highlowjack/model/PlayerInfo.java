@@ -4,14 +4,14 @@ import java.io.Serializable;
 
 /**
  * Represents information about a player in the game.
- * 
+ *
  * @author Dale &amp; Primus
- * @version 1.0
+ * @version 1.1 - Added AIDifficulty
  */
 public class PlayerInfo implements Serializable {
-    
+
     private static final long serialVersionUID = 1L;
-    
+
     /**
      * Type of player - HUMAN or COMPUTER controlled.
      */
@@ -19,29 +19,39 @@ public class PlayerInfo implements Serializable {
         HUMAN,
         COMPUTER
     }
-    
+
     private String name;
     private final PlayerType type;
     private final boolean isController;
-    
+    private final AIDifficulty difficulty;   // meaningful only for COMPUTER players
+
     /**
-     * Creates a new PlayerInfo.
-     * 
-     * @param name the player's name
-     * @param type the player type (HUMAN or COMPUTER)
-     * @param isController whether this player is the game controller
+     * Creates a new PlayerInfo with default Medium difficulty for AI players.
      */
     public PlayerInfo(String name, PlayerType type, boolean isController) {
+        this(name, type, isController, AIDifficulty.MEDIUM);
+    }
+
+    /**
+     * Creates a new PlayerInfo with an explicit AI difficulty.
+     *
+     * @param name         the player's name
+     * @param type         HUMAN or COMPUTER
+     * @param isController whether this player is the game controller
+     * @param difficulty   AI difficulty (ignored for human players)
+     */
+    public PlayerInfo(String name, PlayerType type, boolean isController, AIDifficulty difficulty) {
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Player name cannot be null or empty");
         }
         if (type == null) {
             throw new IllegalArgumentException("Player type cannot be null");
         }
-        
-        this.name = name.trim();
-        this.type = type;
+        this.name         = name.trim();
+        this.type         = type;
         this.isController = isController;
+        this.difficulty   = (type == PlayerType.COMPUTER && difficulty != null)
+                            ? difficulty : AIDifficulty.MEDIUM;
     }
     
     /**
@@ -97,8 +107,14 @@ public class PlayerInfo implements Serializable {
         return isController;
     }
     
+    public AIDifficulty getDifficulty() {
+        return difficulty;
+    }
+
     @Override
     public String toString() {
-        return name + " (" + type + (isController ? ", CONTROLLER" : "") + ")";
+        return name + " (" + type
+            + (type == PlayerType.COMPUTER ? "/" + difficulty : "")
+            + (isController ? ", CONTROLLER" : "") + ")";
     }
 }

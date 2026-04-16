@@ -721,6 +721,11 @@ public class Game implements Serializable{
     public boolean isTrumpTrackerEnabled() { return trumpTrackerEnabled; }
     public void setTrumpTrackerEnabled(boolean enabled) { this.trumpTrackerEnabled = enabled; }
 
+    /** When true, JAFO observers can see all players' hands (host-controlled). */
+    private boolean godModeEnabled = false;
+    public boolean isGodModeEnabled() { return godModeEnabled; }
+    public void setGodModeEnabled(boolean enabled) { this.godModeEnabled = enabled; }
+
     public boolean isWrapUpRequested() { return wrapUpRequested; }
     public void setWrapUpRequested(boolean requested) { this.wrapUpRequested = requested; }
 

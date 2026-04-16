@@ -232,9 +232,25 @@
             </div>
         </div>
         
+        <!-- JAFO observer banner -->
+        <div th:if="${isJafo}" style="text-align:center; margin-bottom:16px;
+             background:rgba(255,215,0,0.12); border:1px solid rgba(255,215,0,0.3);
+             border-radius:12px; padding:14px 20px;">
+            <span style="font-size:1.3rem;">👀</span>
+            <strong style="color:#ffd700; margin-left:6px;">You are watching as an observer (JAFO)</strong><br>
+            <span style="font-size:0.85rem; color:rgba(255,255,255,0.6);">
+                Sit back and enjoy the show — the game starts when the host is ready.
+            </span>
+        </div>
+
         <div class="status-bar">
             <div class="player-count">
                 <span th:text="${mpGame.playerCount}">1</span> / 4 Players Connected
+            </div>
+            <div th:if="${mpGame.observerCount > 0}"
+                 style="font-size:0.95rem; color:rgba(255,255,255,0.6); margin-top:6px;">
+                👀 <span th:text="${mpGame.observerCount}">0</span>
+                <span th:text="${mpGame.observerCount == 1} ? 'observer' : 'observers'">observers</span> watching
             </div>
             <div th:if="${!mpGame.isFullyPopulated()}" class="waiting-animation">
                 Waiting for players...
@@ -311,17 +327,17 @@
         </div>
         
         <!-- Start Game Button (host only) -->
-        <form th:if="${myPosition == 0}" th:action="@{/highlowjack/multiplayer/start}" method="post">
-            <button type="submit" 
-                    class="start-button" 
+        <form th:if="${myPosition == 0 and !isJafo}" th:action="@{/highlowjack/multiplayer/start}" method="post">
+            <button type="submit"
+                    class="start-button"
                     th:disabled="${!mpGame.isFullyPopulated()}">
                 <span th:if="${mpGame.isFullyPopulated()}">🚀 Start Game!</span>
                 <span th:unless="${mpGame.isFullyPopulated()}">Waiting for players...</span>
             </button>
         </form>
-        
-        <!-- Non-host message -->
-        <div th:unless="${myPosition == 0}" style="text-align: center; margin-top: 20px; font-size: 1.1rem;">
+
+        <!-- Non-host / JAFO message -->
+        <div th:unless="${myPosition == 0 and !isJafo}" style="text-align: center; margin-top: 20px; font-size: 1.1rem;">
             <span th:if="${!mpGame.isFullyPopulated()}">
                 🕐 Waiting for more players...
             </span>
@@ -340,18 +356,21 @@
     
 	<script th:inline="javascript">
 	    /*<![CDATA[*/
-	    const joinCode = /*[[${mpGame.joinCode}]]*/ 'ABC123';
+	    const joinCode  = /*[[${mpGame.joinCode}]]*/ 'ABC123';
 	    let lastVersion = /*[[${mpGame.stateVersion}]]*/ 0;
-	    
+	    const isJafo    = /*[[${isJafo}]]*/ false;
+
 	    // Poll for updates every 2 seconds
 	    setInterval(function() {
 	        fetch('/highlowjack/multiplayer/poll?code=' + joinCode + '&lastVersion=' + lastVersion)
 	            .then(response => response.json())
 	            .then(data => {
 	                if (data.gameStarted) {
-	                    // Game started! Navigate directly - server sets session and redirects to /cut
 	                    console.log('🚀 Game started! Redirecting...');
-	                    window.location.href = '/highlowjack/multiplayer/start-player';
+	                    // JAFOs go to /start-jafo; seated players go to /start-player
+	                    window.location.href = isJafo
+	                        ? '/highlowjack/multiplayer/start-jafo'
+	                        : '/highlowjack/multiplayer/start-player';
 	                } else if (data.updated) {
 	                    console.log('🔄 Game state updated, reloading...');
 	                    location.reload();

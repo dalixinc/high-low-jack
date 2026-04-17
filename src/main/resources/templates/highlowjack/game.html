@@ -1381,7 +1381,7 @@
             setTimeout(() => location.reload(), 7000);
         }
 
-        else if (isMultiplayer && (!isMyTurn || isJafo) && !isRoundComplete && !jafoWaiting) {
+        else if (isMultiplayer && (!isMyTurn || isJafo) && !isRoundComplete) {
             // Multiplayer: poll for any game state change so all players see cards in real-time.
             // JAFOs always poll — they never have a "turn".
             let lastTrickSize = -1;

@@ -959,21 +959,28 @@
                         </div>
 
                         <!-- God Mode: show all hands -->
-                        <div th:if="${godModeEnabled and allHands != null}">
-                            <div style="font-size:0.85rem; color:rgba(255,215,0,0.8); margin-bottom:14px;
+                        <div th:if="${godModeEnabled}">
+                            <div style="font-size:0.8rem; color:rgba(255,215,0,0.8); margin-bottom:10px;
                                         letter-spacing:0.5px; text-transform:uppercase;">
                                 🌟 God Mode — all hands visible
                             </div>
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                                 <div th:each="playerName : ${game.playerNames}"
-                                     style="background:rgba(255,255,255,0.06); border-radius:12px; padding:12px;">
-                                    <div style="font-weight:bold; font-size:0.9rem; margin-bottom:8px;
-                                                color:rgba(255,255,255,0.7);"
-                                         th:text="${playerName}">Player</div>
-                                    <div style="display:flex; flex-wrap:wrap; gap:4px; justify-content:center;">
-                                        <img th:each="card : ${allHands[playerName]}"
+                                     th:style="${playerName == game.currentPlayer}
+                                         ? 'background:rgba(255,215,0,0.18); border:2px solid rgba(255,215,0,0.6); border-radius:10px; padding:8px;'
+                                         : 'background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:8px;'">
+                                    <div style="font-weight:bold; font-size:0.8rem; margin-bottom:6px; display:flex; align-items:center; gap:4px;">
+                                        <span th:if="${playerName == game.currentPlayer}" style="color:#ffd700;">▶</span>
+                                        <span th:text="${playerName}"
+                                              th:style="${playerName == game.currentPlayer} ? 'color:#ffd700;' : 'color:rgba(255,255,255,0.75);'">Player</span>
+                                        <span th:if="${game.getHand(playerName) != null}"
+                                              style="color:rgba(255,255,255,0.4); font-size:0.7rem; font-weight:normal;"
+                                              th:text="'(' + ${game.getHand(playerName).size()} + ')'"></span>
+                                    </div>
+                                    <div style="display:flex; flex-wrap:wrap; gap:3px; justify-content:center;">
+                                        <img th:each="card : ${game.getHand(playerName).cards}"
                                              th:src="@{|/images/cards/${#strings.substring(card.suit.name().toLowerCase(), 0, #strings.length(card.suit.name()) - 1)}_${#strings.toLowerCase(card.rank.name()) == 'ace' ? '1' : (#strings.toLowerCase(card.rank.name()) == 'two' ? '2' : (#strings.toLowerCase(card.rank.name()) == 'three' ? '3' : (#strings.toLowerCase(card.rank.name()) == 'four' ? '4' : (#strings.toLowerCase(card.rank.name()) == 'five' ? '5' : (#strings.toLowerCase(card.rank.name()) == 'six' ? '6' : (#strings.toLowerCase(card.rank.name()) == 'seven' ? '7' : (#strings.toLowerCase(card.rank.name()) == 'eight' ? '8' : (#strings.toLowerCase(card.rank.name()) == 'nine' ? '9' : (#strings.toLowerCase(card.rank.name()) == 'ten' ? '10' : (#strings.toLowerCase(card.rank.name()) == 'jack' ? 'jack' : (#strings.toLowerCase(card.rank.name()) == 'queen' ? 'queen' : 'king')))))))))))}.png|}"
-                                             alt="Card" style="width:42px; border-radius:3px;">
+                                             alt="Card" style="width:38px; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,0.4);">
                                     </div>
                                 </div>
                             </div>

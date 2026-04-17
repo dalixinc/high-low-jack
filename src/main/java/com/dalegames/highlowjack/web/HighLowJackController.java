@@ -322,15 +322,6 @@ public class HighLowJackController {
         // JAFO observer attributes
         model.addAttribute("isJafo", isJafo);
         model.addAttribute("godModeEnabled", game.isGodModeEnabled());
-        if (isJafo && game.isGodModeEnabled()) {
-            // God mode: pass all hands so JAFO can see every player's cards
-            Map<String, List<Card>> allHands = new HashMap<>();
-            for (String pName : game.getPlayerNames()) {
-                Hand h = game.getHand(pName);
-                allHands.put(pName, h != null ? h.getCards() : List.of());
-            }
-            model.addAttribute("allHands", allHands);
-        }
 
         return "highlowjack/game";
     }

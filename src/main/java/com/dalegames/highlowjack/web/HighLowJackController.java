@@ -77,19 +77,23 @@ public class HighLowJackController {
     @GetMapping
     public String showGame(Model model, HttpSession session) {
         GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
-        
+
         // No setup exists - redirect to setup screen
         if (setup == null) {
             return "redirect:/highlowjack/setup";
         }
-        
+
         Game game = (Game) session.getAttribute("hlj_game");
 
         if (game == null) {
             return "redirect:/highlowjack/setup";
         }
 
-        // If game hasn't started yet, go through cut ceremony first
+        // Detect JAFO early — affects redirect behaviour and AI turn gating
+        final boolean isJafo = Boolean.TRUE.equals(session.getAttribute("hlj_is_jafo"));
+
+        // If game hasn't started yet: all sessions (including JAFO) go to cut ceremony.
+        // JAFO sees the non-controller spectator view there.
         if (game.getState() == Game.GameState.NOT_STARTED) {
             return "redirect:/highlowjack/cut";
         }
@@ -178,7 +182,7 @@ public class HighLowJackController {
         
         
         
-        else if (game.getState() == Game.GameState.IN_PROGRESS &&
+        else if (!isJafo && game.getState() == Game.GameState.IN_PROGRESS &&
                  !isCurrentPlayerHuman(game, setup)) {
 
             // ── Issue 2 fix: check wrap-up BEFORE playing AI card ───────────
@@ -227,13 +231,13 @@ public class HighLowJackController {
         }
         
         String humanPlayer = (String) session.getAttribute("hlj_playerName");
-        if (humanPlayer == null) {
+        if (!isJafo && humanPlayer == null) {
             humanPlayer = getHumanPlayerName(setup);
         }
-        List<Card> validCards = calculateValidCards(game, humanPlayer);
+        List<Card> validCards = isJafo ? List.of() : calculateValidCards(game, humanPlayer);
         boolean isAITurn = !isCurrentPlayerHuman(game, setup);
-        boolean isMultiplayer = session.getAttribute("hlj_playerName") != null;
-        boolean isMyTurn = game.getCurrentPlayer() != null && game.getCurrentPlayer().equals(humanPlayer);
+        boolean isMultiplayer = session.getAttribute("hlj_playerName") != null || isJafo;
+        boolean isMyTurn = !isJafo && game.getCurrentPlayer() != null && game.getCurrentPlayer().equals(humanPlayer);
         
         Card.Suit leadSuit = null;
         if (game.getCurrentTrick() != null && game.getCurrentTrick().size() > 0) {
@@ -314,6 +318,19 @@ public class HighLowJackController {
         }
         model.addAttribute("wrapUpInfo", wrapUp);
         model.addAttribute("wrapUpRequested", game.isWrapUpRequested());
+
+        // JAFO observer attributes
+        model.addAttribute("isJafo", isJafo);
+        model.addAttribute("godModeEnabled", game.isGodModeEnabled());
+        if (isJafo && game.isGodModeEnabled()) {
+            // God mode: pass all hands so JAFO can see every player's cards
+            Map<String, List<Card>> allHands = new HashMap<>();
+            for (String pName : game.getPlayerNames()) {
+                Hand h = game.getHand(pName);
+                allHands.put(pName, h != null ? h.getCards() : List.of());
+            }
+            model.addAttribute("allHands", allHands);
+        }
 
         return "highlowjack/game";
     }
@@ -630,6 +647,20 @@ public class HighLowJackController {
         return Map.of("ok", true, "enabled", game.isTrumpTrackerEnabled());
     }
 
+    /** Controller-only: toggle god mode for JAFO observers (all hands visible). */
+    @PostMapping("/toggle-god-mode")
+    @ResponseBody
+    public Map<String, Object> toggleGodMode(HttpSession session) {
+        Game game = (Game) session.getAttribute("hlj_game");
+        GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
+        String humanPlayer = (String) session.getAttribute("hlj_playerName");
+        if (game == null || setup == null) return Map.of("ok", false);
+        // Only the controller may toggle god mode
+        if (!setup.isController(humanPlayer)) return Map.of("ok", false, "error", "Not controller");
+        game.setGodModeEnabled(!game.isGodModeEnabled());
+        return Map.of("ok", true, "enabled", game.isGodModeEnabled());
+    }
+
     @PostMapping("/play")
     public String playCard(@RequestParam int cardIndex, HttpSession session) {
         Game game = (Game) session.getAttribute("hlj_game");
@@ -827,9 +858,12 @@ public class HighLowJackController {
 
         
         String scoringHumanPlayer = (String) session.getAttribute("hlj_playerName");
+        boolean isJafoScoring = Boolean.TRUE.equals(session.getAttribute("hlj_is_jafo"));
         boolean isController;
-        if (scoringHumanPlayer == null) {
-            isController = true; // local game — always controller
+        if (isJafoScoring) {
+            isController = false;  // JAFO: never controller — can't trigger Continue
+        } else if (scoringHumanPlayer == null) {
+            isController = true;   // local game — always controller
         } else {
             isController = setup.getPlayers().stream()
                 .anyMatch(p -> p.getName().equals(scoringHumanPlayer) && p.isController());
@@ -1129,6 +1163,11 @@ public class HighLowJackController {
 
     @PostMapping("/continue")
     public String continueGame(HttpSession session, Model model) {
+        // JAFO observers must never trigger game state transitions
+        if (Boolean.TRUE.equals(session.getAttribute("hlj_is_jafo"))) {
+            return "redirect:/highlowjack";
+        }
+
         Game game = (Game) session.getAttribute("hlj_game");
         GameSetup setup = (GameSetup) session.getAttribute("hlj_setup");
         RoundResult results = (RoundResult) session.getAttribute("hlj_roundResult");
@@ -1593,6 +1632,11 @@ public class HighLowJackController {
      */
     @PostMapping("/next-set")
     public String startNextSet(HttpSession session) {
+        // JAFO observers must never trigger game state transitions
+        if (Boolean.TRUE.equals(session.getAttribute("hlj_is_jafo"))) {
+            return "redirect:/highlowjack";
+        }
+
         Game game = (Game) session.getAttribute("hlj_game");
         Match match = (Match) session.getAttribute("hlj_match");
 
@@ -1629,8 +1673,11 @@ public class HighLowJackController {
 
         // Determine if this session is the controller
         String sessionPlayerName = (String) session.getAttribute("hlj_playerName");
+        boolean isJafoCut = Boolean.TRUE.equals(session.getAttribute("hlj_is_jafo"));
         boolean isController;
-        if (sessionPlayerName != null) {
+        if (isJafoCut) {
+            isController = false;  // JAFO: spectator only
+        } else if (sessionPlayerName != null) {
             // Multiplayer: controller is whoever has isController flag in setup
             isController = setup.getPlayers().stream()
                 .filter(p -> p.getName().equals(sessionPlayerName))

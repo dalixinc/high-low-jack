@@ -760,7 +760,7 @@
 <body>
     <div class="game-container">
         <h1>🃏 High Low Jack 🃏</h1>
-        
+
         <div class="game-layout">
             <div class="main-game-area">
                 <div class="game-board">
@@ -861,10 +861,13 @@
 
                         <!-- Centre: turn status -->
                         <div class="action-bar-center">
-                            <span th:if="${game.currentPlayer == humanPlayer}">
+                            <span th:if="${isJafo}">
+                                👀 <strong th:text="${game.currentPlayer}">Player</strong> is playing...
+                            </span>
+                            <span th:if="${!isJafo and game.currentPlayer == humanPlayer}">
                                 ✨ <strong>Your turn!</strong> Choose a card to play
                             </span>
-                            <span th:if="${game.currentPlayer != humanPlayer}">
+                            <span th:if="${!isJafo and game.currentPlayer != humanPlayer}">
                                 🤔 <strong th:text="${game.currentPlayer}">Computer</strong> is thinking...
                             </span>
                         </div>
@@ -935,8 +938,8 @@
                             <button class="btn-play-on" onclick="declineWrapUp()">▶ Play On</button>
                         </div>
 
-                        <!-- Non-controller sees Request button (or status) -->
-                        <div th:unless="${isController}" class="wrap-up-btns" id="wrapUpRequestSection">
+                        <!-- Non-controller (non-JAFO) sees Request button (or status) -->
+                        <div th:if="${!isController and !isJafo}" class="wrap-up-btns" id="wrapUpRequestSection">
                             <span th:if="${wrapUpRequested}" style="color:#f0b27a; font-style:italic;">
                                 ⏳ Wrap-up requested — waiting for controller...
                             </span>
@@ -946,14 +949,51 @@
                         </div>
                     </div>
 
-                    <div class="your-hand">
+                    <!-- ══ JAFO OBSERVER PANEL (replaces hand when observing) ══ -->
+                    <div th:if="${isJafo}" class="your-hand" style="text-align:center;">
+                        <div style="display:inline-flex; align-items:center; gap:10px; margin-bottom:18px;
+                                    background:rgba(255,215,0,0.12); border:1px solid rgba(255,215,0,0.3);
+                                    border-radius:30px; padding:8px 22px;">
+                            <span style="font-size:1.5rem;">👀</span>
+                            <span style="font-weight:bold; color:#ffd700; font-size:1rem;">Observing this match</span>
+                        </div>
+
+                        <!-- God Mode: show all hands -->
+                        <div th:if="${godModeEnabled and allHands != null}">
+                            <div style="font-size:0.85rem; color:rgba(255,215,0,0.8); margin-bottom:14px;
+                                        letter-spacing:0.5px; text-transform:uppercase;">
+                                🌟 God Mode — all hands visible
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                                <div th:each="playerName : ${game.playerNames}"
+                                     style="background:rgba(255,255,255,0.06); border-radius:12px; padding:12px;">
+                                    <div style="font-weight:bold; font-size:0.9rem; margin-bottom:8px;
+                                                color:rgba(255,255,255,0.7);"
+                                         th:text="${playerName}">Player</div>
+                                    <div style="display:flex; flex-wrap:wrap; gap:4px; justify-content:center;">
+                                        <img th:each="card : ${allHands[playerName]}"
+                                             th:src="@{|/images/cards/${#strings.substring(card.suit.name().toLowerCase(), 0, #strings.length(card.suit.name()) - 1)}_${#strings.toLowerCase(card.rank.name()) == 'ace' ? '1' : (#strings.toLowerCase(card.rank.name()) == 'two' ? '2' : (#strings.toLowerCase(card.rank.name()) == 'three' ? '3' : (#strings.toLowerCase(card.rank.name()) == 'four' ? '4' : (#strings.toLowerCase(card.rank.name()) == 'five' ? '5' : (#strings.toLowerCase(card.rank.name()) == 'six' ? '6' : (#strings.toLowerCase(card.rank.name()) == 'seven' ? '7' : (#strings.toLowerCase(card.rank.name()) == 'eight' ? '8' : (#strings.toLowerCase(card.rank.name()) == 'nine' ? '9' : (#strings.toLowerCase(card.rank.name()) == 'ten' ? '10' : (#strings.toLowerCase(card.rank.name()) == 'jack' ? 'jack' : (#strings.toLowerCase(card.rank.name()) == 'queen' ? 'queen' : 'king')))))))))))}.png|}"
+                                             alt="Card" style="width:42px; border-radius:3px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Normal mode: just watching message -->
+                        <div th:unless="${godModeEnabled}" style="color:rgba(255,255,255,0.5); font-size:0.9rem; margin-top:6px;">
+                            Cards will appear here as they are played above.
+                        </div>
+                    </div>
+
+                    <!-- ══ NORMAL PLAYER HAND ══ -->
+                    <div th:unless="${isJafo}" class="your-hand">
                         <h3>Your Hand</h3>
 
                         <div th:if="${leadSuit != null and game.currentPlayer == humanPlayer}" class="must-follow">
-                            You must follow <strong th:text="${leadSuit.name()}">SUIT</strong> 
+                            You must follow <strong th:text="${leadSuit.name()}">SUIT</strong>
                             <span th:text="${leadSuit.symbol}" style="font-size: 1.3rem;">♠</span>
                         </div>
-                        
+
                         <div class="hand-cards">
                             <form th:action="@{/highlowjack/play}" method="post" style="display: contents;">
                                 <div th:each="card, iterStat : ${game.getHand(humanPlayer).cards}"
@@ -969,8 +1009,8 @@
                                 </div>
                             </form>
                         </div>
-                        
-                        <!-- SURGICAL ADDITION #1: Sort Hand Button -->
+
+                        <!-- Sort Hand Button -->
                         <div class="sort-hand-button">
                             <form th:action="@{/highlowjack/sort-hand}" method="post">
                                 <button type="submit">🔄 Sort Hand (♠ ♥ ♦ ♣)</button>
@@ -1180,6 +1220,16 @@
                     </button>
                 </div>
 
+                <!-- God mode toggle (controller only, multiplayer) -->
+                <div th:if="${isController and isMultiplayer}" style="margin-top:10px; text-align:center;">
+                    <button onclick="toggleGodMode()" id="godModeBtn"
+                            th:style="${godModeEnabled}
+                                ? 'background:rgba(255,215,0,0.2); border:1px solid rgba(255,215,0,0.5); color:#ffd700; border-radius:8px; padding:4px 12px; font-size:0.75rem; cursor:pointer;'
+                                : 'background:none; border:1px solid rgba(255,255,255,0.2); color:rgba(255,255,255,0.4); border-radius:8px; padding:4px 12px; font-size:0.75rem; cursor:pointer;'"
+                            th:title="${godModeEnabled} ? 'Observers can see all hands — click to hide' : 'Click to let observers see all hands'">
+                        <span th:text="${godModeEnabled} ? '🌟 God Mode ON' : '👁 God Mode OFF'">God Mode</span>
+                    </button>
+                </div>
             </div>
 
         <!-- ═══════════════════════════════════════════════════════════ -->
@@ -1289,6 +1339,7 @@
         const isMyTurn = /*[[${isMyTurn}]]*/ true;
         const hasEventQuips = /*[[${eventQuips != null and !eventQuips.empty}]]*/ false;
         const wrapUpAvailable = /*[[${wrapUpInfo != null}]]*/ false;
+        const isJafo = /*[[${isJafo != null and isJafo}]]*/ false;
 
         // ── Deal animation: only fire on the first page load of each new round ──
         (function() {
@@ -1330,8 +1381,9 @@
             setTimeout(() => location.reload(), 7000);
         }
 
-        else if (isMultiplayer && !isMyTurn && !isRoundComplete) {
-            // Multiplayer: poll for any game state change so all players see cards in real-time
+        else if (isMultiplayer && (!isMyTurn || isJafo) && !isRoundComplete && !jafoWaiting) {
+            // Multiplayer: poll for any game state change so all players see cards in real-time.
+            // JAFOs always poll — they never have a "turn".
             let lastTrickSize = -1;
             let lastCompletedTricks = -1;
             let lastWrapUp = wrapUpAvailable;
@@ -1339,11 +1391,11 @@
                 fetch('/highlowjack/poll')
                     .then(r => r.json())
                     .then(data => {
-                        const myTurnNow = data.humanPlayer && data.currentPlayer === data.humanPlayer;
+                        const myTurnNow = !isJafo && data.humanPlayer && data.currentPlayer === data.humanPlayer;
                         const roundOver = data.gameState && data.gameState !== 'IN_PROGRESS';
                         const trickSizeChanged = data.currentTrickSize !== undefined && lastTrickSize >= 0 && data.currentTrickSize !== lastTrickSize;
                         const completedTricksChanged = data.completedTrickCount !== undefined && lastCompletedTricks >= 0 && data.completedTrickCount !== lastCompletedTricks;
-                        const wrapUpChanged = data.wrapUpAvailable !== undefined && data.wrapUpAvailable !== lastWrapUp;
+                        const wrapUpChanged = !isJafo && data.wrapUpAvailable !== undefined && data.wrapUpAvailable !== lastWrapUp;
 
                         // Update tracked values
                         if (data.currentTrickSize !== undefined) lastTrickSize = data.currentTrickSize;
@@ -1631,6 +1683,19 @@
             }, 2000);
         })();
 
+        // God mode: controller toggles whether JAFO observers see all hands
+        function toggleGodMode() {
+            if (!isController) return;
+            fetch('/highlowjack/toggle-god-mode', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.ok) {
+                        // Reload so Thymeleaf re-renders god mode button state
+                        location.reload();
+                    }
+                })
+                .catch(() => {});
+        }
         /*]]>*/
     </script>
 

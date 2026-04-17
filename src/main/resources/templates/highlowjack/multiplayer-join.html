@@ -206,6 +206,73 @@
             font-size: 0.85rem;
             margin-left: 8px;
         }
+
+        .jafo-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 30px 0 20px;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.9rem;
+        }
+        .jafo-divider::before, .jafo-divider::after {
+            content: '';
+            flex: 1;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .jafo-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px dashed rgba(255,255,255,0.25);
+            border-radius: 14px;
+            padding: 22px 24px;
+        }
+
+        .jafo-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 6px;
+            color: #ffd700;
+        }
+
+        .jafo-desc {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 16px;
+        }
+
+        .jafo-capacity {
+            font-size: 0.82rem;
+            color: rgba(255,255,255,0.5);
+            margin-top: 10px;
+            text-align: right;
+        }
+
+        .jafo-button {
+            width: 100%;
+            padding: 13px;
+            background: linear-gradient(135deg, #2c3e50 0%, #4a5568 100%);
+            border: 2px solid rgba(255,255,255,0.25);
+            color: white;
+            border-radius: 10px;
+            font-size: 1.05rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+
+        .jafo-button:hover {
+            background: linear-gradient(135deg, #3d5166 0%, #5a6a80 100%);
+            border-color: rgba(255,255,255,0.45);
+            transform: translateY(-1px);
+        }
+
+        .jafo-full {
+            text-align: center;
+            color: rgba(255,150,150,0.8);
+            font-size: 0.9rem;
+            padding: 10px;
+        }
     </style>
 </head>
 <body>
@@ -349,6 +416,39 @@
 
                 <button type="submit" class="join-button">🚀 Join Game</button>
             </form>
+
+            <!-- ── JAFO Observer Section ── -->
+            <div class="jafo-divider">or just watch</div>
+
+            <div class="jafo-box">
+                <div class="jafo-title">👀 Join as Observer (JAFO)</div>
+                <div class="jafo-desc">
+                    Watch the match unfold without playing. You'll see cards as they're played
+                    and can chat — no hand, no moves.
+                </div>
+
+                <!-- Observer capacity full -->
+                <div th:if="${mpGame.observerCount >= mpGame.maxObservers}" class="jafo-full">
+                    👀 Observer seats are full (<span th:text="${mpGame.maxObservers}">4</span> max)
+                </div>
+
+                <!-- Observer spots available -->
+                <div th:unless="${mpGame.observerCount >= mpGame.maxObservers}">
+                    <form th:action="@{/highlowjack/multiplayer/jafo}" method="post">
+                        <input type="hidden" name="joinCode" th:value="${joinCode}">
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label for="observerName" style="font-size:0.95rem;">👤 Your Name</label>
+                            <input type="text" id="observerName" name="observerName"
+                                   placeholder="Enter your name" required maxlength="20">
+                        </div>
+                        <button type="submit" class="jafo-button">👀 Watch as Observer</button>
+                    </form>
+                    <div class="jafo-capacity">
+                        <span th:text="${mpGame.observerCount}">0</span> /
+                        <span th:text="${mpGame.maxObservers}">4</span> observer seats taken
+                    </div>
+                </div>
+            </div>
         </div>
 
         <a th:href="@{/highlowjack/setup}" class="back-link">← Back to Setup</a>

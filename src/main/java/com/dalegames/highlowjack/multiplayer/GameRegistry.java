@@ -30,8 +30,12 @@ public class GameRegistry {
      * Creates a new multiplayer game and returns it.
      */
     public MultiplayerGame createGame(Game game, GameSetup setup) {
+        return createGame(game, setup, 4);
+    }
+
+    public MultiplayerGame createGame(Game game, GameSetup setup, int maxObservers) {
         String code = generateUniqueCode();
-        MultiplayerGame mpGame = new MultiplayerGame(code, game, setup);
+        MultiplayerGame mpGame = new MultiplayerGame(code, game, setup, maxObservers);
         activeGames.put(code, mpGame);
         System.out.println("🎮 Created multiplayer game: " + code);
         return mpGame;

@@ -10,6 +10,7 @@ import com.dalegames.highlowjack.multiplayer.MultiplayerGame;
 import jakarta.servlet.http.HttpSession;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -32,6 +33,9 @@ public class MultiplayerController {
     
     @Autowired
     private GameRegistry gameRegistry;
+
+    @Value("${hlj.max.observers:4}")
+    private int maxObservers;
     
     /**
      * Host creates a new multiplayer game.
@@ -89,7 +93,7 @@ public class MultiplayerController {
             Game game = new Game(setup);
 
             // Create and register multiplayer game
-            MultiplayerGame mpGame = gameRegistry.createGame(game, setup);
+            MultiplayerGame mpGame = gameRegistry.createGame(game, setup, maxObservers);
             String joinCode = mpGame.getJoinCode();
             
             // Host automatically joins as position 0 (North)
@@ -282,27 +286,34 @@ public class MultiplayerController {
     }
     
     /**
-     * Shows the lobby where players wait for game to start.
+     * Shows the lobby where players (and JAFOs) wait for game to start.
      */
     @GetMapping("/lobby")
     public String showLobby(HttpSession session, Model model) {
         String code = (String) session.getAttribute("mp_code");
-        Integer position = (Integer) session.getAttribute("mp_position");
-        
-        if (code == null || position == null) {
+        Boolean isJafo = Boolean.TRUE.equals(session.getAttribute("mp_is_jafo"));
+
+        if (code == null) {
             return "redirect:/highlowjack/multiplayer/join";
         }
-        
+
+        // Non-JAFO players must also have a position
+        Integer position = (Integer) session.getAttribute("mp_position");
+        if (!isJafo && position == null) {
+            return "redirect:/highlowjack/multiplayer/join";
+        }
+
         MultiplayerGame mpGame = gameRegistry.getGame(code);
-        
+
         if (mpGame == null) {
             return "redirect:/highlowjack/multiplayer/join";
         }
-        
+
         model.addAttribute("mpGame", mpGame);
-        model.addAttribute("myPosition", position);
-        model.addAttribute("setup", mpGame.getSetup());  // Add setup for AI detection
-        
+        model.addAttribute("myPosition", position);   // null for JAFOs
+        model.addAttribute("isJafo", isJafo);
+        model.addAttribute("setup", mpGame.getSetup());
+
         return "highlowjack/multiplayer-lobby";
     }
     
@@ -328,8 +339,10 @@ public class MultiplayerController {
         int currentVersion = mpGame.getStateVersion();
         response.put("version", currentVersion);
         response.put("updated", currentVersion > lastVersion);
-        response.put("gameStarted", mpGame.isGameStarted());  // For detecting game start
-        
+        response.put("gameStarted", mpGame.isGameStarted());
+        response.put("observerCount", mpGame.getObserverCount());
+        response.put("playerCount", mpGame.getPlayerCount());
+
         return ResponseEntity.ok(response);
     }
     
@@ -380,6 +393,90 @@ public class MultiplayerController {
         return "redirect:/highlowjack/cut";
     }
     
+    // ── JAFO (Observer) endpoints ────────────────────────────────────────────
+
+    /**
+     * Joins a game as a JAFO observer.
+     */
+    @PostMapping("/jafo")
+    public String joinAsJafo(
+            @RequestParam String joinCode,
+            @RequestParam String observerName,
+            HttpSession session,
+            Model model) {
+
+        if (observerName == null || observerName.trim().isEmpty()) {
+            model.addAttribute("error", "Please enter your name");
+            return addJoinModelAndReturn(joinCode, model);
+        }
+
+        MultiplayerGame mpGame = gameRegistry.getGame(joinCode);
+        if (mpGame == null) {
+            model.addAttribute("error", "Invalid game code");
+            return "highlowjack/multiplayer-join";
+        }
+
+        try {
+            String token = mpGame.addObserver(observerName.trim());
+            session.setAttribute("mp_token", token);
+            session.setAttribute("mp_code", joinCode);
+            session.setAttribute("mp_is_jafo", true);
+            session.setAttribute("mp_playerName", observerName.trim());
+            System.out.println("👀 JAFO joined lobby: " + observerName + " for game " + joinCode);
+            return "redirect:/highlowjack/multiplayer/lobby";
+        } catch (IllegalStateException e) {
+            model.addAttribute("error", "Observer seats are full for this game (" + mpGame.getMaxObservers() + " max)");
+            return addJoinModelAndReturn(joinCode, model);
+        }
+    }
+
+    private String addJoinModelAndReturn(String joinCode, Model model) {
+        MultiplayerGame mpGame = gameRegistry.getGame(joinCode);
+        if (mpGame != null) {
+            model.addAttribute("mpGame", mpGame);
+            model.addAttribute("joinCode", joinCode);
+            model.addAttribute("setup", mpGame.getSetup());
+        }
+        return "highlowjack/multiplayer-join";
+    }
+
+    /**
+     * JAFO observers call this when game starts (detected by lobby polling).
+     * Sets up their session as an observer and redirects to game view.
+     */
+    @GetMapping("/start-jafo")
+    public String startJafo(HttpSession session) {
+        String code = (String) session.getAttribute("mp_code");
+        String token = (String) session.getAttribute("mp_token");
+        Boolean isJafo = Boolean.TRUE.equals(session.getAttribute("mp_is_jafo"));
+
+        if (code == null || token == null || !isJafo) {
+            return "redirect:/highlowjack/multiplayer/join";
+        }
+
+        MultiplayerGame mpGame = gameRegistry.getGame(code);
+
+        if (mpGame == null || !mpGame.isGameStarted() || !mpGame.isObserver(token)) {
+            return "redirect:/highlowjack/multiplayer/lobby";
+        }
+
+        // Transfer game to JAFO session — no playerName, marked as observer
+        session.setAttribute("hlj_game", mpGame.getGame());
+        session.setAttribute("hlj_setup", mpGame.getSetup());
+        session.setAttribute("hlj_match", new Match(mpGame.getSetup().getMatchType()));
+        session.setAttribute("hlj_is_jafo", true);
+
+        // Clean up multiplayer session attrs
+        session.removeAttribute("mp_token");
+        session.removeAttribute("mp_code");
+        session.removeAttribute("mp_is_jafo");
+        session.removeAttribute("mp_playerName");
+        session.removeAttribute("mp_position");
+
+        System.out.println("👀 JAFO entering game: " + code);
+        return "redirect:/highlowjack";
+    }
+
     /**
      * Non-host players call this when game starts (detected by polling).
      * Transfers game to their session and redirects to game.

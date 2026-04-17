@@ -4,7 +4,9 @@ import com.dalegames.highlowjack.model.Game;
 import com.dalegames.highlowjack.model.GameSetup;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -21,18 +23,27 @@ public class MultiplayerGame {
     private final Game game;
     private final GameSetup setup;
     private final Map<Integer, PlayerConnection> players; // position -> player
+    private final List<ObserverConnection> observers;     // JAFO observers
+    private final int maxObservers;
     private final LocalDateTime createdAt;
     private int stateVersion; // Increments when game state changes
     private boolean gameStarted; // True when host starts the game
-    
-    public MultiplayerGame(String joinCode, Game game, GameSetup setup) {
+
+    public MultiplayerGame(String joinCode, Game game, GameSetup setup, int maxObservers) {
         this.joinCode = joinCode;
         this.game = game;
         this.setup = setup;
         this.players = new HashMap<>();
+        this.observers = new ArrayList<>();
+        this.maxObservers = maxObservers;
         this.createdAt = LocalDateTime.now();
         this.stateVersion = 0;
         this.gameStarted = false;
+    }
+
+    /** Backwards-compatible constructor — defaults to 4 max observers. */
+    public MultiplayerGame(String joinCode, Game game, GameSetup setup) {
+        this(joinCode, game, setup, 4);
     }
     
     /**
@@ -147,24 +158,66 @@ public class MultiplayerGame {
         return gameStarted;
     }
     
+    // ── Observer (JAFO) support ──────────────────────────────────────────────
+
+    /**
+     * Adds a JAFO observer to the game.
+     * @return the observer's unique token
+     * @throws IllegalStateException if observer capacity is full
+     */
+    public synchronized String addObserver(String name) {
+        if (observers.size() >= maxObservers) {
+            throw new IllegalStateException("Observer capacity reached (" + maxObservers + ")");
+        }
+        String token = UUID.randomUUID().toString();
+        observers.add(new ObserverConnection(name, token));
+        stateVersion++;
+        System.out.println("👀 JAFO joined: " + name);
+        return token;
+    }
+
+    public boolean isObserver(String token) {
+        return observers.stream().anyMatch(o -> o.token.equals(token));
+    }
+
+    public int getObserverCount() { return observers.size(); }
+    public int getMaxObservers()  { return maxObservers; }
+
+    public List<ObserverConnection> getObservers() {
+        return new ArrayList<>(observers);
+    }
+
     /**
      * Represents a player connection.
      */
     public static class PlayerConnection {
         private final String playerName;
         private final String token;
-        
+
         public PlayerConnection(String playerName, String token) {
             this.playerName = playerName;
             this.token = token;
         }
-        
+
         public String getPlayerName() {
             return playerName;
         }
-        
+
         public String getToken() {
             return token;
         }
+    }
+
+    public static class ObserverConnection {
+        private final String name;
+        private final String token;
+
+        public ObserverConnection(String name, String token) {
+            this.name = name;
+            this.token = token;
+        }
+
+        public String getName()  { return name; }
+        public String getToken() { return token; }
     }
 }

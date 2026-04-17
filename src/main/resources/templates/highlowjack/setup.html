@@ -285,6 +285,19 @@
             margin-left: 5px;
         }
         
+        .streak-badge {
+            display: inline-block;
+            font-size: 1.1rem;
+            margin-left: 6px;
+            vertical-align: middle;
+            line-height: 1;
+            cursor: default;
+            transition: opacity 0.3s;
+        }
+        .streak-badge:empty {
+            display: none;
+        }
+
         .position-badge {
             display: inline-block;
             font-size: 0.75rem;
@@ -552,8 +565,9 @@
                             Player 1
                             <span class="controller-badge">👑</span>
                         </div>
-                        <input type="text" name="player1Name" value="Dale" required 
+                        <input type="text" name="player1Name" id="pname-ind-1" value="Dale" required
                                placeholder="Enter player name" maxlength="20">
+                        <span class="streak-badge" id="sbadge-ind-1"></span>
                         <div class="player-type-select">
                             <label class="type-button active">
                                 <input type="radio" name="player1Type" value="HUMAN" checked>
@@ -573,8 +587,9 @@
 
                     <div class="player-row">
                         <div class="player-label">Player 2</div>
-                        <input type="text" name="player2Name" value="Kreep" required
+                        <input type="text" name="player2Name" id="pname-ind-2" value="Kreep" required
                                placeholder="Enter player name" maxlength="20">
+                        <span class="streak-badge" id="sbadge-ind-2"></span>
                         <div class="player-type-select">
                             <label class="type-button">
                                 <input type="radio" name="player2Type" value="HUMAN">
@@ -594,8 +609,9 @@
 
                     <div class="player-row">
                         <div class="player-label">Player 3</div>
-                        <input type="text" name="player3Name" value="Carryn" required
+                        <input type="text" name="player3Name" id="pname-ind-3" value="Carryn" required
                                placeholder="Enter player name" maxlength="20">
+                        <span class="streak-badge" id="sbadge-ind-3"></span>
                         <div class="player-type-select">
                             <label class="type-button">
                                 <input type="radio" name="player3Type" value="HUMAN">
@@ -615,8 +631,9 @@
 
                     <div class="player-row">
                         <div class="player-label">Player 4</div>
-                        <input type="text" name="player4Name" value="Primus" required
+                        <input type="text" name="player4Name" id="pname-ind-4" value="Primus" required
                                placeholder="Enter player name" maxlength="20">
+                        <span class="streak-badge" id="sbadge-ind-4"></span>
                         <div class="player-type-select">
                             <label class="type-button">
                                 <input type="radio" name="player4Type" value="HUMAN">
@@ -687,8 +704,9 @@
                                     North <span class="controller-badge">👑</span>
                                 </div>
                                 <div class="team-player-name">
-                                    <input type="text" name="player1NameTeam" value="Dale"
+                                    <input type="text" name="player1NameTeam" id="pname-team-1" value="Dale"
                                            placeholder="North player" maxlength="20">
+                                    <span class="streak-badge" id="sbadge-team-1"></span>
                                 </div>
                                 <div class="player-type-select">
                                     <label class="type-button active">
@@ -710,8 +728,9 @@
                             <div class="team-player">
                                 <div class="team-player-position">South</div>
                                 <div class="team-player-name">
-                                    <input type="text" name="player3NameTeam" value="Primus"
+                                    <input type="text" name="player3NameTeam" id="pname-team-3" value="Primus"
                                            placeholder="South player" maxlength="20">
+                                    <span class="streak-badge" id="sbadge-team-3"></span>
                                 </div>
                                 <div class="player-type-select">
                                     <label class="type-button">
@@ -738,8 +757,9 @@
                             <div class="team-player">
                                 <div class="team-player-position">East</div>
                                 <div class="team-player-name">
-                                    <input type="text" name="player2NameTeam" value="Kreep"
+                                    <input type="text" name="player2NameTeam" id="pname-team-2" value="Kreep"
                                            placeholder="East player" maxlength="20">
+                                    <span class="streak-badge" id="sbadge-team-2"></span>
                                 </div>
                                 <div class="player-type-select">
                                     <label class="type-button">
@@ -761,8 +781,9 @@
                             <div class="team-player">
                                 <div class="team-player-position">West</div>
                                 <div class="team-player-name">
-                                    <input type="text" name="player4NameTeam" value="Preezbob"
+                                    <input type="text" name="player4NameTeam" id="pname-team-4" value="Preezbob"
                                            placeholder="West player" maxlength="20">
+                                    <span class="streak-badge" id="sbadge-team-4"></span>
                                 </div>
                                 <div class="player-type-select">
                                     <label class="type-button">
@@ -1005,6 +1026,51 @@
                     el.style.opacity = '1';
                 }, 420);
             }, 3800);
+        })();
+
+        // ── Hot streak badges ────────────────────────────────────────────────
+        (function() {
+            const streakMap = /*[[${streakMap}]]*/ {};
+
+            function streakEmoji(s) {
+                if (s >= 9) return '🔥🔥🔥';
+                if (s >= 6) return '🔥🔥';
+                return '🔥';
+            }
+
+            function updateBadge(badgeId, name) {
+                const badge = document.getElementById(badgeId);
+                if (!badge) return;
+                const s = streakMap[name.trim()];
+                if (s && s >= 3) {
+                    badge.textContent = streakEmoji(s);
+                    badge.title = name.trim() + ' is on a ' + s + '-match win streak!';
+                } else {
+                    badge.textContent = '';
+                    badge.title = '';
+                }
+            }
+
+            // Wire up each name input to its badge
+            const pairs = [
+                ['pname-ind-1', 'sbadge-ind-1'],
+                ['pname-ind-2', 'sbadge-ind-2'],
+                ['pname-ind-3', 'sbadge-ind-3'],
+                ['pname-ind-4', 'sbadge-ind-4'],
+                ['pname-team-1', 'sbadge-team-1'],
+                ['pname-team-2', 'sbadge-team-2'],
+                ['pname-team-3', 'sbadge-team-3'],
+                ['pname-team-4', 'sbadge-team-4'],
+            ];
+
+            pairs.forEach(([inputId, badgeId]) => {
+                const input = document.getElementById(inputId);
+                if (!input) return;
+                // Check on load for default names
+                updateBadge(badgeId, input.value);
+                // Update as user types
+                input.addEventListener('input', () => updateBadge(badgeId, input.value));
+            });
         })();
 
         // ── Card animation toggle (localStorage) ─────────────────────────────

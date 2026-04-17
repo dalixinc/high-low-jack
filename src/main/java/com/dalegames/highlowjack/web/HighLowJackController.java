@@ -323,6 +323,9 @@ public class HighLowJackController {
         model.addAttribute("isJafo", isJafo);
         model.addAttribute("godModeEnabled", game.isGodModeEnabled());
 
+        // Hot streak badges (3+ win streak → 🔥)
+        model.addAttribute("streakMap", buildStreakMap());
+
         return "highlowjack/game";
     }
 
@@ -378,7 +381,22 @@ public class HighLowJackController {
     public String showSetup(Model model) {
         model.addAttribute("appVersion", appVersion);
         model.addAttribute("buzzMessages", generateBuzzMessages());
+        model.addAttribute("streakMap", buildStreakMap());
         return "highlowjack/setup";
+    }
+
+    /**
+     * Builds a name→streak map for all players whose current win streak is ≥ 3.
+     * Used to show the 🔥 hot-streak badge on setup and game screens.
+     */
+    private Map<String, Integer> buildStreakMap() {
+        Map<String, Integer> map = new HashMap<>();
+        try {
+            playerService.getAllPlayers().stream()
+                .filter(p -> !p.isTeam() && p.getCurrentWinStreak() >= 3)
+                .forEach(p -> map.put(p.getName(), p.getCurrentWinStreak()));
+        } catch (Exception ignored) {}
+        return map;
     }
 
     /**

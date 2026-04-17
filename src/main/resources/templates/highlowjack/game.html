@@ -772,8 +772,14 @@
                                 <span th:if="${setup != null && setup.isHumanPlayer(player)}">👤</span>
                                 <span th:unless="${setup != null && setup.isHumanPlayer(player)}">🤖</span>
                                 <span th:text="${player}">Player</span>
-                                <span th:if="${pitcherName != null && pitcherName == player}" 
+                                <span th:if="${pitcherName != null && pitcherName == player}"
                                     title="Pitched trump this round">🎺</span>
+                                <!-- Hot streak badge -->
+                                <span th:if="${streakMap != null and streakMap.containsKey(player)}"
+                                      th:with="s=${streakMap.get(player)}"
+                                      th:title="${s + '-match win streak!'}"
+                                      style="margin-left:2px; font-size:0.85em; cursor:default;"
+                                      th:text="${s >= 9 ? '🔥🔥🔥' : (s >= 6 ? '🔥🔥' : '🔥')}">🔥</span>
                             </div>
                             <div class="score" th:text="${game.getScore(player)}">0</div>
                             <div class="tricks-count" style="font-size: 0.85rem; opacity: 0.8; margin-top: 3px;">

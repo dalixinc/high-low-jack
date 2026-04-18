@@ -92,6 +92,15 @@ public class HighLowJackController {
         // Detect JAFO early — affects redirect behaviour and AI turn gating
         final boolean isJafo = Boolean.TRUE.equals(session.getAttribute("hlj_is_jafo"));
 
+        // Determine this session's player identity early — needed to gate AI turn processing.
+        // Non-controller human sessions must NEVER call playAITurn() on the shared Game object;
+        // with 3+ human players, concurrent reloads would corrupt the game state.
+        String humanPlayer = (String) session.getAttribute("hlj_playerName");
+        if (!isJafo && humanPlayer == null) {
+            humanPlayer = getHumanPlayerName(setup);
+        }
+        final boolean isController = !isJafo && setup.isController(humanPlayer);
+
         // If game hasn't started yet: all sessions (including JAFO) go to cut ceremony.
         // JAFO sees the non-controller spectator view there.
         if (game.getState() == Game.GameState.NOT_STARTED) {
@@ -182,7 +191,7 @@ public class HighLowJackController {
         
         
         
-        else if (!isJafo && game.getState() == Game.GameState.IN_PROGRESS &&
+        else if (isController && game.getState() == Game.GameState.IN_PROGRESS &&
                  !isCurrentPlayerHuman(game, setup)) {
 
             // ── Issue 2 fix: check wrap-up BEFORE playing AI card ───────────
@@ -230,10 +239,6 @@ public class HighLowJackController {
             session.setAttribute("hlj_game", game);
         }
         
-        String humanPlayer = (String) session.getAttribute("hlj_playerName");
-        if (!isJafo && humanPlayer == null) {
-            humanPlayer = getHumanPlayerName(setup);
-        }
         List<Card> validCards = isJafo ? List.of() : calculateValidCards(game, humanPlayer);
         boolean isAITurn = !isCurrentPlayerHuman(game, setup);
         boolean isMultiplayer = session.getAttribute("hlj_playerName") != null || isJafo;
@@ -249,7 +254,7 @@ public class HighLowJackController {
         model.addAttribute("game", game);
         model.addAttribute("setup", setup);
         model.addAttribute("humanPlayer", humanPlayer);
-        model.addAttribute("isController", setup.isController(humanPlayer));
+        model.addAttribute("isController", isController);
         model.addAttribute("isAITurn", isAITurn);
         model.addAttribute("isMultiplayer", isMultiplayer);
         model.addAttribute("chatMaxLength", MAX_CHAT_LENGTH);
